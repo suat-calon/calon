@@ -1,0 +1,700 @@
+// =============================================================================
+// AURALIS BUSINESS OS — PRISMA SCHEMA
+// Mimari Anayasa: Sıfır Teknik Borç | Soft Delete | Multi-Tenant RLS
+// =============================================================================
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+  // Üretilen tip güvenli istemcinin kullanım yeri
+  output        = "../generated/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =============================================================================
+// BÖLÜM 1: IAM & TENANT (Kimlik ve Çok Kiracılı Yönetim)
+// =============================================================================
+
+enum TenantPlan {
+  SOLO       // Tek kişilik
+  BOUTIQUE   // 3–10 personel
+  ENTERPRISE // Klinik / Zincir şube
+}
+
+enum TenantStatus {
+  ACTIVE
+  SUSPENDED
+  CHURNED
+}
+
+model Tenant {
+  id        String       @id @default(uuid()) @db.Uuid
+  name      String
+  slug      String       @unique               // subdomain: slug.auralis.app
+  plan      TenantPlan   @default(SOLO)
+  status    TenantStatus @default(ACTIVE)
+  brandColor String?                            // UI özelleştirme
+  logoUrl   String?
+  timezone  String       @default("Europe/Istanbul")
+  locale    String       @default("tr-TR")
+
+  // Audit
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?                           // Soft delete
+  isDeleted Boolean   @default(false)
+
+  // İlişkiler
+  users        UserTenant[]
+  locations    Location[]
+  customers    Customer[]
+  appointments Appointment[]
+  services     Service[]
+  serviceCategories ServiceCategory[]
+  products     Product[]
+  staff        StaffProfile[]
+  campaigns    CampaignTemplate[]               // v2 placeholder
+  refreshTokens RefreshToken[]
+  idempotencyKeys IdempotencyKey[]
+  auditLogs    AuditLog[]
+  transactionLedgers TransactionLedger[]
+
+  @@index([slug])
+  @@index([status])
+  @@map("tenants")
+}
+
+enum UserRole {
+  SUPER_ADMIN    // Platform yöneticisi (Auralis)
+  TENANT_OWNER   // İşletme sahibi
+  MANAGER        // Şube müdürü
+  RECEPTIONIST   // Resepsiyonist
+  STAFF          // Personel (kendi takvimini görür)
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  INVITED
+}
+
+model User {
+  id           String     @id @default(uuid()) @db.Uuid
+  email        String     @unique
+  passwordHash String
+  firstName    String
+  lastName     String
+  phone        String?
+  avatarUrl    String?
+  status       UserStatus @default(INVITED)
+
+  // Audit
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  lastLoginAt  DateTime?
+  deletedAt    DateTime?
+  isDeleted    Boolean    @default(false)
+
+  // İlişkiler
+  tenants       UserTenant[]
+  refreshTokens RefreshToken[]
+  auditLogs     AuditLog[]
+
+  @@index([email])
+  @@map("users")
+}
+
+model UserTenant {
+  id       String   @id @default(uuid()) @db.Uuid
+  userId   String   @db.Uuid
+  tenantId String   @db.Uuid
+  role     UserRole @default(STAFF)
+  locationId String? @db.Uuid               // Hangi şubeye atandı
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User     @relation(fields: [userId],   references: [id], onDelete: Cascade)
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  location Location? @relation(fields: [locationId], references: [id])
+
+  @@unique([userId, tenantId])              // Bir kullanıcı bir tenant'ta tek rol
+  @@index([tenantId, role])
+  @@map("user_tenants")
+}
+
+// =============================================================================
+// BÖLÜM 2: LOKASYON VE KAYNAKLAR (Location, Room)
+// =============================================================================
+
+model Location {
+  id       String  @id @default(uuid()) @db.Uuid
+  tenantId String  @db.Uuid
+  name     String
+  address  String?
+  city     String?
+  country  String  @default("TR")
+  phone    String?
+  isActive Boolean @default(true)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+  isDeleted Boolean   @default(false)
+
+  tenant        Tenant       @relation(fields: [tenantId], references: [id])
+  rooms         Room[]
+  staff         StaffProfile[]
+  appointments  Appointment[]
+  userTenants   UserTenant[]
+
+  @@index([tenantId])
+  @@map("locations")
+}
+
+model Room {
+  id         String  @id @default(uuid()) @db.Uuid
+  tenantId   String  @db.Uuid
+  locationId String  @db.Uuid
+  name       String                             // "Oda 1", "Lazer Kabini"
+  capacity   Int     @default(1)
+  isActive   Boolean @default(true)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+  isDeleted Boolean   @default(false)
+
+  location     Location      @relation(fields: [locationId], references: [id])
+  appointments Appointment[]
+
+  @@index([tenantId, locationId])
+  @@map("rooms")
+}
+
+// =============================================================================
+// BÖLÜM 3: PERSONEL (StaffProfile, StaffWorkingHour, StaffShift)
+// =============================================================================
+
+model StaffProfile {
+  id             String  @id @default(uuid()) @db.Uuid
+  tenantId       String  @db.Uuid
+  locationId     String  @db.Uuid
+  userId         String? @db.Uuid             // Sisteme bağlı ise
+  firstName      String
+  lastName       String
+  phone          String?
+  avatarUrl      String?
+  title          String?                       // "Saç Uzmanı", "Estetisyen"
+  colorHex       String  @default("#6366f1")   // Takvim rengi
+  commissionRate Float   @default(0)           // % cinsinden
+  isActive       Boolean @default(true)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+  isDeleted Boolean   @default(false)
+
+  tenant       Tenant          @relation(fields: [tenantId],  references: [id])
+  location     Location        @relation(fields: [locationId], references: [id])
+  workingHours StaffWorkingHour[]
+  shifts       StaffShift[]
+  appointments Appointment[]
+  services     StaffService[]
+  commissions  CommissionLog[]
+
+  @@index([tenantId, locationId])
+  @@map("staff_profiles")
+}
+
+enum DayOfWeek {
+  MON TUE WED THU FRI SAT SUN
+}
+
+model StaffWorkingHour {
+  id          String    @id @default(uuid()) @db.Uuid
+  staffId     String    @db.Uuid
+  dayOfWeek   DayOfWeek
+  startTime   String                            // "09:00"
+  endTime     String                            // "18:00"
+  isWorkingDay Boolean  @default(true)
+  breakStart  String?                           // "12:00"
+  breakEnd    String?                           // "13:00"
+
+  staff StaffProfile @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  @@unique([staffId, dayOfWeek])
+  @@map("staff_working_hours")
+}
+
+model StaffShift {
+  id        String   @id @default(uuid()) @db.Uuid
+  staffId   String   @db.Uuid
+  date      DateTime @db.Date
+  startTime DateTime
+  endTime   DateTime
+  notes     String?
+
+  staff StaffProfile @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  @@index([staffId, date])
+  @@map("staff_shifts")
+}
+
+// =============================================================================
+// BÖLÜM 4: HİZMET KATALOĞU (ServiceCategory, Service, StaffService, Product)
+// =============================================================================
+
+model ServiceCategory {
+  id          String  @id @default(uuid()) @db.Uuid
+  tenantId    String  @db.Uuid
+  name        String
+  description String?
+  colorHex    String  @default("#6366f1")
+  sortOrder   Int     @default(0)
+  isActive    Boolean @default(true)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  isDeleted Boolean   @default(false)
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id])
+  services Service[]
+
+  @@index([tenantId])
+  @@map("service_categories")
+}
+
+model Service {
+  id          String  @id @default(uuid()) @db.Uuid
+  tenantId    String  @db.Uuid
+  categoryId  String  @db.Uuid
+  name        String
+  description String?
+  durationMin Int                               // Dakika cinsinden süre
+  price       Decimal @db.Decimal(10, 2)
+  currency    String  @default("TRY")
+  depositRate Float   @default(0)               // Kaparo oranı (0–1)
+  isActive    Boolean @default(true)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  isDeleted Boolean   @default(false)
+
+  tenant       Tenant       @relation(fields: [tenantId],  references: [id])
+  category     ServiceCategory @relation(fields: [categoryId], references: [id])
+  staffServices StaffService[]
+  appointments Appointment[]
+  productUsages ServiceProduct[]
+
+  @@index([tenantId, categoryId])
+  @@map("services")
+}
+
+model StaffService {
+  staffId   String @db.Uuid
+  serviceId String @db.Uuid
+
+  staff   StaffProfile @relation(fields: [staffId],   references: [id], onDelete: Cascade)
+  service Service      @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@id([staffId, serviceId])
+  @@map("staff_services")
+}
+
+model Product {
+  id          String  @id @default(uuid()) @db.Uuid
+  tenantId    String  @db.Uuid
+  name        String
+  sku         String?
+  unit        String  @default("ml")            // ml, gr, adet
+  stockAmount Decimal @default(0) @db.Decimal(10, 3)
+  minStock    Decimal @default(0) @db.Decimal(10, 3)
+  costPrice   Decimal @default(0) @db.Decimal(10, 2)
+  isActive    Boolean @default(true)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  isDeleted Boolean   @default(false)
+
+  serviceUsages ServiceProduct[]
+  stockLogs     StockLog[]
+
+  @@index([tenantId])
+  @@map("products")
+}
+
+model ServiceProduct {
+  serviceId  String  @db.Uuid
+  productId  String  @db.Uuid
+  usageAmount Decimal @db.Decimal(10, 3)        // Kullanılacak miktar (gram/ml)
+
+  service Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@id([serviceId, productId])
+  @@map("service_products")
+}
+
+model StockLog {
+  id        String   @id @default(uuid()) @db.Uuid
+  productId String   @db.Uuid
+  tenantId  String   @db.Uuid
+  delta     Decimal  @db.Decimal(10, 3)         // + giriş, – çıkış
+  reason    String                               // "appointment:uuid" | "manual"
+  createdAt DateTime @default(now())
+
+  product Product @relation(fields: [productId], references: [id])
+
+  @@index([tenantId, productId])
+  @@index([createdAt])
+  @@map("stock_logs")
+}
+
+// =============================================================================
+// BÖLÜM 5: MÜŞTERİ VE SADAKAT (Customer, LoyaltyTransaction)
+// =============================================================================
+
+enum LoyaltyTier {
+  BRONZE
+  SILVER
+  GOLD
+  PLATINUM
+}
+
+model Customer {
+  id          String      @id @default(uuid()) @db.Uuid
+  tenantId    String      @db.Uuid
+  firstName   String
+  lastName    String
+  email       String?
+  phone       String?
+  dateOfBirth DateTime?   @db.Date
+  gender      String?
+  avatarUrl   String?
+  notes       String?
+
+  // Sadakat
+  loyaltyTier   LoyaltyTier @default(BRONZE)
+  loyaltyPoints Int         @default(0)
+
+  // KVKK/GDPR
+  consentGiven  Boolean   @default(false)
+  consentDate   DateTime?
+  anonymizedAt  DateTime?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+  isDeleted Boolean   @default(false)
+
+  tenant            Tenant             @relation(fields: [tenantId], references: [id])
+  appointments      Appointment[]
+  loyaltyTransactions LoyaltyTransaction[]
+  consentForms      ConsentForm[]
+
+  @@index([tenantId, phone])
+  @@index([tenantId, email])
+  @@map("customers")
+}
+
+enum LoyaltyAction {
+  EARNED_APPOINTMENT
+  EARNED_REFERRAL
+  EARNED_REVIEW
+  REDEEMED
+  EXPIRED
+  ADJUSTED
+}
+
+model LoyaltyTransaction {
+  id          String        @id @default(uuid()) @db.Uuid
+  tenantId    String        @db.Uuid
+  customerId  String        @db.Uuid
+  appointmentId String?     @db.Uuid
+  action      LoyaltyAction
+  points      Int                                // + kazanım, – harcama
+  balanceAfter Int
+  description String?
+
+  createdAt DateTime @default(now())
+
+  customer    Customer    @relation(fields: [customerId],    references: [id])
+  appointment Appointment? @relation(fields: [appointmentId], references: [id])
+
+  @@index([tenantId, customerId])
+  @@map("loyalty_transactions")
+}
+
+// =============================================================================
+// BÖLÜM 6: RANDEVU (Appointment) — GIST CONSTRAINT BURADA
+// NOT: EXCLUDE USING GIST kısıtlaması Raw SQL migration'da tanımlanacak.
+// Prisma doğrudan EXCLUDE sözdizimini desteklemediğinden
+// bu kritik kural migration dosyasına ham SQL olarak yazılır.
+// =============================================================================
+
+enum AppointmentStatus {
+  PENDING     // Taslak / ön kayıt
+  CONFIRMED   // Onaylandı
+  CHECKED_IN  // Müşteri geldi
+  IN_SERVICE  // Hizmet devam ediyor
+  COMPLETED   // Tamamlandı
+  CANCELLED   // İptal edildi
+  NO_SHOW     // Gelmedi
+}
+
+enum AppointmentSource {
+  WALK_IN       // Kapıdan gelen
+  PHONE         // Telefon
+  WHATSAPP      // WhatsApp (v2)
+  ONLINE        // Online self-booking
+  AI_ASSISTANT  // Yapay Zeka (v2)
+  RECEPTIONIST  // Resepsiyonist
+}
+
+model Appointment {
+  id              String            @id @default(uuid()) @db.Uuid
+  tenantId        String            @db.Uuid
+  customerId      String            @db.Uuid
+  staffId         String            @db.Uuid
+  serviceId       String            @db.Uuid
+  locationId      String            @db.Uuid
+  roomId          String?           @db.Uuid
+
+  status          AppointmentStatus @default(PENDING)
+  source          AppointmentSource @default(RECEPTIONIST)
+
+  startTime       DateTime                           // GIST kısıtlaması bu alana bakacak
+  endTime         DateTime
+
+  notes           String?
+  internalNotes   String?                            // Personel notu
+  depositPaid     Decimal?          @db.Decimal(10, 2)
+  totalPrice      Decimal?          @db.Decimal(10, 2)
+
+  // Mükerrer işlem koruması
+  idempotencyKey  String?           @unique
+
+  // Audit hash (manipülasyon tespiti)
+  integrityHash   String?
+
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  cancelledAt     DateTime?
+  cancellationReason String?
+  // Soft delete: Randevular asla fiziksel silinmez
+  isDeleted       Boolean           @default(false)
+
+  tenant      Tenant       @relation(fields: [tenantId],   references: [id])
+  customer    Customer     @relation(fields: [customerId], references: [id])
+  staff       StaffProfile @relation(fields: [staffId],    references: [id])
+  service     Service      @relation(fields: [serviceId],  references: [id])
+  location    Location     @relation(fields: [locationId], references: [id])
+  room        Room?        @relation(fields: [roomId],     references: [id])
+
+  loyaltyTransactions LoyaltyTransaction[]
+  transactions        TransactionLedger[]
+  commissions         CommissionLog[]
+  consentForms        ConsentForm[]
+
+  @@index([tenantId, staffId, startTime, endTime])   // Müsaitlik sorguları
+  @@index([tenantId, customerId])
+  @@index([tenantId, status])
+  @@index([startTime])
+  @@map("appointments")
+}
+
+// =============================================================================
+// BÖLÜM 7: FİNANS (TransactionLedger, CommissionLog)
+// =============================================================================
+
+enum TransactionType {
+  PAYMENT_CASH
+  PAYMENT_CARD
+  PAYMENT_ONLINE
+  DEPOSIT
+  REFUND
+  COMMISSION_PAYOUT
+  ADJUSTMENT
+}
+
+model TransactionLedger {
+  id            String          @id @default(uuid()) @db.Uuid
+  tenantId      String          @db.Uuid
+  appointmentId String?         @db.Uuid
+  type          TransactionType
+  amount        Decimal         @db.Decimal(10, 2)
+  currency      String          @default("TRY")
+  description   String?
+  reference     String?                             // Harici ödeme referansı
+  processedAt   DateTime        @default(now())
+
+  // KVKK: Finansal veriler 10 yıl saklanır, kişisel veriler anonimleştirilir
+  isDeleted     Boolean         @default(false)
+
+  tenant      Tenant       @relation(fields: [tenantId],     references: [id])
+  appointment Appointment? @relation(fields: [appointmentId], references: [id])
+
+  @@index([tenantId, processedAt])
+  @@index([appointmentId])
+  @@map("transaction_ledger")
+}
+
+model CommissionLog {
+  id            String   @id @default(uuid()) @db.Uuid
+  tenantId      String   @db.Uuid
+  staffId       String   @db.Uuid
+  appointmentId String   @db.Uuid
+  amount        Decimal  @db.Decimal(10, 2)
+  rate          Float
+  periodStart   DateTime @db.Date
+  periodEnd     DateTime @db.Date
+  isPaid        Boolean  @default(false)
+  paidAt        DateTime?
+
+  staff       StaffProfile @relation(fields: [staffId],       references: [id])
+  appointment Appointment  @relation(fields: [appointmentId], references: [id])
+
+  @@index([tenantId, staffId, isPaid])
+  @@map("commission_logs")
+}
+
+// =============================================================================
+// BÖLÜM 8: YASAL UYUM (ConsentForm — KVKK/GDPR)
+// =============================================================================
+
+model ConsentForm {
+  id            String   @id @default(uuid()) @db.Uuid
+  tenantId      String   @db.Uuid
+  customerId    String   @db.Uuid
+  appointmentId String?  @db.Uuid
+  formType      String                                // "KVKK", "GDPR", "TREATMENT"
+  content       String   @db.Text                    // Form içeriği anlık snapshot
+  signedAt      DateTime
+  ipAddress     String?
+  userAgent     String?
+
+  customer    Customer    @relation(fields: [customerId],    references: [id])
+  appointment Appointment? @relation(fields: [appointmentId], references: [id])
+
+  @@index([tenantId, customerId])
+  @@map("consent_forms")
+}
+
+// =============================================================================
+// BÖLÜM 9: GÜVENLİK (RefreshToken, IdempotencyKey)
+// =============================================================================
+
+model RefreshToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  token     String    @unique
+  userId    String    @db.Uuid
+  tenantId  String    @db.Uuid
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+  // Token Reuse Detection için hangi cihazdan
+  userAgent String?
+  ipAddress String?
+
+  user   User   @relation(fields: [userId],   references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])                                // TTL temizliği
+  @@map("refresh_tokens")
+}
+
+model IdempotencyKey {
+  id        String   @id @default(uuid()) @db.Uuid
+  key       String   @unique                          // "appointment:{uuid}" | "payment:{uuid}"
+  tenantId  String   @db.Uuid
+  response  Json?                                     // Başarılı yanıtı sakla
+  createdAt DateTime @default(now())
+  expiresAt DateTime                                  // 24 saat sonra temizlenir
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])                                // TTL index
+  @@map("idempotency_keys")
+}
+
+// =============================================================================
+// BÖLÜM 10: AUDIT LOG (Her kritik değişiklik için)
+// =============================================================================
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  tenantId   String   @db.Uuid
+  entityType String                                   // "Appointment", "Customer", vb.
+  entityId   String   @db.Uuid
+  action     String                                   // "CONFIRM", "CANCEL", "GDPR_DELETION"
+  actorId    String?  @db.Uuid                       // Kim yaptı
+  actorRole  String?
+  before     Json?                                    // Önceki durum
+  after      Json?                                    // Sonraki durum
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  actor  User?  @relation(fields: [actorId],  references: [id])
+
+  @@index([tenantId, entityType, entityId])
+  @@index([tenantId, createdAt])
+  @@map("audit_logs")
+}
+
+// =============================================================================
+// BÖLÜM 11: v2 PLACEHOLDER (AI/WhatsApp — Schema var, endpoint YOK)
+// =============================================================================
+
+enum MessageChannel {
+  WHATSAPP
+  SMS
+  EMAIL
+  PUSH
+}
+
+enum MessageDirection {
+  INBOUND
+  OUTBOUND
+}
+
+/// v2: AI asistan mesaj geçmişi. v1'de tablo oluşturulur ama kullanılmaz.
+model Message {
+  id         String           @id @default(uuid()) @db.Uuid
+  tenantId   String           @db.Uuid
+  customerId String?          @db.Uuid
+  channel    MessageChannel
+  direction  MessageDirection
+  content    String           @db.Text
+  intent     String?                                // Tespit edilen niyet
+  sessionId  String?
+  createdAt  DateTime         @default(now())
+
+  @@index([tenantId, customerId])
+  @@index([sessionId])
+  @@map("messages")
+}
+
+/// v2: Kampanya şablonları. v1'de tablo oluşturulur ama kullanılmaz.
+model CampaignTemplate {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @db.Uuid
+  name      String
+  channel   MessageChannel
+  subject   String?
+  body      String   @db.Text
+  isActive  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+  @@map("campaign_templates")
+}

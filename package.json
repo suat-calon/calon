@@ -1,0 +1,30 @@
+{
+  "name": "auralis-os",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build":   "turbo run build",
+    "dev":     "turbo run dev --parallel",
+    "lint":    "turbo run lint",
+    "test":    "turbo run test",
+    "db:generate": "yarn workspace @auralis/database prisma generate",
+    "db:migrate":  "yarn workspace @auralis/database prisma migrate dev",
+    "db:studio":   "yarn workspace @auralis/database prisma studio",
+    "db:seed":     "yarn workspace @auralis/database prisma db seed"
+  },
+  "devDependencies": {
+    "turbo":      "^2.3.3",
+    "typescript": "^5.7.3",
+    "prettier":   "^3.4.2",
+    "@types/node": "^22.10.7"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "yarn": ">=1.22.0"
+  },
+  "packageManager": "yarn@1.22.22"
+}

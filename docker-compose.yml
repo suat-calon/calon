@@ -1,0 +1,49 @@
+version: '3.9'
+
+# =============================================================================
+# AURALIS — LOCAL DEVELOPMENT STACK
+# PostgreSQL 16 + Redis 7
+# =============================================================================
+
+services:
+
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: auralis_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       auralis_dev
+      POSTGRES_USER:     postgres          # Superuser (migration için)
+      POSTGRES_PASSWORD: postgres_secret   # Geliştirme ortamı
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # İlk başlatmada auralis_app rolünü otomatik oluştur
+      - ./docker/postgres-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test:     ["CMD-SHELL", "pg_isready -U postgres -d auralis_dev"]
+      interval: 5s
+      timeout:  5s
+      retries:  10
+
+  # ---------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: auralis_redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test:     ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout:  3s
+      retries:  5
+
+volumes:
+  postgres_data:
+  redis_data:

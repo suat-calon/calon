@@ -1,0 +1,59 @@
+# Dependencies
+node_modules/
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+
+# Turborepo cache
+.turbo/
+
+# Environment variables (NEVER commit secrets)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env
+
+# Prisma generated client (yarn workspace install regenerates this)
+packages/database/node_modules/.prisma/
+packages/database/src/generated/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# OS artifacts
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Testing
+coverage/
+.nyc_output/
+
+# Docker overrides (local only)
+docker-compose.override.yml
