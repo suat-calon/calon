@@ -212,7 +212,13 @@ model StaffProfile {
 }
 
 enum DayOfWeek {
-  MON TUE WED THU FRI SAT SUN
+  MON
+  TUE
+  WED
+  THU
+  FRI
+  SAT
+  SUN
 }
 
 model StaffWorkingHour {
@@ -321,6 +327,7 @@ model Product {
   updatedAt DateTime  @updatedAt
   isDeleted Boolean   @default(false)
 
+  tenant        Tenant           @relation(fields: [tenantId], references: [id])
   serviceUsages ServiceProduct[]
   stockLogs     StockLog[]
 

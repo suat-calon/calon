@@ -25,6 +25,7 @@ out/
 # Prisma generated client (yarn workspace install regenerates this)
 packages/database/node_modules/.prisma/
 packages/database/src/generated/
+packages/database/generated/
 
 # Logs
 *.log

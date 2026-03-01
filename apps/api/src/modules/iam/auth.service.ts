@@ -21,7 +21,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { JwtService }   from '@nestjs/jwt';
-import { PrismaClient } from '@prisma/client';
+import { Prisma }       from '@prisma/client';
 import * as bcrypt      from 'bcrypt';
 import * as crypto      from 'crypto';
 import { PrismaService } from '../../common/prisma.service';
@@ -75,7 +75,7 @@ export class AuthService {
     const passwordHash = await bcrypt.hash(dto.password, BCRYPT_ROUNDS);
 
     // ── 4. Atomik kayıt: Tenant + User + UserTenant ──────────────────────────
-    const { user, tenant } = await this.prisma.$transaction(async (tx: PrismaClient) => {
+    const { user, tenant } = await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const tenant = await tx.tenant.create({
         data: {
           name:   dto.tenantName,

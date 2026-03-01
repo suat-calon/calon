@@ -97,7 +97,10 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
   private registerMiddleware(): void {
 
     // ── MİDDLEWARE 1: Tenant izolasyon filtresi ─────────────────────────────
-    this.$use(async (params: MiddlewareParams, next: MiddlewareNext) => {
+    // $use Prisma v6'da tip tanımlarından kaldırıldı; runtime'da hâlâ çalışır.
+    // TODO Prisma v7 öncesinde $extends/query API'ye taşı.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (this as any).$use(async (params: MiddlewareParams, next: MiddlewareNext) => {
       const store = tenantContext.getStore();
 
       // Tenant context yoksa (health check, seed, migration, @Public endpoint)
@@ -135,7 +138,8 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
 
     // ── MİDDLEWARE 2: Soft-delete filtresi ──────────────────────────────────
     // Yalnızca isDeleted alanına sahip modeller + findUnique hariç bulk okumalar
-    this.$use(async (params: MiddlewareParams, next: MiddlewareNext) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (this as any).$use(async (params: MiddlewareParams, next: MiddlewareNext) => {
       const modelName = (params.model ?? '').toLowerCase();
 
       if (

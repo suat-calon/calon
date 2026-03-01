@@ -6,6 +6,7 @@ import { DatabaseModule }      from './common/database.module';
 import { RedisModule }         from './common/redis.module';
 import { TenantGuard }         from './modules/iam/guards/tenant.guard';
 import { IamModule }           from './modules/iam/iam.module';
+import { OperationsModule }   from './modules/operations/operations.module';
 
 @Module({
   imports: [
@@ -33,8 +34,10 @@ import { IamModule }           from './modules/iam/iam.module';
     // ── IAM: Kayıt, giriş, token yenileme ────────────────────────────────────
     IamModule,
 
+    // ── Operations: Randevu motoru ────────────────────────────────────────────
+    OperationsModule,
+
     // Gelecek modüller (v1 sprint'lerinde açılacak):
-    // OperationsModule,   // Randevu, müşteri, personel CRUD
     // FinanceModule,      // Ödeme ve komisyon
   ],
   providers: [
