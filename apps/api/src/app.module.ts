@@ -7,6 +7,8 @@ import { RedisModule }         from './common/redis.module';
 import { TenantGuard }         from './modules/iam/guards/tenant.guard';
 import { IamModule }           from './modules/iam/iam.module';
 import { OperationsModule }   from './modules/operations/operations.module';
+import { InventoryModule }   from './modules/inventory/inventory.module';
+import { CatalogModule }     from './modules/catalog/catalog.module';
 
 @Module({
   imports: [
@@ -36,6 +38,12 @@ import { OperationsModule }   from './modules/operations/operations.module';
 
     // ── Operations: Randevu motoru ────────────────────────────────────────────
     OperationsModule,
+
+    // ── Inventory: Asenkron stok düşüm worker'ı ──────────────────────────────
+    InventoryModule,
+
+    // ── Catalog: Ürün ve hizmet kataloğu ─────────────────────────────────────
+    CatalogModule,
 
     // Gelecek modüller (v1 sprint'lerinde açılacak):
     // FinanceModule,      // Ödeme ve komisyon
