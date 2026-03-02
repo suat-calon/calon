@@ -30,6 +30,7 @@ import {
 import { PrismaService }              from '../../../common/prisma.service';
 import { QUEUE_NAMES }                from '../../../common/redis.module';
 import { LedgerService }              from '../../finance/ledger.service';
+import { CommissionService }          from '../../staff/commission.service';
 import { AppointmentLockService }     from './appointment-lock.service';
 import { isValidTransition }          from './appointment.machine';
 import { CreateAppointmentDto }       from './dto/create-appointment.dto';
@@ -58,9 +59,10 @@ function isGistExclusionViolation(err: unknown): boolean {
 @Injectable()
 export class AppointmentService {
   constructor(
-    private readonly prisma:  PrismaService,
-    private readonly ledger:  LedgerService,
-    private readonly lock:    AppointmentLockService,
+    private readonly prisma:      PrismaService,
+    private readonly ledger:      LedgerService,
+    private readonly lock:        AppointmentLockService,
+    private readonly commission:  CommissionService,
     @InjectQueue(QUEUE_NAMES.STOCK_DEDUCT)
     private readonly inventoryQueue: Queue,
   ) {}
@@ -177,13 +179,14 @@ export class AppointmentService {
         },
       });
 
-      // ── XState COMPLETED → Deftere kayıt (Faz 6 - Adım 3) ─────────────────
-      // XState makinesi COMPLETED durumuna geçerken, iş kaydı veya fatura
-      // Ledger'a ADJUSTMENT tipiyle yazılır. Bu, doğrudan durum güncellemesi
-      // (PaymentService.checkout() kullanılmadan) senaryosunda finansal
-      // kaydın tutarlılığını garanti eder.
+      // ── XState COMPLETED → Deftere kayıt + Hakediş (Faz 6 Adım 3 / Faz 9 Adım 3) ──
+      // 1. Ledger: ADJUSTMENT tipiyle finansal kayıt
+      // 2. CommissionService: personel hakedişini hesapla + logla
+      //    Her iki işlem aynı $transaction içinde; birinde hata → tam rollback.
       if (dto.status === AppointmentStatus.COMPLETED) {
         const totalAmount = appt.totalPrice ?? new Prisma.Decimal(0);
+
+        // ── 3a. Ledger kaydı ──────────────────────────────────────────────────
         await this.ledger.record(
           {
             tenantId,
@@ -194,6 +197,21 @@ export class AppointmentService {
           },
           tx,
         );
+
+        // ── 3b. Hakediş hesapla + logla (staffId null ise atlanır) ────────────
+        // commissionRate === 0 veya personel bulunamazsa CommissionService
+        // null döner ya da NotFoundException fırlatır → rollback tetiklenir.
+        if (appt.staffId) {
+          await this.commission.calculateAndLogCommission(
+            {
+              tenantId,
+              staffId:       appt.staffId,
+              appointmentId: id,
+              serviceAmount: totalAmount,
+            },
+            tx,
+          );
+        }
       }
 
       return appt;

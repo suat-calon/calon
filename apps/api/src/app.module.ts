@@ -11,6 +11,7 @@ import { InventoryModule }     from './modules/inventory/inventory.module';
 import { CatalogModule }       from './modules/catalog/catalog.module';
 import { FinanceModule }       from './modules/finance/finance.module';
 import { CrmModule }          from './modules/crm/crm.module';
+import { StaffModule }        from './modules/staff/staff.module';
 
 @Module({
   imports: [
@@ -52,6 +53,9 @@ import { CrmModule }          from './modules/crm/crm.module';
 
     // ── CRM: Müşteri profilleri, KVKK/GDPR motoru, onam formları, galeri ──────
     CrmModule,
+
+    // ── Staff: Personel profili, çalışma saatleri, vardiya ve hakediş ────────
+    StaffModule,
   ],
   providers: [
     // ── TenantGuard global: Tüm endpoint'leri korur ──────────────────────────

@@ -3,6 +3,7 @@ import { AppointmentController }   from './appointment/appointment.controller';
 import { AppointmentService }      from './appointment/appointment.service';
 import { AppointmentLockService }  from './appointment/appointment-lock.service';
 import { FinanceModule }           from '../finance/finance.module';
+import { StaffModule }             from '../staff/staff.module';
 
 /**
  * OPERATIONS MODULE
@@ -15,11 +16,14 @@ import { FinanceModule }           from '../finance/finance.module';
  * FinanceModule importu: AppointmentService → LedgerService bağımlılığı
  * için (Faz 6 Adım 3 — XState COMPLETED → Ledger entegrasyonu).
  *
+ * StaffModule importu: AppointmentService → CommissionService bağımlılığı
+ * için (Faz 9 Adım 3 — XState COMPLETED → hakediş hesaplama + loglama).
+ *
  * AppointmentLockService: Redis SETNX tabanlı Soft-Lock (Faz 8 Adım 1-2).
  * ─────────────────────────────────────────────────────────────────────────────
  */
 @Module({
-  imports:     [FinanceModule],
+  imports:     [FinanceModule, StaffModule],
   controllers: [AppointmentController],
   providers:   [AppointmentService, AppointmentLockService],
 })
