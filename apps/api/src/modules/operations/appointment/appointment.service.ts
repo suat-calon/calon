@@ -23,10 +23,12 @@ import {
   Prisma,
   Appointment,
   AppointmentStatus,
+  TransactionType,
 } from '@prisma/client';
 
 import { PrismaService }              from '../../../common/prisma.service';
 import { QUEUE_NAMES }                from '../../../common/redis.module';
+import { LedgerService }              from '../../finance/ledger.service';
 import { isValidTransition }          from './appointment.machine';
 import { CreateAppointmentDto }       from './dto/create-appointment.dto';
 import { UpdateAppointmentStatusDto } from './dto/update-appointment-status.dto';
@@ -54,7 +56,8 @@ function isGistExclusionViolation(err: unknown): boolean {
 @Injectable()
 export class AppointmentService {
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly prisma:  PrismaService,
+    private readonly ledger:  LedgerService,
     @InjectQueue(QUEUE_NAMES.STOCK_DEDUCT)
     private readonly inventoryQueue: Queue,
   ) {}
@@ -130,7 +133,7 @@ export class AppointmentService {
       );
     }
 
-    // ── 3. Atomik güncelleme + AuditLog ──────────────────────────────────────
+    // ── 3. Atomik güncelleme + AuditLog + Ledger (COMPLETED hook) ────────────
     const updated = await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const appt = await tx.appointment.update({
         where: { id },
@@ -156,6 +159,25 @@ export class AppointmentService {
           after:      { status: dto.status },
         },
       });
+
+      // ── XState COMPLETED → Deftere kayıt (Faz 6 - Adım 3) ─────────────────
+      // XState makinesi COMPLETED durumuna geçerken, iş kaydı veya fatura
+      // Ledger'a ADJUSTMENT tipiyle yazılır. Bu, doğrudan durum güncellemesi
+      // (PaymentService.checkout() kullanılmadan) senaryosunda finansal
+      // kaydın tutarlılığını garanti eder.
+      if (dto.status === AppointmentStatus.COMPLETED) {
+        const totalAmount = appt.totalPrice ?? new Prisma.Decimal(0);
+        await this.ledger.record(
+          {
+            tenantId,
+            appointmentId: id,
+            type:        TransactionType.ADJUSTMENT,
+            amount:      totalAmount,
+            description: `XState tamamlama kaydı — Randevu: ${id}`,
+          },
+          tx,
+        );
+      }
 
       return appt;
     });

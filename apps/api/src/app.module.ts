@@ -6,9 +6,10 @@ import { DatabaseModule }      from './common/database.module';
 import { RedisModule }         from './common/redis.module';
 import { TenantGuard }         from './modules/iam/guards/tenant.guard';
 import { IamModule }           from './modules/iam/iam.module';
-import { OperationsModule }   from './modules/operations/operations.module';
-import { InventoryModule }   from './modules/inventory/inventory.module';
-import { CatalogModule }     from './modules/catalog/catalog.module';
+import { OperationsModule }    from './modules/operations/operations.module';
+import { InventoryModule }     from './modules/inventory/inventory.module';
+import { CatalogModule }       from './modules/catalog/catalog.module';
+import { FinanceModule }       from './modules/finance/finance.module';
 
 @Module({
   imports: [
@@ -45,8 +46,8 @@ import { CatalogModule }     from './modules/catalog/catalog.module';
     // ── Catalog: Ürün ve hizmet kataloğu ─────────────────────────────────────
     CatalogModule,
 
-    // Gelecek modüller (v1 sprint'lerinde açılacak):
-    // FinanceModule,      // Ödeme ve komisyon
+    // ── Finance: Değiştirilemez defter, kaparo ve ödeme işlemleri ─────────────
+    FinanceModule,
   ],
   providers: [
     // ── TenantGuard global: Tüm endpoint'leri korur ──────────────────────────
