@@ -403,6 +403,7 @@ model Customer {
   appointments      Appointment[]
   loyaltyTransactions LoyaltyTransaction[]
   consentForms      ConsentForm[]
+  photos            CustomerPhoto[]
 
   @@index([tenantId, phone])
   @@index([tenantId, email])
@@ -507,6 +508,7 @@ model Appointment {
   transactions        TransactionLedger[]
   commissions         CommissionLog[]
   consentForms        ConsentForm[]
+  photos              CustomerPhoto[]
 
   @@index([tenantId, staffId, startTime, endTime])   // Müsaitlik sorguları
   @@index([tenantId, customerId])
@@ -590,6 +592,41 @@ model ConsentForm {
 
   @@index([tenantId, customerId])
   @@map("consent_forms")
+}
+
+// =============================================================================
+// BÖLÜM 8.5: GALERİ (CustomerPhoto — Öncesi/Sonrası Fotoğraflar)
+// KVKK Madde 6 kapsamında "özel nitelikli kişisel veri" (sağlık/biyometrik).
+// Fotoğraflar S3/Object Storage'da; burada yalnızca URL metadata'sı saklanır.
+// Silme: CustomerService.handleDeletionRequest() → isDeleted: true (GDPR akışı)
+// =============================================================================
+
+enum PhotoType {
+  BEFORE    // İşlem öncesi
+  AFTER     // İşlem sonrası
+  PROGRESS  // Süreç (çok seanslı tedaviler)
+}
+
+model CustomerPhoto {
+  id            String    @id @default(uuid()) @db.Uuid
+  tenantId      String    @db.Uuid              // Tenant izolasyonu (FK yok — middleware yönetir)
+  customerId    String    @db.Uuid
+  appointmentId String?   @db.Uuid
+  photoType     PhotoType
+  url           String                           // Tam boyut S3 URL
+  thumbnailUrl  String?                          // Küçük boy önizleme URL
+  bodyArea      String?                          // "Yüz", "Saç", "Vücut" vb.
+  notes         String?
+  takenAt       DateTime  @default(now())        // Fotoğrafın çekildiği an
+  uploadedAt    DateTime  @default(now())        // Sisteme yüklenme anı
+  isDeleted     Boolean   @default(false)        // GDPR: soft-delete (fiziksel silme yapılmaz)
+
+  customer    Customer     @relation(fields: [customerId],    references: [id])
+  appointment Appointment? @relation(fields: [appointmentId], references: [id])
+
+  @@index([tenantId, customerId])
+  @@index([tenantId, appointmentId])
+  @@map("customer_photos")
 }
 
 // =============================================================================

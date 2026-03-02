@@ -10,6 +10,7 @@ import { OperationsModule }    from './modules/operations/operations.module';
 import { InventoryModule }     from './modules/inventory/inventory.module';
 import { CatalogModule }       from './modules/catalog/catalog.module';
 import { FinanceModule }       from './modules/finance/finance.module';
+import { CrmModule }          from './modules/crm/crm.module';
 
 @Module({
   imports: [
@@ -48,6 +49,9 @@ import { FinanceModule }       from './modules/finance/finance.module';
 
     // ── Finance: Değiştirilemez defter, kaparo ve ödeme işlemleri ─────────────
     FinanceModule,
+
+    // ── CRM: Müşteri profilleri, KVKK/GDPR motoru, onam formları, galeri ──────
+    CrmModule,
   ],
   providers: [
     // ── TenantGuard global: Tüm endpoint'leri korur ──────────────────────────

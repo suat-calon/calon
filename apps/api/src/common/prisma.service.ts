@@ -36,7 +36,7 @@ const TENANT_SCOPED_MODELS: readonly string[] = [
   'appointment',     'transactionledger','commissionlog',
   'loyaltytransaction', 'consentform',   'refreshtoken',
   'idempotencykey',  'auditlog',         'message',
-  'campaigntemplate',
+  'campaigntemplate','customerphoto',
 ];
 
 // ---------------------------------------------------------------------------
@@ -46,7 +46,7 @@ const TENANT_SCOPED_MODELS: readonly string[] = [
 const SOFT_DELETE_MODELS: readonly string[] = [
   'tenant',    'user',     'location',    'room',
   'staffprofile', 'servicecategory', 'service', 'product',
-  'customer',  'appointment', 'transactionledger',
+  'customer',  'appointment', 'transactionledger', 'customerphoto',
 ];
 
 // findUnique HARIÇ — Prisma unique where'e ek alan kabul etmez
