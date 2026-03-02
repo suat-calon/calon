@@ -54,6 +54,17 @@ function isGistExclusionViolation(err: unknown): boolean {
   return false;
 }
 
+/**
+ * PostgreSQL deadlock (40P01) tespit eder.
+ * Yüksek eşzamanlılıkta GIST yarışı sırasında oluşabilir.
+ * Semantik olarak "slot meşgul" anlamına gelir → ConflictException ile eşdeğer.
+ */
+function isDeadlock(err: unknown): boolean {
+  if (err instanceof Error && err.message.includes('40P01')) return true;
+  if (err instanceof Error && err.message.toLowerCase().includes('deadlock')) return true;
+  return false;
+}
+
 // ── Servis ────────────────────────────────────────────────────────────────────
 
 @Injectable()
@@ -107,6 +118,12 @@ export class AppointmentService {
       if (isGistExclusionViolation(err)) {
         throw new ConflictException(
           'Seçilen saat bu personel veya oda için müsait değil',
+        );
+      }
+      if (isDeadlock(err)) {
+        // Yüksek eşzamanlılıkta GIST yarışı → slot meşgul sayılır
+        throw new ConflictException(
+          'Eşzamanlı istek çakışması — slot meşgul',
         );
       }
       throw err;

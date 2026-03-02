@@ -96,9 +96,17 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
   // ---------------------------------------------------------------------------
   private registerMiddleware(): void {
 
+    // ── Prisma v6'da $use kaldırıldı — guard ile kontrol et ─────────────────
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if (typeof (this as any).$use !== 'function') {
+      this.logger.warn(
+        'Prisma $use v6\'da kaldırıldı. Middleware devre dışı. ' +
+        'Tenant izolasyonu servis katmanında, RLS PostgreSQL\'de uygulanıyor.',
+      );
+      return;
+    }
+
     // ── MİDDLEWARE 1: Tenant izolasyon filtresi ─────────────────────────────
-    // $use Prisma v6'da tip tanımlarından kaldırıldı; runtime'da hâlâ çalışır.
-    // TODO Prisma v7 öncesinde $extends/query API'ye taşı.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (this as any).$use(async (params: MiddlewareParams, next: MiddlewareNext) => {
       const store = tenantContext.getStore();
