@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import { Toaster } from '@/components/ui/toaster';
+import { Toaster }       from '@/components/ui/toaster';
+import { QueryProvider } from '@/components/providers/query-provider';
 
 export const metadata: Metadata = {
   title:       'Auralis Business OS',
@@ -13,8 +14,10 @@ export default function RootLayout({
   return (
     <html lang="tr">
       <body>
-        {children}
-        <Toaster />
+        <QueryProvider>
+          {children}
+          <Toaster />
+        </QueryProvider>
       </body>
     </html>
   );
