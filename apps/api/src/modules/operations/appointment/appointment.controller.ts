@@ -13,14 +13,17 @@ import {
   ApiBearerAuth,
   ApiOperation,
   ApiCreatedResponse,
+  ApiNoContentResponse,
   ApiOkResponse,
   ApiBadRequestResponse,
   ApiNotFoundResponse,
   ApiConflictResponse,
 } from '@nestjs/swagger';
 
-import { AppointmentService }         from './appointment.service';
+import { AppointmentService }          from './appointment.service';
+import { AppointmentLockService }      from './appointment-lock.service';
 import { CreateAppointmentDto }        from './dto/create-appointment.dto';
+import { HoldSlotDto }                 from './dto/hold-slot.dto';
 import { UpdateAppointmentStatusDto }  from './dto/update-appointment-status.dto';
 import { CurrentTenant }               from '../../../common/decorators/current-tenant.decorator';
 import { CurrentUser, CurrentUserPayload } from '../../../common/decorators/current-user.decorator';
@@ -37,7 +40,40 @@ import { CurrentUser, CurrentUserPayload } from '../../../common/decorators/curr
 @ApiBearerAuth()
 @Controller('appointments')
 export class AppointmentController {
-  constructor(private readonly appointmentService: AppointmentService) {}
+  constructor(
+    private readonly appointmentService: AppointmentService,
+    private readonly lockService:        AppointmentLockService,
+  ) {}
+
+  // ── POST /hold ────────────────────────────────────────────────────────────
+
+  /**
+   * Redis Soft-Lock: Kullanıcı ödeme/onay sayfasına geçerken slotu 5 dakika kilitler.
+   *
+   * Akış:
+   *   Kullanıcı → saat seçer → POST /appointments/hold
+   *   → ödeme/onay işlemi → POST /appointments (create) → kilit silinir
+   *
+   * 204: Kilit başarıyla oluşturuldu.
+   * 409: Aynı tenant/personel/saat kombinasyonu zaten kilitli.
+   */
+  @Post('hold')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Randevu slotunu geçici kilitle (5 dk Redis TTL)' })
+  @ApiNoContentResponse({ description: 'Slot başarıyla kilitlendi' })
+  @ApiConflictResponse({ description: 'Bu saat dilimi geçici olarak kilitli (başkası işlemde)' })
+  async holdSlot(
+    @CurrentTenant() tenantId: string,
+    @CurrentUser()   user:     CurrentUserPayload,
+    @Body()          dto:      HoldSlotDto,
+  ): Promise<void> {
+    await this.lockService.holdSlot(
+      tenantId,
+      dto.staffId,
+      dto.startTime,
+      user.id,
+    );
+  }
 
   // ── POST / ────────────────────────────────────────────────────────────────
 

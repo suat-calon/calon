@@ -2,7 +2,8 @@
  * APPOINTMENT SERVICE
  * ─────────────────────────────────────────────────────────────────────────────
  * İş kuralları:
- *   • create()       — GIST exclusion constraint ihlalini ConflictException'a çevirir
+ *   • create()       — GIST exclusion constraint ihlalini ConflictException'a çevirir;
+ *                      Prisma kaydı başarılı olunca Redis hold kilidini siler
  *   • updateStatus() — XState ile geçiş doğrular, AuditLog yazar, COMPLETED'da stok kuyruğu tetikler
  *
  * Güvenlik:
@@ -29,6 +30,7 @@ import {
 import { PrismaService }              from '../../../common/prisma.service';
 import { QUEUE_NAMES }                from '../../../common/redis.module';
 import { LedgerService }              from '../../finance/ledger.service';
+import { AppointmentLockService }     from './appointment-lock.service';
 import { isValidTransition }          from './appointment.machine';
 import { CreateAppointmentDto }       from './dto/create-appointment.dto';
 import { UpdateAppointmentStatusDto } from './dto/update-appointment-status.dto';
@@ -58,6 +60,7 @@ export class AppointmentService {
   constructor(
     private readonly prisma:  PrismaService,
     private readonly ledger:  LedgerService,
+    private readonly lock:    AppointmentLockService,
     @InjectQueue(QUEUE_NAMES.STOCK_DEDUCT)
     private readonly inventoryQueue: Queue,
   ) {}
@@ -66,15 +69,22 @@ export class AppointmentService {
 
   /**
    * Yeni randevu oluşturur.
-   * GIST exclusion constraint ihlali → ConflictException (çakışan saat/personel/oda)
+   *
+   * Adımlar:
+   *   1. Prisma'ya randevu kaydı oluştur
+   *      → GIST exclusion constraint ihlali → ConflictException (çakışan saat/personel/oda)
+   *   2. Başarılı kayıt sonrası Redis hold kilidini sil (releaseSlot)
+   *      → TTL dolmuş veya kilit hiç açılmamışsa DEL no-op yapar (güvenli)
    */
   async create(
     tenantId: string,
     dto:      CreateAppointmentDto,
     actorId?: string,
   ): Promise<Appointment> {
+    let appointment: Appointment;
+
     try {
-      return await this.prisma.appointment.create({
+      appointment = await this.prisma.appointment.create({
         data: {
           tenantId,
           customerId:    dto.customerId,
@@ -99,6 +109,13 @@ export class AppointmentService {
       }
       throw err;
     }
+
+    // ── Adım 2: Prisma kaydı başarılı → Redis hold kilidini kaldır ─────────
+    // staffId ve startTime, DTO'dan doğrudan alınır.
+    // releaseSlot hata fırlatmaz (DEL idempotent'tir).
+    await this.lock.releaseSlot(tenantId, dto.staffId, dto.startTime);
+
+    return appointment;
   }
 
   // ── updateStatus ────────────────────────────────────────────────────────────
