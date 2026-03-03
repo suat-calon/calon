@@ -2,15 +2,21 @@
  * AURALIS API — BOOTSTRAP
  */
 import { NestFactory }            from '@nestjs/core';
-import { ValidationPipe }         from '@nestjs/common';
+import { ValidationPipe, Logger } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ConfigService }          from '@nestjs/config';
+import { Logger as PinoLogger }   from 'nestjs-pino';
 import { AppModule }              from './app.module';
+import { MetricsService }         from './common/logging/metrics.service';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule, {
-    logger: ['error', 'warn', 'log', 'debug'],
+    // Pino devralana kadar NestJS built-in logger kapalı
+    bufferLogs: true,
   });
+
+  // Pino structured logger'ı NestJS'in varsayılan logger'ı olarak ayarla
+  app.useLogger(app.get(PinoLogger));
 
   const config = app.get(ConfigService);
 
@@ -48,11 +54,20 @@ async function bootstrap(): Promise<void> {
     SwaggerModule.setup('api/docs', app, document);
   }
 
+  // SIGTERM — graceful shutdown + metrics özeti
+  const metrics = app.get(MetricsService);
+  const logger  = new Logger('Bootstrap');
+
+  process.on('SIGTERM', () => {
+    logger.log(metrics.summaryLine());
+    void app.close();
+  });
+
   const port = config.get<number>('PORT', 4000);
   await app.listen(port);
 
-  console.log(`\n🚀 Auralis API: http://localhost:${port}/api/v1`);
-  console.log(`📖 Swagger:      http://localhost:${port}/api/docs\n`);
+  logger.log(`🚀 Auralis API: http://localhost:${port}/api/v1`);
+  logger.log(`📖 Swagger:      http://localhost:${port}/api/docs`);
 }
 
 void bootstrap();

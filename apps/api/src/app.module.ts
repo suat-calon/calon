@@ -1,9 +1,12 @@
-import { Module }              from '@nestjs/common';
+import { Module, NestModule, MiddlewareConsumer }  from '@nestjs/common';
 import { ConfigModule }        from '@nestjs/config';
-import { APP_GUARD }           from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { JwtModule }           from '@nestjs/jwt';
 import { DatabaseModule }      from './common/database.module';
 import { RedisModule }         from './common/redis.module';
+import { LoggingModule }       from './common/logging/logging.module';
+import { CorrelationMiddleware } from './common/logging/correlation.middleware';
+import { LoggingInterceptor }  from './common/logging/logging.interceptor';
 import { TenantGuard }         from './modules/iam/guards/tenant.guard';
 import { BillingGuard }        from './modules/billing/guards/billing.guard';
 import { IamModule }           from './modules/iam/iam.module';
@@ -25,13 +28,15 @@ import { LoyaltyModule }     from './modules/loyalty/loyalty.module';
     }),
 
     // ── JWT — global, TenantGuard + AuthService tarafından kullanılır ────────
-    // signOptions.expiresIn: Access token varsayılanı.
-    // AuthService.generateTokenPair() bu ayarı devralır.
     JwtModule.register({
       global:      true,
       secret:      process.env['JWT_SECRET'] ?? 'CHANGE_IN_PRODUCTION',
       signOptions: { expiresIn: '15m' },
     }),
+
+    // ── Observability: Pino logger + CorrelationMiddleware + Metrics ─────────
+    // (Faz 13 — console.log YASAK, Pino kullan)
+    LoggingModule,
 
     // ── Veritabanı (global — PrismaService tüm modüllere açık) ──────────────
     DatabaseModule,
@@ -73,11 +78,23 @@ import { LoyaltyModule }     from './modules/loyalty/loyalty.module';
       useClass: TenantGuard,
     },
     // ── BillingGuard global: SUSPENDED/PAST_DUE erişim kontrolü (Faz 12) ────
-    // TenantGuard'dan sonra çalışır (sıra önemli — provider sırası = çalışma sırası)
     {
       provide:  APP_GUARD,
       useClass: BillingGuard,
     },
+    // ── LoggingInterceptor global: her request için structured log + metrics ─
+    {
+      provide:  APP_INTERCEPTOR,
+      useClass: LoggingInterceptor,
+    },
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  /**
+   * CorrelationMiddleware'i tüm route'lara uygular.
+   * Guard'lardan önce çalışır → correlationId her log satırında mevcut olur.
+   */
+  configure(consumer: MiddlewareConsumer): void {
+    consumer.apply(CorrelationMiddleware).forRoutes('*');
+  }
+}

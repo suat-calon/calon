@@ -65,3 +65,7 @@ apps/web/tsconfig.tsbuildinfo
 
 # Claude Code local settings (machine-specific)
 .claude/settings.local.json
+
+# Test fixtures & results (generated — not committed)
+test/fixtures/tenants.json
+test/results/*.json

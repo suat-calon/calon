@@ -28,6 +28,8 @@ import { BillingService }        from '../billing/billing.service';
 import { BillingCron }           from '../billing/billing.cron';
 import { EntitlementsService }   from '../billing/entitlements.service';
 import { AllowPastDue }          from '../billing/decorators/allow-past-due.decorator';
+import { MetricsService }        from '../../common/logging/metrics.service';
+import { BackpressureService }   from '../../common/queue/backpressure.service';
 
 // ── DTO'lar ───────────────────────────────────────────────────────────────────
 
@@ -55,6 +57,8 @@ export class BillingAdminController {
     private readonly billing:      BillingService,
     private readonly cron:         BillingCron,
     private readonly entitlements: EntitlementsService,
+    private readonly metrics:      MetricsService,
+    private readonly backpressure: BackpressureService,
   ) {}
 
   // ── Süper admin yetki kontrolü ────────────────────────────────────────────
@@ -160,5 +164,17 @@ export class BillingAdminController {
     this.assertSuperAdmin(req);
     await this.entitlements.invalidate(tenantId);
     return { success: true, tenantId };
+  }
+
+  // ── GET /admin/metrics ────────────────────────────────────────────────────
+  /** In-memory request metrics (p50, p95, error rate) + kuyruk derinliği */
+  @Get('metrics')
+  async getMetrics(@Req() req: { userRole?: string }) {
+    this.assertSuperAdmin(req);
+    const [requestMetrics, queueStats] = await Promise.all([
+      this.metrics.snapshot(),
+      this.backpressure.getQueueStats(),
+    ]);
+    return { requestMetrics, queueStats };
   }
 }

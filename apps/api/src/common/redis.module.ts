@@ -2,15 +2,14 @@ import { Global, Module }              from '@nestjs/common';
 import { BullModule }                  from '@nestjs/bull';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import Redis                           from 'ioredis';
+import { FailedJobService }            from './queue/failed-job.service';
+import { BackpressureService }         from './queue/backpressure.service';
 
-// ── Queue adları ─────────────────────────────────────────────────────────────
-export const QUEUE_NAMES = {
-  NOTIFICATIONS:  'notifications',
-  STOCK_DEDUCT:   'stock-deduct',
-  LOYALTY_EARN:   'loyalty-earn',   // Faz 11: Asenkron puan kazanımı
-  HUMAN_HANDOFF:  'human-handoff',  // v2 AI devir
-  CAMPAIGN:       'campaign',       // v2 Kampanya
-} as const;
+// ── Queue adları (döngüsel bağımlılığı kırmak için ayrı dosyada) ─────────────
+// import: modül gövdesinde (BullModule.registerQueue) kullanılır
+// re-export: diğer modüller hâlâ 'redis.module' üzerinden alabilir
+import { QUEUE_NAMES } from './queue/queue-names';
+export { QUEUE_NAMES } from './queue/queue-names';
 
 // ── Injection token: Ham Redis istemcisi (SETNX hold kilidi için) ─────────────
 export const REDIS_CLIENT = Symbol('REDIS_CLIENT');
@@ -52,7 +51,7 @@ const redisClientProvider = {
         },
         defaultJobOptions: {
           removeOnComplete: 100,
-          removeOnFail:     50,
+          removeOnFail:     50,       // Son 50 başarısız job Bull'da saklanır (debug için)
           attempts:         3,
           backoff: { type: 'exponential', delay: 1000 },
         },
@@ -67,7 +66,17 @@ const redisClientProvider = {
       { name: QUEUE_NAMES.CAMPAIGN      },
     ),
   ],
-  providers: [redisClientProvider],
-  exports:   [BullModule, REDIS_CLIENT],
+  providers: [
+    redisClientProvider,
+    // ── Faz 13: Resilience ────────────────────────────────────────────────────
+    FailedJobService,     // DLQ → kalıcı hata → PostgreSQL'e yaz
+    BackpressureService,  // Kuyruk yoğunluğu denetimi → 429 önlemi
+  ],
+  exports: [
+    BullModule,
+    REDIS_CLIENT,
+    FailedJobService,
+    BackpressureService,
+  ],
 })
 export class RedisModule {}

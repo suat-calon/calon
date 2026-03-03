@@ -862,3 +862,26 @@ model CampaignTemplate {
   @@index([tenantId])
   @@map("campaign_templates")
 }
+
+// =============================================================================
+// BÖLÜM 9: FAZ 13 — RESILIENCE (Dead Letter Queue)
+// =============================================================================
+
+/// Bull kuyruğundaki kalıcı başarısız job'ları saklar.
+/// 3 deneme sonrası hâlâ hata veren job'lar buraya taşınır.
+/// @OnQueueFailed → FailedJobService.save() çağırır.
+model FailedJob {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String?  @db.Uuid            // job.data.tenantId varsa doldurulur
+  queueName String                        // Örn: "loyalty-earn", "stock-deduct"
+  jobName   String                        // Örn: "earn-points", "deduct-stock"
+  jobId     String                        // Bull job.id
+  jobData   Json                          // Orijinal job payload
+  errorMsg  String   @db.Text            // son hata mesajı
+  attempts  Int                           // kaç kez denendi
+  failedAt  DateTime @default(now())
+
+  @@index([queueName, failedAt])
+  @@map("failed_jobs")
+}
+
