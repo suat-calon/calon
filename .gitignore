@@ -58,3 +58,10 @@ coverage/
 
 # Docker overrides (local only)
 docker-compose.override.yml
+
+# Next.js generated files (auto-created by next dev/build)
+apps/web/next-env.d.ts
+apps/web/tsconfig.tsbuildinfo
+
+# Claude Code local settings (machine-specific)
+.claude/settings.local.json

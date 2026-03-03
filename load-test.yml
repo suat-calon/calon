@@ -1,0 +1,138 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# AURALIS — ARTILLERY YÜK TESTİ KONFİGÜRASYONU
+# ═══════════════════════════════════════════════════════════════════════════
+#
+# Hedef: 250 RPS — Aşamalı yükselme + sabit yük + soğutma
+#
+# KURULUM:
+#   npm install -g artillery
+#   npx artillery run load-test.yml --target http://localhost:4000
+#
+# SENARYO:
+#   Gerçek kullanıcı davranışını simüle eder:
+#   1. Kimlik doğrulama (token al)
+#   2. Randevuları listele  (GET)
+#   3. Yeni randevu oluştur (POST)
+#   4. Durum güncelleme     (PATCH)
+#
+# ORTAM DEĞİŞKENLERİ:
+#   API_BASE_URL   : API hedef adresi (varsayılan: http://localhost:4000)
+#   AUTH_TOKEN     : Önceden oluşturulmuş JWT (bearer token)
+#   TEST_TENANT_ID : Test tenant UUID'si
+# ═══════════════════════════════════════════════════════════════════════════
+
+config:
+  target: "{{ $env.API_BASE_URL || 'http://localhost:4000' }}"
+
+  # ── HTTP ayarları ──────────────────────────────────────────────────────────
+  http:
+    timeout: 10          # saniye — bu süreyi aşan istek timeout sayılır
+    pool:    100          # maksimum eşzamanlı bağlantı
+    maxRedirects: 0
+
+  # ── Test aşamaları ─────────────────────────────────────────────────────────
+  phases:
+    # Isınma: 0 → 50 RPS (30 saniye)
+    - name:     "Isınma (Ramp-up)"
+      duration: 30
+      arrivalRate:  1
+      rampTo:       50
+
+    # Orta yük: 50 → 150 RPS (30 saniye)
+    - name:     "Orta Yük"
+      duration: 30
+      arrivalRate:  50
+      rampTo:       150
+
+    # Tam yük: 250 RPS sabit (60 saniye)
+    - name:     "Tam Yük — 250 RPS"
+      duration: 60
+      arrivalRate:  250
+
+    # Doruk: 300 RPS (30 saniye) — sistemin limitini gör
+    - name:     "Doruk Testi"
+      duration: 30
+      arrivalRate:  300
+
+    # Soğutma: 300 → 0 RPS (30 saniye)
+    - name:     "Soğutma"
+      duration: 30
+      arrivalRate:  300
+      rampTo:       0
+
+  # ── Performans eşikleri ────────────────────────────────────────────────────
+  # Testler bu eşiklerin altına düşerse Artillery çıkış kodu 1 döner
+  ensure:
+    p99: 2000        # p99 < 2 saniye
+    p95: 800         # p95 < 800ms
+    p50: 200         # medyan < 200ms
+    maxErrorRate: 5  # hata oranı < %5
+
+  # ── Metrik eklentisi ───────────────────────────────────────────────────────
+  plugins:
+    ensure: {}      # thresholds
+
+  # ── Değişkenler ────────────────────────────────────────────────────────────
+  variables:
+    # Test token'ı — Artillery başlamadan önce aşağıdaki komutla üret:
+    # TOKEN=$(curl -s -X POST http://localhost:4000/api/v1/auth/login \
+    #   -H "Content-Type: application/json" \
+    #   -d '{"email":"load@test.com","password":"TestPass1!","tenantId":"<uuid>"}' \
+    #   | jq -r .accessToken)
+    # API_BASE_URL=http://localhost:4000 AUTH_TOKEN=$TOKEN npx artillery run load-test.yml
+    authToken: "{{ $env.AUTH_TOKEN }}"
+
+# ── Senaryo tanımları ────────────────────────────────────────────────────────
+scenarios:
+  # ── Senaryo 1: Salt Okuma (%60 trafik) ────────────────────────────────────
+  - name:   "Randevu Listele (Read-Only)"
+    weight: 60
+    flow:
+      - get:
+          url:  "/api/v1/appointments"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          expect:
+            - statusCode: 200
+
+  # ── Senaryo 2: Randevu Oluştur (%25 trafik) ───────────────────────────────
+  - name:   "Randevu Oluştur (Write)"
+    weight: 25
+    flow:
+      - post:
+          url:  "/api/v1/appointments"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+            Content-Type:  "application/json"
+          json:
+            customerId: "{{ $env.CUSTOMER_ID || '00000000-0000-0000-0000-000000000001' }}"
+            staffId:    "{{ $env.STAFF_ID    || '00000000-0000-0000-0000-000000000002' }}"
+            serviceId:  "{{ $env.SERVICE_ID  || '00000000-0000-0000-0000-000000000003' }}"
+            locationId: "{{ $env.LOCATION_ID || '00000000-0000-0000-0000-000000000004' }}"
+            # Çakışmayı önlemek için rastgele saat kullan
+            startTime:  "2026-09-{{ $randomInt(1, 28) }}T{{ $randomInt(8, 18) }}:00:00.000Z"
+            endTime:    "2026-09-{{ $randomInt(1, 28) }}T{{ $randomInt(8, 18) }}:59:00.000Z"
+            totalPrice: 250
+          capture:
+            - json:    "$.id"
+              as:      "appointmentId"
+
+  # ── Senaryo 3: Durum Güncelle (%15 trafik) ────────────────────────────────
+  - name:   "Randevu Durumunu Güncelle"
+    weight: 15
+    flow:
+      - get:
+          url:  "/api/v1/appointments?limit=1"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          capture:
+            - json:    "$.data[0].id"
+              as:      "existingId"
+      - patch:
+          url:  "/api/v1/appointments/{{ existingId }}/status"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+            Content-Type:  "application/json"
+          json:
+            status: "CONFIRMED"
+          ifTrue: "{{ existingId }}"
