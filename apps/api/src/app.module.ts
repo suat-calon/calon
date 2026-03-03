@@ -5,7 +5,9 @@ import { JwtModule }           from '@nestjs/jwt';
 import { DatabaseModule }      from './common/database.module';
 import { RedisModule }         from './common/redis.module';
 import { TenantGuard }         from './modules/iam/guards/tenant.guard';
+import { BillingGuard }        from './modules/billing/guards/billing.guard';
 import { IamModule }           from './modules/iam/iam.module';
+import { BillingModule }       from './modules/billing/billing.module';
 import { OperationsModule }    from './modules/operations/operations.module';
 import { InventoryModule }     from './modules/inventory/inventory.module';
 import { CatalogModule }       from './modules/catalog/catalog.module';
@@ -40,6 +42,9 @@ import { LoyaltyModule }     from './modules/loyalty/loyalty.module';
     // ── IAM: Kayıt, giriş, token yenileme ────────────────────────────────────
     IamModule,
 
+    // ── Billing: Plan Engine, Entitlements, State Machine, Cron (Faz 12) ────
+    BillingModule,
+
     // ── Operations: Randevu motoru ────────────────────────────────────────────
     OperationsModule,
 
@@ -62,11 +67,16 @@ import { LoyaltyModule }     from './modules/loyalty/loyalty.module';
     LoyaltyModule,
   ],
   providers: [
-    // ── TenantGuard global: Tüm endpoint'leri korur ──────────────────────────
-    // @Public() decorator ile seçici olarak devre dışı bırakılır
+    // ── TenantGuard global: JWT doğrulama + tenantId enjeksiyonu ─────────────
     {
       provide:  APP_GUARD,
       useClass: TenantGuard,
+    },
+    // ── BillingGuard global: SUSPENDED/PAST_DUE erişim kontrolü (Faz 12) ────
+    // TenantGuard'dan sonra çalışır (sıra önemli — provider sırası = çalışma sırası)
+    {
+      provide:  APP_GUARD,
+      useClass: BillingGuard,
     },
   ],
 })

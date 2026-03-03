@@ -31,6 +31,36 @@ enum TenantStatus {
   CHURNED
 }
 
+// =============================================================================
+// BÖLÜM 12: BİLLİNG / PLAN ENGINE (Faz 12)
+// =============================================================================
+
+enum BillingCycle {
+  MONTHLY
+  YEARLY
+}
+
+/// Tenant'ın abonelik/ödeme durumu (Tenant.status'tan ayrı, billing odaklı)
+enum BillingStatus {
+  TRIAL      // 7 günlük deneme — Pro feature set
+  ACTIVE     // Ödeme alındı, aktif
+  PAST_DUE   // Ödeme gecikti, grace period (3 gün) — kritik write'lar kapalı
+  SUSPENDED  // Grace bitti — sadece billing + auth erişimi
+  CANCELED   // Abonelik iptal edildi
+}
+
+enum BillingProvider {
+  NONE    // Ödeme altyapısı yok (test/manual)
+  IYZICO
+  PAYTR
+  STRIPE
+}
+
+enum UsageEventType {
+  SMS
+  AI
+}
+
 model Tenant {
   id        String       @id @default(uuid()) @db.Uuid
   name      String
@@ -62,6 +92,12 @@ model Tenant {
   idempotencyKeys IdempotencyKey[]
   auditLogs    AuditLog[]
   transactionLedgers TransactionLedger[]
+
+  // Faz 12: Plan Engine
+  billing                TenantBilling?
+  usagePeriods           UsagePeriod[]
+  usageEvents            UsageEvent[]
+  entitlementSnapshot    TenantEntitlementSnapshot?
 
   @@index([slug])
   @@index([status])
@@ -725,6 +761,84 @@ model Message {
   @@index([tenantId, customerId])
   @@index([sessionId])
   @@map("messages")
+}
+
+// =============================================================================
+// BÖLÜM 12: BİLLİNG MODELLERİ (Faz 12 — Plan Engine)
+// =============================================================================
+
+/// Tenant başına 1:1 fatura/abonelik kaydı. Gerçek kaynak TenantBilling'dir.
+model TenantBilling {
+  tenantId               String          @id @db.Uuid
+  plan                   TenantPlan      @default(SOLO)
+  cycle                  BillingCycle    @default(MONTHLY)
+  status                 BillingStatus   @default(TRIAL)
+  trialEndsAt            DateTime
+  graceUntil             DateTime
+  currentPeriodStart     DateTime        @default(now())
+  currentPeriodEnd       DateTime
+  cancelAtPeriodEnd      Boolean         @default(false)
+  provider               BillingProvider @default(NONE)
+  providerSubscriptionId String?
+  lastPaymentAt          DateTime?
+  createdAt              DateTime        @default(now())
+  updatedAt              DateTime        @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("tenant_billing")
+}
+
+/// Dönem bazlı kullanım kotası. Her fatura döneminde yeni kayıt oluşturulur.
+model UsagePeriod {
+  id                String   @id @default(uuid()) @db.Uuid
+  tenantId          String   @db.Uuid
+  periodStart       DateTime
+  periodEnd         DateTime
+  smsIncluded       Int      @default(0)
+  smsUsed           Int      @default(0)
+  aiIncluded        Int      @default(0)
+  aiUsed            Int      @default(0)
+  extraSmsPurchased Int      @default(0)
+  extraAiPurchased  Int      @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, periodStart])
+  @@map("usage_periods")
+}
+
+/// Append-only kullanım olayları. Dispute için event log'dan doğrulanabilir.
+model UsageEvent {
+  id             String         @id @default(uuid()) @db.Uuid
+  tenantId       String         @db.Uuid
+  type           UsageEventType
+  units          Int
+  idempotencyKey String         @unique
+  occurredAt     DateTime       @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, occurredAt])
+  @@map("usage_events")
+}
+
+/// Redis-eş önbellek. Gerçek kaynak TenantBilling + PlanCatalog'dur; bu tablo sadece DB cache.
+model TenantEntitlementSnapshot {
+  tenantId     String        @id @db.Uuid
+  featuresJson Json
+  limitsJson   Json
+  quotaJson    Json
+  status       BillingStatus
+  isTrial      Boolean
+  updatedAt    DateTime      @updatedAt
+  version      Int           @default(0)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("tenant_entitlement_snapshots")
 }
 
 /// v2: Kampanya şablonları. v1'de tablo oluşturulur ama kullanılmaz.

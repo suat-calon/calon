@@ -24,10 +24,11 @@ import { JwtService }   from '@nestjs/jwt';
 import { Prisma }       from '@prisma/client';
 import * as bcrypt      from 'bcrypt';
 import * as crypto      from 'crypto';
-import { PrismaService } from '../../common/prisma.service';
-import { JwtPayload }    from './guards/tenant.guard';
-import { RegisterDto }   from './dto/register.dto';
-import { LoginDto }      from './dto/login.dto';
+import { PrismaService }   from '../../common/prisma.service';
+import { JwtPayload }      from './guards/tenant.guard';
+import { RegisterDto }     from './dto/register.dto';
+import { LoginDto }        from './dto/login.dto';
+import { BillingService }  from '../billing/billing.service';
 
 export interface AuthTokens {
   accessToken:  string;
@@ -45,8 +46,9 @@ export class AuthService {
   private readonly logger = new Logger(AuthService.name);
 
   constructor(
-    private readonly prisma: PrismaService,
-    private readonly jwt:    JwtService,
+    private readonly prisma:   PrismaService,
+    private readonly jwt:      JwtService,
+    private readonly billing:  BillingService,
   ) {}
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -103,6 +105,16 @@ export class AuthService {
 
       return { user, tenant };
     });
+
+    // ── 5. TenantBilling: TRIAL başlat (transaction dışı — kendi try/catch) ─
+    // Not: transaction dışında çağrılır çünkü BillingService bağımlılığı
+    // zaten Prisma üzerinden atomik yazım yapar.
+    try {
+      await this.billing.initTrial(tenant.id);
+    } catch (err) {
+      // TenantBilling zaten varsa (idempotent register denemesi) sessizce geç
+      this.logger.warn(`[Auth] initTrial warning: ${String(err)}`);
+    }
 
     this.logger.log(
       `Yeni kayıt: tenant=${tenant.slug} (${tenant.id}) | user=${user.email} (${user.id})`,
