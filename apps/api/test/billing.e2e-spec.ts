@@ -314,7 +314,7 @@ describe('FAZ 12 — Plan Engine', () => {
       expect(res.status).not.toBe(402);
     });
 
-    it('PAST_DUE: POST /loyalty/redeem (@BlockWhenPastDue) → 402', async () => {
+    it('PAST_DUE: POST /loyalty/redeem (Default-Deny write) → 402', async () => {
       const token = mintToken(jwtService, userId, tenantId, 'TENANT_OWNER', 'BOUTIQUE');
       const res   = await request(app.getHttpServer())
         .post('/api/v1/loyalty/redeem')
@@ -536,6 +536,147 @@ describe('FAZ 12 — Plan Engine', () => {
       // Yeni okumada ACTIVE
       ent = await entitlements.getEntitlements(tenantId, 'BOUTIQUE');
       expect(ent.status).toBe('ACTIVE');
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ADIM 6 — Default-Deny: PAST_DUE'da tüm write metodları bloklanır
+  // ═══════════════════════════════════════════════════════════════════════════
+  describe('Adım 6 — Default-Deny: PAST_DUE write metodları → 402', () => {
+    let tenantId: string;
+    let userId:   string;
+    let staffId:  string;
+    let locationId: string;
+
+    beforeAll(async () => {
+      ({ tenantId, userId, staffId, locationId } = await seedBillingTenant(spy, {
+        slug:          `billing-default-deny-${uuid().slice(0, 8)}`,
+        email:         `deny-${uuid().slice(0, 8)}@test.com`,
+        plan:          'BOUTIQUE',
+        billingStatus: 'PAST_DUE',
+      }));
+      await entitlements.invalidate(tenantId);
+    });
+
+    it('PAST_DUE: BillingService.recordUsage çağrısı — UsageEvent + UsagePeriod atomik', async () => {
+      const billingService = app.get(BillingService);
+      const iKey = `test-ikey-${uuid()}`;
+      const extId = `ext-${uuid()}`;
+
+      // İlk çağrı: kayıt oluşturulur
+      const result = await billingService.recordUsage(
+        tenantId, 'SMS', 2, iKey, extId,
+      );
+      expect(result).toBeTruthy();
+      expect(result!.units).toBe(2);
+
+      // Aynı externalId ile ikinci çağrı: P2002 sessizce yutulur, null döner
+      const dup = await billingService.recordUsage(
+        tenantId, 'SMS', 2, `ikey-2-${uuid()}`, extId,
+      );
+      expect(dup).toBeNull(); // idempotent — çifte sayım YOK
+    });
+
+    it('PAST_DUE: Admin billing POST → 200 (@AllowPastDue whitelist)', async () => {
+      const superAdminId = uuid();
+      await spy.user.create({
+        data: {
+          id:           superAdminId,
+          email:        `sa-deny-${uuid().slice(0, 8)}@test.com`,
+          passwordHash: '$2b$12$aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+          firstName:    'SA',
+          lastName:     'Test',
+          status:       'ACTIVE',
+          tenants: { create: { tenantId, role: 'SUPER_ADMIN' } },
+        },
+      });
+
+      const superToken = mintSuperAdmin(jwtService, superAdminId, tenantId);
+      const res = await request(app.getHttpServer())
+        .post(`/api/v1/admin/billing/tenants/${tenantId}/activate`)
+        .set('Authorization', `Bearer ${superToken}`)
+        .send({ cycle: 'MONTHLY' });
+
+      expect(res.status).toBe(200);
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ADIM 7 — Usage Event Idempotency: externalId çifte sayım koruması
+  // ═══════════════════════════════════════════════════════════════════════════
+  describe('Adım 7 — UsageEvent externalId idempotency', () => {
+    let tenantId: string;
+
+    beforeAll(async () => {
+      ({ tenantId } = await seedBillingTenant(spy, {
+        slug:          `billing-usage-${uuid().slice(0, 8)}`,
+        email:         `usage-${uuid().slice(0, 8)}@test.com`,
+        plan:          'BOUTIQUE',
+        billingStatus: 'ACTIVE',
+      }));
+      await spy.tenantBilling.update({
+        where: { tenantId },
+        data:  { status: 'ACTIVE' },
+      });
+      await entitlements.invalidate(tenantId);
+    });
+
+    it('İlk recordUsage: UsageEvent ve UsagePeriod artışı kaydedilir', async () => {
+      const billingService = app.get(BillingService);
+      const externalId = `sms-provider-tx-${uuid()}`;
+
+      const before = await spy.usagePeriod.findFirst({
+        where:   { tenantId },
+        orderBy: { periodStart: 'desc' },
+      });
+      const beforeSms = before?.smsUsed ?? 0;
+
+      await billingService.recordUsage(
+        tenantId, 'SMS', 1, `ikey-${uuid()}`, externalId,
+      );
+
+      const after = await spy.usagePeriod.findFirst({
+        where:   { tenantId },
+        orderBy: { periodStart: 'desc' },
+      });
+      expect(after!.smsUsed).toBe(beforeSms + 1);
+    });
+
+    it('Tekrar aynı externalId: P2002 sessizce yutulur, smsUsed artmaz', async () => {
+      const billingService = app.get(BillingService);
+      const externalId = `sms-provider-tx-dedup-${uuid()}`;
+
+      // İlk kayıt
+      await billingService.recordUsage(
+        tenantId, 'SMS', 3, `ikey-first-${uuid()}`, externalId,
+      );
+
+      const mid = await spy.usagePeriod.findFirst({
+        where:   { tenantId },
+        orderBy: { periodStart: 'desc' },
+      });
+      const midSms = mid!.smsUsed;
+
+      // Aynı externalId ile tekrar — null döner, smsUsed değişmez
+      const dup = await billingService.recordUsage(
+        tenantId, 'SMS', 3, `ikey-second-${uuid()}`, externalId,
+      );
+      expect(dup).toBeNull();
+
+      const after = await spy.usagePeriod.findFirst({
+        where:   { tenantId },
+        orderBy: { periodStart: 'desc' },
+      });
+      expect(after!.smsUsed).toBe(midSms); // artmadı
+    });
+
+    it('Aynı idempotencyKey ile tekrar: P2002 sessizce yutulur', async () => {
+      const billingService = app.get(BillingService);
+      const iKey = `dedup-ikey-${uuid()}`;
+
+      await billingService.recordUsage(tenantId, 'AI', 1, iKey);
+      const dup = await billingService.recordUsage(tenantId, 'AI', 1, iKey);
+      expect(dup).toBeNull();
     });
   });
 });

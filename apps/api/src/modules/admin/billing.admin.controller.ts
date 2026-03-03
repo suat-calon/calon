@@ -27,6 +27,7 @@ import { BillingStatus, TenantPlan } from '@prisma/client';
 import { BillingService }        from '../billing/billing.service';
 import { BillingCron }           from '../billing/billing.cron';
 import { EntitlementsService }   from '../billing/entitlements.service';
+import { AllowPastDue }          from '../billing/decorators/allow-past-due.decorator';
 
 // ── DTO'lar ───────────────────────────────────────────────────────────────────
 
@@ -47,6 +48,7 @@ class ActivateDto {
 
 // ── Controller ────────────────────────────────────────────────────────────────
 
+@AllowPastDue()
 @Controller('admin/billing')
 export class BillingAdminController {
   constructor(

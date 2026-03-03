@@ -31,12 +31,14 @@ import {
 
 import { AuthService, AuthTokens } from './auth.service';
 import { Public }          from './guards/tenant.guard';
+import { AllowPastDue }    from '../billing/decorators/allow-past-due.decorator';
 import { RegisterDto }     from './dto/register.dto';
 import { LoginDto }        from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { LogoutDto }       from './dto/logout.dto';
 
 @ApiTags('auth')
+@AllowPastDue()
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}

@@ -20,8 +20,9 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  ConflictException,
 } from '@nestjs/common';
-import { BillingStatus, BillingCycle, TenantPlan } from '@prisma/client';
+import { BillingStatus, BillingCycle, TenantPlan, UsageEventType, Prisma } from '@prisma/client';
 
 import { PrismaService }        from '../../common/prisma.service';
 import { EntitlementsService }  from './entitlements.service';
@@ -227,6 +228,84 @@ export class BillingService {
       include: { tenant: { select: { name: true, slug: true } } },
       orderBy: { createdAt: 'desc' },
     });
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // RECORD USAGE — Atomik kullanım kaydı (UsageEvent + UsagePeriod increment)
+  // ═══════════════════════════════════════════════════════════════════════════
+  /**
+   * Kullanım olayını atomik şekilde kaydeder:
+   *   1. UsageEvent oluştur (idempotencyKey UNIQUE constraint)
+   *   2. Aynı transaction içinde UsagePeriod kotasını artır
+   *
+   * İdempotency (Finansal Kalkan):
+   *   - externalId sağlanmışsa ve aynı externalId daha önce kaydedildiyse
+   *     Prisma P2002 (unique constraint) hatası fırlar.
+   *   - Bu hata sessizce yakalanır → çifte sayım engellenir.
+   *
+   * @param tenantId       Tenant kimliği
+   * @param type           'SMS_SENT' | 'AI_CALL' | diğer enum değerleri
+   * @param units          Tüketilen birim sayısı
+   * @param idempotencyKey API isteği idempotency anahtarı (zorunlu, UNIQUE)
+   * @param externalId     Dış servis işlem ID'si (opsiyonel, UNIQUE) — çifte sayım kalkanı
+   * @returns              Oluşturulan UsageEvent kaydı veya null (idempotent tekrar)
+   */
+  async recordUsage(
+    tenantId:       string,
+    type:           UsageEventType,
+    units:          number,
+    idempotencyKey: string,
+    externalId?:    string,
+  ) {
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        // 1. UsageEvent oluştur — idempotencyKey veya externalId çakışırsa P2002
+        const event = await tx.usageEvent.create({
+          data: {
+            tenantId,
+            type,
+            units,
+            idempotencyKey,
+            externalId: externalId ?? null,
+          },
+        });
+
+        // 2. Aktif UsagePeriod kotasını artır (aynı transaction)
+        const field: 'smsUsed' | 'aiUsed' =
+          type === UsageEventType.SMS ? 'smsUsed' : 'aiUsed';
+
+        const period = await tx.usagePeriod.findFirst({
+          where: {
+            tenantId,
+            periodStart: { lte: new Date() },
+            periodEnd:   { gte: new Date() },
+          },
+          orderBy: { periodStart: 'desc' },
+        });
+
+        if (period) {
+          await tx.usagePeriod.update({
+            where: { id: period.id },
+            data:  { [field]: { increment: units } },
+          });
+        }
+
+        return event;
+      });
+    } catch (err) {
+      // P2002: Unique constraint violation — idempotent tekrar
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === 'P2002'
+      ) {
+        this.logger.warn(
+          `[Usage] Idempotent tekrar (P2002): tenantId=${tenantId} type=${type} ` +
+          `idempotencyKey=${idempotencyKey} externalId=${externalId ?? 'n/a'} — atlandı`,
+        );
+        return null; // çifte sayım yok, ilk kaydın sonucunu döndür
+      }
+      throw err;
+    }
   }
 
   // ── Yardımcı ────────────────────────────────────────────────────────────────

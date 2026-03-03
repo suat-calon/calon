@@ -33,7 +33,6 @@ import { ProPlanGuard }            from './guards/pro-plan.guard';
 import { LoyaltyService }          from './loyalty.service';
 import { RedeemPointsDto }         from './dto/redeem-points.dto';
 import { LoyaltyHistoryQueryDto }  from './dto/loyalty-history-query.dto';
-import { BlockWhenPastDue }        from '../billing/decorators/block-when-past-due.decorator';
 
 @Controller('loyalty')
 @UseGuards(ProPlanGuard)
@@ -49,7 +48,6 @@ export class LoyaltyController {
    */
   @Post('redeem')
   @HttpCode(HttpStatus.OK)
-  @BlockWhenPastDue()
   @UseInterceptors(IdempotencyInterceptor)
   async redeem(
     @CurrentTenant() tenantId: string,
