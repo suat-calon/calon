@@ -12,6 +12,7 @@ import { CatalogModule }       from './modules/catalog/catalog.module';
 import { FinanceModule }       from './modules/finance/finance.module';
 import { CrmModule }          from './modules/crm/crm.module';
 import { StaffModule }        from './modules/staff/staff.module';
+import { LoyaltyModule }     from './modules/loyalty/loyalty.module';
 
 @Module({
   imports: [
@@ -56,6 +57,9 @@ import { StaffModule }        from './modules/staff/staff.module';
 
     // ── Staff: Personel profili, çalışma saatleri, vardiya ve hakediş ────────
     StaffModule,
+
+    // ── Loyalty: Sadakat puanı motoru (Faz 11 — Pro+ plan zorunlu) ───────────
+    LoyaltyModule,
   ],
   providers: [
     // ── TenantGuard global: Tüm endpoint'leri korur ──────────────────────────

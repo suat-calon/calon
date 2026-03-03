@@ -32,6 +32,8 @@ export interface JwtPayload {
   sub:      string;  // userId
   tenantId: string;
   role:     string;
+  /** Tenant plan — plan gating için (Pro+ özellikleri) */
+  plan?:    string;
   iat?:     number;
   exp?:     number;
 }
@@ -53,9 +55,10 @@ export class TenantGuard implements CanActivate {
 
     const request = context.switchToHttp().getRequest<{
       headers: { authorization?: string };
-      tenantId?: string;
-      userId?:   string;
-      userRole?: string;
+      tenantId?:   string;
+      userId?:     string;
+      userRole?:   string;
+      tenantPlan?: string;  // Plan gating (Pro+)
     }>();
 
     const authHeader = request.headers.authorization;
@@ -80,9 +83,10 @@ export class TenantGuard implements CanActivate {
     }
 
     // Request'e ekle (controller'lar @Req() ile erişebilir)
-    request.tenantId = payload.tenantId;
-    request.userId   = payload.sub;
-    request.userRole = payload.role;
+    request.tenantId   = payload.tenantId;
+    request.userId     = payload.sub;
+    request.userRole   = payload.role;
+    request.tenantPlan = payload.plan ?? 'SOLO'; // Plan gating için
 
     // AsyncLocalStorage'a yaz — Prisma middleware buradan okuyacak
     return new Promise<boolean>((resolve) => {
@@ -92,7 +96,7 @@ export class TenantGuard implements CanActivate {
           userId:   payload.sub,
           userRole: payload.role,
         },
-        () => resolve(true),
+        () => resolve(true), // tenantPlan request'te — context'e gerek yok
       );
     });
   }

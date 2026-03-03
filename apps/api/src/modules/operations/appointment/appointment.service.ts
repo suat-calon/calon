@@ -35,6 +35,7 @@ import { AppointmentLockService }     from './appointment-lock.service';
 import { isValidTransition }          from './appointment.machine';
 import { CreateAppointmentDto }       from './dto/create-appointment.dto';
 import { UpdateAppointmentStatusDto } from './dto/update-appointment-status.dto';
+import { EarnFromAppointmentPayload } from '../../loyalty/loyalty.service';
 
 // ── GIST yardımcısı ───────────────────────────────────────────────────────────
 
@@ -76,6 +77,8 @@ export class AppointmentService {
     private readonly commission:  CommissionService,
     @InjectQueue(QUEUE_NAMES.STOCK_DEDUCT)
     private readonly inventoryQueue: Queue,
+    @InjectQueue(QUEUE_NAMES.LOYALTY_EARN)
+    private readonly loyaltyQueue: Queue,
   ) {}
 
   // ── create ──────────────────────────────────────────────────────────────────
@@ -229,18 +232,53 @@ export class AppointmentService {
             tx,
           );
         }
+
+        // ── 3c. Loyalty Outbox — $transaction içinde atomik iz bırak ──────────
+        // Strateji: AuditLog kaydı = outbox event (transaction'la atomik).
+        // Transaction commit → queue.add() → Processor idempotencyKey ile korur.
+        // Sunucu çökmesi durumunda BullMQ job kaybolabilir (at-most-once MVP).
+        const loyaltyIdempotencyKey =
+          `${tenantId}:${id}:LOYALTY_EARNED_APPOINTMENT:v1`;
+
+        await tx.auditLog.create({
+          data: {
+            tenantId,
+            entityType: 'Appointment',
+            entityId:   id,
+            action:     'LOYALTY_EARN_REQUESTED',
+            actorId:    actorId   ?? undefined,
+            actorRole:  actorRole ?? undefined,
+            after: {
+              idempotencyKey: loyaltyIdempotencyKey,
+              customerId:     appt.customerId,
+              totalPrice:     String(totalAmount),
+            },
+          },
+        });
       }
 
       return appt;
     });
 
-    // ── 4. COMPLETED → stok düşme kuyruğu ───────────────────────────────────
+    // ── 4. COMPLETED → stok düşme + puan kazanımı kuyruğu ───────────────────
     if (dto.status === AppointmentStatus.COMPLETED) {
+      // 4a. Envanter stok düşümü
       await this.inventoryQueue.add('deduct-stock', {
         appointmentId: id,
         tenantId,
         serviceId:     updated.serviceId,
       });
+
+      // 4b. Sadakat puan kazanımı (asenkron, idempotent)
+      // OutboxLog = Adım 3c'deki AuditLog; burası BullMQ'ya iletiyor.
+      const loyaltyPayload: EarnFromAppointmentPayload = {
+        tenantId,
+        customerId:     updated.customerId,
+        appointmentId:  id,
+        totalPrice:     String(updated.totalPrice ?? '0'),
+        idempotencyKey: `${tenantId}:${id}:LOYALTY_EARNED_APPOINTMENT:v1`,
+      };
+      await this.loyaltyQueue.add('earn-points', loyaltyPayload);
     }
 
     return updated;

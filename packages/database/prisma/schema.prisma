@@ -420,18 +420,20 @@ enum LoyaltyAction {
 }
 
 model LoyaltyTransaction {
-  id          String        @id @default(uuid()) @db.Uuid
-  tenantId    String        @db.Uuid
-  customerId  String        @db.Uuid
-  appointmentId String?     @db.Uuid
-  action      LoyaltyAction
-  points      Int                                // + kazanım, – harcama
-  balanceAfter Int
-  description String?
+  id             String        @id @default(uuid()) @db.Uuid
+  tenantId       String        @db.Uuid
+  customerId     String        @db.Uuid
+  appointmentId  String?       @db.Uuid
+  action         LoyaltyAction
+  points         Int                                // + kazanım, – harcama
+  balanceAfter   Int
+  description    String?
+  // İdempotency: aynı işlem iki kez uygulanmaz (UNIQUE kısıtı)
+  idempotencyKey String?       @unique
 
   createdAt DateTime @default(now())
 
-  customer    Customer    @relation(fields: [customerId],    references: [id])
+  customer    Customer     @relation(fields: [customerId],    references: [id])
   appointment Appointment? @relation(fields: [appointmentId], references: [id])
 
   @@index([tenantId, customerId])

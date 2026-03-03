@@ -108,7 +108,7 @@ export class AuthService {
       `Yeni kayıt: tenant=${tenant.slug} (${tenant.id}) | user=${user.email} (${user.id})`,
     );
 
-    return this.generateTokenPair(user.id, tenant.id, 'TENANT_OWNER');
+    return this.generateTokenPair(user.id, tenant.id, 'TENANT_OWNER', tenant.plan);
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -131,12 +131,13 @@ export class AuthService {
       throw new UnauthorizedException('E-posta veya şifre hatalı.');
     }
 
-    // ── 3. Tenant üyeliği kontrolü ──────────────────────────────────────────
+    // ── 3. Tenant üyeliği + plan kontrolü ───────────────────────────────────
     const userTenant = await this.prisma.userTenant.findUnique({
       where: {
         // Prisma @unique([userId, tenantId]) için bileşik anahtar
         userId_tenantId: { userId: user.id, tenantId: dto.tenantId },
       },
+      include: { tenant: { select: { plan: true } } },
     });
 
     if (!userTenant) {
@@ -150,10 +151,10 @@ export class AuthService {
     });
 
     this.logger.log(
-      `Giriş: user=${user.email} | tenant=${dto.tenantId} | rol=${userTenant.role}`,
+      `Giriş: user=${user.email} | tenant=${dto.tenantId} | rol=${userTenant.role} | plan=${userTenant.tenant.plan}`,
     );
 
-    return this.generateTokenPair(user.id, dto.tenantId, userTenant.role);
+    return this.generateTokenPair(user.id, dto.tenantId, userTenant.role, userTenant.tenant.plan);
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -214,11 +215,12 @@ export class AuthService {
       data:  { revokedAt: new Date() },
     });
 
-    // ── 4. Kullanıcının güncel rolünü bul ────────────────────────────────────
+    // ── 4. Kullanıcının güncel rolü ve tenant planını bul ────────────────────
     const userTenant = await this.prisma.userTenant.findUnique({
       where: {
         userId_tenantId: { userId: record.userId, tenantId: record.tenantId },
       },
+      include: { tenant: { select: { plan: true } } },
     });
 
     if (!userTenant) {
@@ -229,10 +231,10 @@ export class AuthService {
 
     // ── 5. Yeni token çifti üret ─────────────────────────────────────────────
     this.logger.log(
-      `Token yenileme: userId=${record.userId} | tenant=${record.tenantId}`,
+      `Token yenileme: userId=${record.userId} | tenant=${record.tenantId} | plan=${userTenant.tenant.plan}`,
     );
 
-    return this.generateTokenPair(record.userId, record.tenantId, userTenant.role);
+    return this.generateTokenPair(record.userId, record.tenantId, userTenant.role, userTenant.tenant.plan);
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -255,9 +257,11 @@ export class AuthService {
     userId:   string,
     tenantId: string,
     role:     string,
+    plan:     string = 'SOLO',
   ): Promise<AuthTokens> {
     // ── Access Token: stateless JWT ──────────────────────────────────────────
-    const payload: JwtPayload = { sub: userId, tenantId, role };
+    // plan claim: plan gating (ProPlanGuard) tarafından okunur; her login'de güncellenir.
+    const payload: JwtPayload = { sub: userId, tenantId, role, plan };
     const accessToken = this.jwt.sign(payload);  // expiresIn JwtModule'den (15m)
 
     // ── Refresh Token: opaque (48 byte = 96 hex karakter) ────────────────────

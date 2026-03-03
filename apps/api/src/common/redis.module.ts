@@ -7,6 +7,7 @@ import Redis                           from 'ioredis';
 export const QUEUE_NAMES = {
   NOTIFICATIONS:  'notifications',
   STOCK_DEDUCT:   'stock-deduct',
+  LOYALTY_EARN:   'loyalty-earn',   // Faz 11: Asenkron puan kazanımı
   HUMAN_HANDOFF:  'human-handoff',  // v2 AI devir
   CAMPAIGN:       'campaign',       // v2 Kampanya
 } as const;
@@ -61,6 +62,7 @@ const redisClientProvider = {
     BullModule.registerQueue(
       { name: QUEUE_NAMES.NOTIFICATIONS },
       { name: QUEUE_NAMES.STOCK_DEDUCT  },
+      { name: QUEUE_NAMES.LOYALTY_EARN  },
       { name: QUEUE_NAMES.HUMAN_HANDOFF },
       { name: QUEUE_NAMES.CAMPAIGN      },
     ),
