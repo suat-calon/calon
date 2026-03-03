@@ -257,6 +257,9 @@ export class BillingService {
     idempotencyKey: string,
     externalId?:    string,
   ) {
+    // Provider ID yoksa deterministik fallback üret (her zaman aynı → idempotent)
+    const resolvedExternalId = externalId ?? `internal:${idempotencyKey}`;
+
     try {
       return await this.prisma.$transaction(async (tx) => {
         // 1. UsageEvent oluştur — idempotencyKey veya externalId çakışırsa P2002
@@ -266,7 +269,7 @@ export class BillingService {
             type,
             units,
             idempotencyKey,
-            externalId: externalId ?? null,
+            externalId: resolvedExternalId,
           },
         });
 
@@ -294,15 +297,25 @@ export class BillingService {
       });
     } catch (err) {
       // P2002: Unique constraint violation — idempotent tekrar
+      // RESTful idempotency: ilk başarılı işlemin sonucunu (mevcut kaydı) dön
       if (
         err instanceof Prisma.PrismaClientKnownRequestError &&
         err.code === 'P2002'
       ) {
         this.logger.warn(
           `[Usage] Idempotent tekrar (P2002): tenantId=${tenantId} type=${type} ` +
-          `idempotencyKey=${idempotencyKey} externalId=${externalId ?? 'n/a'} — atlandı`,
+          `idempotencyKey=${idempotencyKey} externalId=${resolvedExternalId} — mevcut kayıt dönülüyor`,
         );
-        return null; // çifte sayım yok, ilk kaydın sonucunu döndür
+        // İlk başarılı kaydı idempotencyKey veya externalId ile bul ve dön
+        const existing = await this.prisma.usageEvent.findFirst({
+          where: {
+            OR: [
+              { idempotencyKey },
+              { externalId: resolvedExternalId },
+            ],
+          },
+        });
+        return existing;
       }
       throw err;
     }

@@ -64,27 +64,35 @@ export class EntitlementsService {
   ) {}
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // GETENTITLEMENTS — Ana giriş noktası (cache-aside)
+  // GETENTITLEMENTS — Ana giriş noktası (cache-aside + Redis fallback)
   // ═══════════════════════════════════════════════════════════════════════════
   async getEntitlements(
     tenantId:     string,
     jwtPlanClaim: string = 'SOLO',
   ): Promise<EntitlementsResult> {
-    // ── 1. Redis cache hit ───────────────────────────────────────────────────
+    // ── 1. Redis cache hit (200 ms timeout — SPOF koruması) ──────────────────
     try {
-      const raw = await this.redis.get(cacheKey(tenantId));
+      const raw = await Promise.race<string | null>([
+        this.redis.get(cacheKey(tenantId)),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('Redis timeout (200ms)')), 200),
+        ),
+      ]);
       if (raw) {
         return JSON.parse(raw) as EntitlementsResult;
       }
     } catch (err) {
-      // Redis arızasında geç, DB'den oku
-      this.logger.warn(`[Entitlements] Redis okuma hatası: ${String(err)}`);
+      // Redis çöktü veya timeout → Doğrudan DB fallback — 500 kesilmez
+      this.logger.warn(
+        `[Entitlements] Redis okuma hatası — DB fallback aktif: ${String(err)}`,
+      );
+      return this.buildEntitlements(tenantId, jwtPlanClaim);
     }
 
-    // ── 2. DB'den build et ───────────────────────────────────────────────────
+    // ── 2. Cache miss → DB'den build et ─────────────────────────────────────
     const result = await this.buildEntitlements(tenantId, jwtPlanClaim);
 
-    // ── 3. Cache'e yaz ───────────────────────────────────────────────────────
+    // ── 3. Cache'e yaz (hata olursa yut — sonraki istek tekrar DB'den okur) ──
     try {
       await this.redis.setex(cacheKey(tenantId), CACHE_TTL_SEC, JSON.stringify(result));
     } catch (err) {

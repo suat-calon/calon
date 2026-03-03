@@ -818,8 +818,9 @@ model UsageEvent {
   units          Int
   idempotencyKey String         @unique
   /// Dış servis benzersiz işlem kimliği (SMS sağlayıcısı, ödeme sistemi vs.)
+  /// Provider ID yoksa servis katmanı "internal:{idempotencyKey}" fallback üretir.
   /// Aynı externalId ile ikinci istek gelirse P2002 fırlar → sessizce yutulan = çifte sayım koruması.
-  externalId     String?        @unique
+  externalId     String         @unique
   occurredAt     DateTime       @default(now())
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)

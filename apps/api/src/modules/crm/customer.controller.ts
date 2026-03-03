@@ -35,6 +35,7 @@ import { CreateCustomerDto }      from './dto/create-customer.dto';
 import { ListCustomersQueryDto }  from './dto/list-customers-query.dto';
 import { CurrentTenant }          from '../../common/decorators/current-tenant.decorator';
 import { CurrentUser, CurrentUserPayload } from '../../common/decorators/current-user.decorator';
+import { WriteOperation }         from '../billing/decorators/write-operation.decorator';
 
 @ApiTags('CRM — Müşteriler')
 @ApiBearerAuth()
@@ -45,6 +46,7 @@ export class CustomerController {
   // ── POST /customers ──────────────────────────────────────────────────────────
 
   @Post()
+  @WriteOperation()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Yeni müşteri kaydı oluştur' })
   @ApiCreatedResponse({ description: 'Müşteri başarıyla oluşturuldu' })
@@ -94,6 +96,7 @@ export class CustomerController {
    * • 204 No Content döner (silinmiş nesne geri dönmez)
    */
   @Delete(':id/gdpr')
+  @WriteOperation()
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'KVKK/GDPR silme hakkı — PII anonimleştirme' })
   @ApiNoContentResponse({ description: 'PII başarıyla anonimleştirildi' })

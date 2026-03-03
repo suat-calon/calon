@@ -20,8 +20,9 @@ import {
 import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { Product } from '@prisma/client';
 
-import { PrismaService }   from '../../common/prisma.service';
-import { CurrentTenant }   from '../../common/decorators/current-tenant.decorator';
+import { PrismaService }    from '../../common/prisma.service';
+import { CurrentTenant }    from '../../common/decorators/current-tenant.decorator';
+import { WriteOperation }   from '../billing/decorators/write-operation.decorator';
 import { CreateProductDto } from './dto/create-product.dto';
 
 @ApiTags('Catalog / Products')
@@ -33,6 +34,7 @@ export class ProductController {
   // ── POST /products ───────────────────────────────────────────────────────
 
   @Post()
+  @WriteOperation()
   @HttpCode(HttpStatus.CREATED)
   @ApiCreatedResponse({ description: 'Ürün oluşturuldu' })
   async create(

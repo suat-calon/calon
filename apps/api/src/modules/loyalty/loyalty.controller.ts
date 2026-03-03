@@ -30,6 +30,7 @@ import { Request } from 'express';
 import { IdempotencyInterceptor }  from '../../common/idempotency.interceptor';
 import { CurrentTenant }           from '../../common/decorators/current-tenant.decorator';
 import { ProPlanGuard }            from './guards/pro-plan.guard';
+import { WriteOperation }          from '../billing/decorators/write-operation.decorator';
 import { LoyaltyService }          from './loyalty.service';
 import { RedeemPointsDto }         from './dto/redeem-points.dto';
 import { LoyaltyHistoryQueryDto }  from './dto/loyalty-history-query.dto';
@@ -47,6 +48,7 @@ export class LoyaltyController {
    * Yetersiz bakiye → 400 | Müşteri bulunamadı → 404
    */
   @Post('redeem')
+  @WriteOperation()
   @HttpCode(HttpStatus.OK)
   @UseInterceptors(IdempotencyInterceptor)
   async redeem(

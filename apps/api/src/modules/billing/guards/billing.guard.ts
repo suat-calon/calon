@@ -1,5 +1,5 @@
 /**
- * BILLING GUARD — Abonelik Durumu Kapı Bekçisi (Default-Deny)
+ * BILLING GUARD — Abonelik Durumu Kapı Bekçisi (Semantic Default-Deny)
  * ──────────────────────────────────────────────────────────────────────────────
  * Katman 1: Global guard (TenantGuard'dan sonra çalışır)
  *
@@ -8,12 +8,16 @@
  *     - Sadece whitelist path prefix'leri VEYA @AllowPastDue() dekoratörüne izin ver
  *     - Diğerleri → 402 Payment Required + errorCode=SUSPENDED
  *
- *   PAST_DUE (Default-Deny):
+ *   PAST_DUE (Semantic Default-Deny):
  *     - @AllowPastDue() varsa → geçir
- *     - GET/HEAD (okuma) → geçir
- *     - POST/PUT/PATCH/DELETE (yazma) → 402 Payment Required + errorCode=PAST_DUE
+ *     - @WriteOperation() YOKSA → geçir  (okuma / semantik-salt operasyon)
+ *     - @WriteOperation() VARSA → 402 Payment Required + errorCode=PAST_DUE
  *
  *   TRIAL / ACTIVE / CANCELED: herhangi bir kısıtlama yok.
+ *
+ * Neden HTTP metodu YERİNE @WriteOperation()?
+ *   HTTP POST her zaman "veri değiştirme" anlamına gelmez (örn: arama, rapor).
+ *   Semantik dekoratör, route'un gerçek niyetini açıkça ifade eder.
  * ──────────────────────────────────────────────────────────────────────────────
  */
 
@@ -27,8 +31,9 @@ import {
 import { Reflector } from '@nestjs/core';
 
 import { EntitlementsService } from '../entitlements.service';
-import { ALLOW_PAST_DUE_KEY } from '../decorators/allow-past-due.decorator';
-import { IS_PUBLIC_KEY }      from '../../iam/guards/tenant.guard';
+import { ALLOW_PAST_DUE_KEY }  from '../decorators/allow-past-due.decorator';
+import { WRITE_OPERATION_KEY } from '../decorators/write-operation.decorator';
+import { IS_PUBLIC_KEY }       from '../../iam/guards/tenant.guard';
 
 // ── SUSPENDED whitelist path prefix'leri ─────────────────────────────────────
 const SUSPENDED_WHITELIST = [
@@ -37,9 +42,6 @@ const SUSPENDED_WHITELIST = [
   '/api/v1/billing',    // ödeme ekranı
   '/health',            // uptime check
 ];
-
-// ── Yazma metodları ───────────────────────────────────────────────────────────
-const WRITE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
 // ── Guard ─────────────────────────────────────────────────────────────────────
 
@@ -63,7 +65,6 @@ export class BillingGuard implements CanActivate {
       tenantPlan?: string;
       userRole?:   string;
       url?:        string;
-      method?:     string;
     }>();
 
     const tenantId = request.tenantId;
@@ -99,10 +100,14 @@ export class BillingGuard implements CanActivate {
       return true;
     }
 
-    // ── PAST_DUE — Default-Deny (write metodları) ────────────────────────────
+    // ── PAST_DUE — Semantic Default-Deny (@WriteOperation() olanlar bloklanır) ──
     if (ent.status === 'PAST_DUE') {
-      const method = (request.method ?? 'GET').toUpperCase();
-      if (WRITE_METHODS.has(method)) {
+      const isWriteOperation = this.reflector.getAllAndOverride<boolean>(WRITE_OPERATION_KEY, [
+        context.getHandler(),
+        context.getClass(),
+      ]);
+
+      if (isWriteOperation) {
         throw new HttpException(
           {
             message:   'Ödeme gecikti. Bu işlemi gerçekleştirmek için ödemenizi tamamlayın.',

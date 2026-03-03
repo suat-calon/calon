@@ -570,11 +570,12 @@ describe('FAZ 12 — Plan Engine', () => {
       expect(result).toBeTruthy();
       expect(result!.units).toBe(2);
 
-      // Aynı externalId ile ikinci çağrı: P2002 sessizce yutulur, null döner
+      // Aynı externalId ile ikinci çağrı: P2002 sessizce yutulur, ilk kayıt dönülür (RESTful idempotency)
       const dup = await billingService.recordUsage(
         tenantId, 'SMS', 2, `ikey-2-${uuid()}`, extId,
       );
-      expect(dup).toBeNull(); // idempotent — çifte sayım YOK
+      expect(dup).toBeTruthy();          // null değil — ilk başarılı kaydı dönüyor
+      expect(dup!.externalId).toBe(extId); // aynı externalId ile mevcut kayıt
     });
 
     it('PAST_DUE: Admin billing POST → 200 (@AllowPastDue whitelist)', async () => {
@@ -657,11 +658,12 @@ describe('FAZ 12 — Plan Engine', () => {
       });
       const midSms = mid!.smsUsed;
 
-      // Aynı externalId ile tekrar — null döner, smsUsed değişmez
+      // Aynı externalId ile tekrar — ilk kayıt dönülür (RESTful idempotency), smsUsed değişmez
       const dup = await billingService.recordUsage(
         tenantId, 'SMS', 3, `ikey-second-${uuid()}`, externalId,
       );
-      expect(dup).toBeNull();
+      expect(dup).toBeTruthy();
+      expect(dup!.externalId).toBe(externalId); // aynı dış kimlik — mevcut kayıt
 
       const after = await spy.usagePeriod.findFirst({
         where:   { tenantId },
@@ -676,7 +678,9 @@ describe('FAZ 12 — Plan Engine', () => {
 
       await billingService.recordUsage(tenantId, 'AI', 1, iKey);
       const dup = await billingService.recordUsage(tenantId, 'AI', 1, iKey);
-      expect(dup).toBeNull();
+      // RESTful idempotency: null değil, ilk başarılı işlemin kaydını dön
+      expect(dup).toBeTruthy();
+      expect(dup!.idempotencyKey).toBe(iKey);
     });
   });
 });

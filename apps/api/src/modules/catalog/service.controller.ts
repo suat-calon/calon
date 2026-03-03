@@ -22,6 +22,7 @@ import { Service } from '@prisma/client';
 
 import { PrismaService }    from '../../common/prisma.service';
 import { CurrentTenant }    from '../../common/decorators/current-tenant.decorator';
+import { WriteOperation }   from '../billing/decorators/write-operation.decorator';
 import { CreateServiceDto } from './dto/create-service.dto';
 
 @ApiTags('Catalog / Services')
@@ -33,6 +34,7 @@ export class ServiceController {
   // ── POST /services ───────────────────────────────────────────────────────
 
   @Post()
+  @WriteOperation()
   @HttpCode(HttpStatus.CREATED)
   @ApiCreatedResponse({ description: 'Hizmet oluşturuldu' })
   async create(

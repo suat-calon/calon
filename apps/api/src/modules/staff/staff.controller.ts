@@ -25,6 +25,7 @@ import { ListStaffQueryDto }    from './dto/list-staff-query.dto';
 import { SetWorkingHoursDto }   from './dto/set-working-hours.dto';
 import { CreateShiftDto, ListShiftsQueryDto } from './dto/create-shift.dto';
 import { CurrentTenant }        from '../../common/decorators/current-tenant.decorator';
+import { WriteOperation }       from '../billing/decorators/write-operation.decorator';
 
 /**
  * STAFF CONTROLLER
@@ -47,6 +48,7 @@ export class StaffController {
   // ── POST / ────────────────────────────────────────────────────────────────
 
   @Post()
+  @WriteOperation()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Yeni personel profili oluştur' })
   @ApiCreatedResponse({ description: 'Personel başarıyla oluşturuldu' })
@@ -92,6 +94,7 @@ export class StaffController {
    * İdempotent: Aynı istek birden fazla gönderilirse sonuç aynıdır.
    */
   @Put(':id/working-hours')
+  @WriteOperation()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Haftalık çalışma saatlerini güncelle (upsert)' })
   @ApiOkResponse({ description: 'Çalışma saatleri başarıyla güncellendi' })
@@ -112,6 +115,7 @@ export class StaffController {
    * olağandışı programlama durumları için.
    */
   @Post(':id/shifts')
+  @WriteOperation()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Personele özel vardiya ekle (izin, rapor, fazla mesai)' })
   @ApiCreatedResponse({ description: 'Vardiya başarıyla oluşturuldu' })

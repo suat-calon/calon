@@ -27,6 +27,7 @@ import { HoldSlotDto }                 from './dto/hold-slot.dto';
 import { UpdateAppointmentStatusDto }  from './dto/update-appointment-status.dto';
 import { CurrentTenant }               from '../../../common/decorators/current-tenant.decorator';
 import { CurrentUser, CurrentUserPayload } from '../../../common/decorators/current-user.decorator';
+import { WriteOperation }              from '../../billing/decorators/write-operation.decorator';
 
 /**
  * APPOINTMENT CONTROLLER
@@ -58,6 +59,7 @@ export class AppointmentController {
    * 409: Aynı tenant/personel/saat kombinasyonu zaten kilitli.
    */
   @Post('hold')
+  @WriteOperation()
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Randevu slotunu geçici kilitle (5 dk Redis TTL)' })
   @ApiNoContentResponse({ description: 'Slot başarıyla kilitlendi' })
@@ -78,6 +80,7 @@ export class AppointmentController {
   // ── POST / ────────────────────────────────────────────────────────────────
 
   @Post()
+  @WriteOperation()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Yeni randevu oluştur' })
   @ApiCreatedResponse({ description: 'Randevu başarıyla oluşturuldu' })
@@ -93,6 +96,7 @@ export class AppointmentController {
   // ── PATCH /:id/status ─────────────────────────────────────────────────────
 
   @Patch(':id/status')
+  @WriteOperation()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Randevu durumunu güncelle' })
   @ApiOkResponse({ description: 'Durum başarıyla güncellendi' })

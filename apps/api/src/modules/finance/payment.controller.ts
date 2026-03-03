@@ -47,6 +47,7 @@ import { CheckoutDto }             from './dto/checkout.dto';
 import { IdempotencyInterceptor }  from '../../common/idempotency.interceptor';
 import { CurrentTenant }           from '../../common/decorators/current-tenant.decorator';
 import { CurrentUser, CurrentUserPayload } from '../../common/decorators/current-user.decorator';
+import { WriteOperation }          from '../billing/decorators/write-operation.decorator';
 
 @ApiTags('Finance — Payments & Ledger')
 @ApiBearerAuth()
@@ -60,6 +61,7 @@ export class PaymentController {
   // ── POST /payments/:appointmentId/deposit ──────────────────────────────────
 
   @Post(':appointmentId/deposit')
+  @WriteOperation()
   @HttpCode(HttpStatus.CREATED)
   @UseInterceptors(IdempotencyInterceptor)
   @ApiOperation({ summary: 'Randevu için kaparo al' })
@@ -83,6 +85,7 @@ export class PaymentController {
   // ── POST /payments/:appointmentId/checkout ────────────────────────────────
 
   @Post(':appointmentId/checkout')
+  @WriteOperation()
   @HttpCode(HttpStatus.CREATED)
   @UseInterceptors(IdempotencyInterceptor)
   @ApiOperation({ summary: 'Hesap kapat: ödeme al + randevuyu COMPLETED\'a geçir' })
