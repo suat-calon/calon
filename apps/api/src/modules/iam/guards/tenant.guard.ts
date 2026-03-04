@@ -75,11 +75,13 @@ export class TenantGuard implements CanActivate {
       throw new UnauthorizedException('Token geçersiz veya süresi dolmuş.');
     }
 
-    if (!payload.tenantId) {
-      throw new ForbiddenException('Token içinde tenant bilgisi bulunamadı.');
-    }
     if (!payload.sub) {
       throw new ForbiddenException('Token içinde kullanıcı bilgisi bulunamadı.');
+    }
+
+    // SUPER_ADMIN: tenantId zorunlu değil — platform-level erişim
+    if (!payload.tenantId && payload.role !== 'SUPER_ADMIN') {
+      throw new ForbiddenException('Token içinde tenant bilgisi bulunamadı.');
     }
 
     // Request'e ekle (controller'lar @Req() ile erişebilir)
@@ -89,14 +91,16 @@ export class TenantGuard implements CanActivate {
     request.tenantPlan = payload.plan ?? 'SOLO'; // Plan gating için
 
     // AsyncLocalStorage'a yaz — Prisma middleware buradan okuyacak
+    // SUPER_ADMIN için tenantId olmayabilir; context yine de çalışır
+    const tenantId = payload.tenantId ?? 'super_admin';
     return new Promise<boolean>((resolve) => {
       tenantContext.run(
         {
-          tenantId: payload.tenantId,
+          tenantId,
           userId:   payload.sub,
           userRole: payload.role,
         },
-        () => resolve(true), // tenantPlan request'te — context'e gerek yok
+        () => resolve(true),
       );
     });
   }

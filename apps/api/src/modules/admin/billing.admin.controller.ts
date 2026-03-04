@@ -21,7 +21,7 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import { IsEnum, IsOptional, IsString } from 'class-validator';
+import { IsEnum, IsIn, IsOptional, IsString } from 'class-validator';
 import { BillingStatus, TenantPlan } from '@prisma/client';
 
 import { BillingService }        from '../billing/billing.service';
@@ -44,7 +44,7 @@ class ActivateDto {
   providerSubscriptionId?: string;
 
   @IsOptional()
-  @IsEnum(['MONTHLY', 'YEARLY'])
+  @IsIn(['MONTHLY', 'YEARLY'])
   cycle?: 'MONTHLY' | 'YEARLY';
 }
 

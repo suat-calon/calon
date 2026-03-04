@@ -2,9 +2,15 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "api",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": ["/c", "yarn workspace @auralis/api dev"],
+      "port": 4000
+    },
+    {
       "name": "web",
-      "runtimeExecutable": "yarn",
-      "runtimeArgs": ["workspace", "@auralis/web", "dev"],
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": ["/c", "yarn workspace @auralis/web dev"],
       "port": 3000
     }
   ]

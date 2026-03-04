@@ -1,6 +1,8 @@
 /**
  * AURALIS API — BOOTSTRAP
  */
+// tsconfig-paths/register MUST be first: redirects @prisma/client → packages/database/generated/client at runtime
+import 'tsconfig-paths/register';
 import { NestFactory }            from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
