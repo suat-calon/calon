@@ -65,4 +65,10 @@ export class BookPublicDto {
   @IsString()
   @MaxLength(500)
   notes?: string;
+
+  /** Faz 18: Referral kodu (opsiyonel — ?ref= query parametresinden gelir) */
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  referralCode?: string;
 }

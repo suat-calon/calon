@@ -103,6 +103,9 @@ model Tenant {
   // Faz 15: Onboarding Wizard İdempotency
   onboardingIdempotencies OnboardingIdempotency[]
 
+  // Faz 18: Viral Growth — Referrals
+  referrals               Referral[]
+
   @@index([slug])
   @@index([status])
   @@map("tenants")
@@ -430,6 +433,9 @@ model Customer {
   loyaltyTier   LoyaltyTier @default(BRONZE)
   loyaltyPoints Int         @default(0)
 
+  // Faz 18: Viral Growth — Referral kodu
+  referralCode  String?     @unique                   // aur-{RANDOM6}
+
   // KVKK/GDPR
   consentGiven  Boolean   @default(false)
   consentDate   DateTime?
@@ -445,6 +451,10 @@ model Customer {
   loyaltyTransactions LoyaltyTransaction[]
   consentForms      ConsentForm[]
   photos            CustomerPhoto[]
+
+  // Faz 18: Referral ilişkileri
+  referralsMade     Referral[] @relation("ReferralReferrer")
+  referralsReceived Referral[] @relation("ReferralReferred")
 
   @@index([tenantId, phone])
   @@index([tenantId, email])
@@ -552,6 +562,9 @@ model Appointment {
   commissions         CommissionLog[]
   consentForms        ConsentForm[]
   photos              CustomerPhoto[]
+
+  // Faz 18: Referral ilişkisi
+  referral            Referral?
 
   @@index([tenantId, staffId, startTime, endTime])   // Müsaitlik sorguları
   @@index([tenantId, customerId])
@@ -908,4 +921,30 @@ model OnboardingIdempotency {
   @@unique([tenantId, key])
   @@index([tenantId])
   @@map("onboarding_idempotency")
+}
+
+// =============================================================================
+// BÖLÜM 18: VİRAL GROWTH — REFERRAL ENGINE (Faz 18)
+// =============================================================================
+
+/// Müşteri referans kayıtları.
+/// @@unique([referrerCustomerId, referredCustomerId]): aynı çift bir kez ödüllendirilir (P2002 idempotency).
+/// @@index([tenantId, referrerCustomerId]): referrer performans sorguları için.
+model Referral {
+  id                  String   @id @default(uuid()) @db.Uuid
+  tenantId            String   @db.Uuid
+  referrerCustomerId  String   @db.Uuid
+  referredCustomerId  String   @db.Uuid
+  appointmentId       String   @unique @db.Uuid             // Tetikleyen randevu (1-to-1)
+  awardedPoints       Int      @default(0)                // Verilen puan
+  createdAt           DateTime @default(now())
+
+  tenant           Tenant      @relation(fields: [tenantId],            references: [id])
+  referrer         Customer    @relation("ReferralReferrer", fields: [referrerCustomerId], references: [id])
+  referred         Customer    @relation("ReferralReferred", fields: [referredCustomerId], references: [id])
+  appointment      Appointment @relation(fields: [appointmentId],       references: [id])
+
+  @@unique([referrerCustomerId, referredCustomerId])       // P2002 idempotency
+  @@index([tenantId, referrerCustomerId])                  // Acceptance criteria
+  @@map("referrals")
 }

@@ -16,13 +16,25 @@ import {
   NotFoundException,
   ConflictException,
 } from '@nestjs/common';
+import { InjectQueue }    from '@nestjs/bull';
+import { Queue }          from 'bull';
+import { randomBytes }    from 'crypto';
 import { DayOfWeek, TenantStatus } from '@prisma/client';
 
 import { PrismaService }                  from '../../common/prisma.service';
 import { tenantContext }                  from '../../common/tenant.context';
+import { QUEUE_NAMES }                    from '../../common/queue/queue-names';
 import { AppointmentService }             from '../operations/appointment/appointment.service';
 import { AppointmentAvailabilityService } from '../operations/appointment/appointment-availability.service';
 import { BookPublicDto }                  from './dto/book-public.dto';
+
+// ── Referral job payload ───────────────────────────────────────────────────
+export interface ReferralJobPayload {
+  tenantId:           string;
+  referredCustomerId: string;
+  referralCode:       string;
+  appointmentId:      string;
+}
 
 // ── DayOfWeek dönüştürücü ─────────────────────────────────────────────────
 // JS Date.getDay(): 0=Sun,1=Mon,...,6=Sat
@@ -86,6 +98,9 @@ export interface BookingResultDto {
   service:  { name: string; durationMin: number };
   staff:    { firstName: string; lastName: string };
   location: { name: string };
+  // Faz 18: Referral
+  referralCode?: string;  // Yeni müşterinin üretilen kodu (paylaşım için)
+  salonSlug:     string;  // Share URL oluşturmak için
 }
 
 @Injectable()
@@ -96,7 +111,14 @@ export class PublicService {
     private readonly prisma:        PrismaService,
     private readonly appointments:  AppointmentService,
     private readonly availability:  AppointmentAvailabilityService,
+    @InjectQueue(QUEUE_NAMES.REFERRAL_PROCESS)
+    private readonly referralQueue: Queue<ReferralJobPayload>,
   ) {}
+
+  // ── Faz 18: Referral kodu üretici ─────────────────────────────────────────
+  private generateReferralCode(): string {
+    return 'aur-' + randomBytes(3).toString('hex').toUpperCase(); // aur-A1B2C3
+  }
 
   // ═══════════════════════════════════════════════════════════════════════════
   // GET /public/salon/:slug
@@ -275,7 +297,10 @@ export class PublicService {
         where: { phone: dto.phone },
       });
 
+      let isNewCustomer = false;
+
       if (!customer) {
+        isNewCustomer = true;
         customer = await this.prisma.customer.create({
           data: {
             tenantId:     dto.tenantId,
@@ -285,10 +310,12 @@ export class PublicService {
             email:        dto.email,
             consentGiven: true,
             consentDate:  new Date(),
+            // Faz 18: Her yeni müşteri bir referral kodu alır
+            referralCode: this.generateReferralCode(),
           },
         });
         this.logger.log(
-          `Yeni müşteri oluşturuldu: ${customer.id} | tenant=${dto.tenantId}`,
+          `Yeni müşteri oluşturuldu: ${customer.id} | tenant=${dto.tenantId} | refCode=${customer.referralCode}`,
         );
       }
 
@@ -325,6 +352,22 @@ export class PublicService {
         `Public booking: appt=${appointment.id} | tenant=${dto.tenantId} | staff=${dto.staffId}`,
       );
 
+      // ── 6. Faz 18: Referral işleme — fire and forget (senkron hızı koruma) ─
+      if (dto.referralCode && isNewCustomer) {
+        void this.referralQueue
+          .add('process-referral', {
+            tenantId:           dto.tenantId,
+            referredCustomerId: customer.id,
+            referralCode:       dto.referralCode,
+            appointmentId:      appointment.id,
+          })
+          .catch((err: unknown) =>
+            this.logger.error(
+              `Referral queue error: ${String(err)} | appt=${appointment.id}`,
+            ),
+          );
+      }
+
       return {
         appointmentId: appointment.id,
         startTime:     appointment.startTime.toISOString(),
@@ -332,6 +375,9 @@ export class PublicService {
         service:  { name: service.name, durationMin: service.durationMin },
         staff:    { firstName: staff.firstName, lastName: staff.lastName },
         location: { name: location.name },
+        // Faz 18: Referral
+        referralCode: isNewCustomer ? (customer.referralCode ?? undefined) : undefined,
+        salonSlug:    tenant.slug,
       };
     });
   }

@@ -7,9 +7,10 @@
  */
 
 export const QUEUE_NAMES = {
-  NOTIFICATIONS:  'notifications',
-  STOCK_DEDUCT:   'stock-deduct',
-  LOYALTY_EARN:   'loyalty-earn',   // Faz 11: Asenkron puan kazanımı
-  HUMAN_HANDOFF:  'human-handoff',  // v2 AI devir
-  CAMPAIGN:       'campaign',       // v2 Kampanya
+  NOTIFICATIONS:    'notifications',
+  STOCK_DEDUCT:     'stock-deduct',
+  LOYALTY_EARN:     'loyalty-earn',     // Faz 11: Asenkron puan kazanımı
+  HUMAN_HANDOFF:    'human-handoff',    // v2 AI devir
+  CAMPAIGN:         'campaign',         // v2 Kampanya
+  REFERRAL_PROCESS: 'referral-process', // Faz 18: Viral Growth referral işleme
 } as const;

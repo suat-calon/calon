@@ -35,6 +35,15 @@ export interface EarnFromAppointmentPayload {
   idempotencyKey: string;
 }
 
+/** Faz 18: Referral puan kazanımı payload */
+export interface EarnFromReferralPayload {
+  tenantId:       string;
+  customerId:     string;  // referrer (kodu paylaşan)
+  referralId:     string;  // Referral kayıt ID'si
+  points:         number;  // Sabit: 50
+  idempotencyKey: string;  // "referral:{referralId}"
+}
+
 export interface LoyaltyHistoryResult {
   balance: number;
   total:   number;
@@ -129,6 +138,64 @@ export class LoyaltyService {
 
     this.logger.log(
       `[Loyalty] +${points} puan | customerId=${customerId} | key=${idempotencyKey}`,
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // EARN FROM REFERRAL — Faz 18: BullMQ ReferralProcessor tarafından çağrılır
+  // ═══════════════════════════════════════════════════════════════════════════
+  async earnFromReferral(payload: EarnFromReferralPayload): Promise<void> {
+    const { tenantId, customerId, referralId, points, idempotencyKey } = payload;
+
+    // ── 1. İdempotency: zaten işlendiyse sessizce geç ───────────────────────
+    const existing = await this.prisma.loyaltyTransaction.findUnique({
+      where: { idempotencyKey },
+    });
+    if (existing) {
+      this.logger.debug(`[Loyalty] Referral earn zaten işlendi: ${idempotencyKey}`);
+      return;
+    }
+
+    // ── 2. Atomik: SELECT FOR UPDATE → INSERT → UPDATE ───────────────────────
+    await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      const rows = await tx.$queryRawUnsafe<Array<{ loyaltyPoints: number }>>(
+        `SELECT "loyaltyPoints"
+           FROM customers
+          WHERE id = $1::uuid
+            AND "tenantId" = $2::uuid
+            AND "isDeleted" = FALSE
+          FOR UPDATE`,
+        customerId,
+        tenantId,
+      );
+
+      if (!rows[0]) {
+        this.logger.warn(`[Loyalty] Referrer bulunamadı: ${customerId}`);
+        return;
+      }
+
+      const newBalance = rows[0].loyaltyPoints + points;
+
+      await tx.loyaltyTransaction.create({
+        data: {
+          tenantId,
+          customerId,
+          action:        'EARNED_REFERRAL',
+          points,
+          balanceAfter:  newBalance,
+          description:   `Referral ödülü — referralId:${referralId}`,
+          idempotencyKey,
+        },
+      });
+
+      await tx.customer.update({
+        where: { id: customerId },
+        data:  { loyaltyPoints: newBalance },
+      });
+    });
+
+    this.logger.log(
+      `[Loyalty] +${points} referral puanı | customerId=${customerId} | key=${idempotencyKey}`,
     );
   }
 

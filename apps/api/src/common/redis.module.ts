@@ -59,11 +59,12 @@ const redisClientProvider = {
       inject: [ConfigService],
     }),
     BullModule.registerQueue(
-      { name: QUEUE_NAMES.NOTIFICATIONS },
-      { name: QUEUE_NAMES.STOCK_DEDUCT  },
-      { name: QUEUE_NAMES.LOYALTY_EARN  },
-      { name: QUEUE_NAMES.HUMAN_HANDOFF },
-      { name: QUEUE_NAMES.CAMPAIGN      },
+      { name: QUEUE_NAMES.NOTIFICATIONS    },
+      { name: QUEUE_NAMES.STOCK_DEDUCT     },
+      { name: QUEUE_NAMES.LOYALTY_EARN     },
+      { name: QUEUE_NAMES.HUMAN_HANDOFF    },
+      { name: QUEUE_NAMES.CAMPAIGN         },
+      { name: QUEUE_NAMES.REFERRAL_PROCESS }, // Faz 18
     ),
   ],
   providers: [

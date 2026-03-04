@@ -31,6 +31,8 @@ import { slugify }    from '@lib/utils';
 import { SalonBookingPage } from '@components/SalonBookingPage';
 import { CityPage }         from '@components/CityPage';
 
+const SITE_URL = process.env['NEXT_PUBLIC_BOOKING_URL'] ?? 'https://book.auralis.app';
+
 // ── Metadata ───────────────────────────────────────────────────────────────────
 
 export async function generateMetadata({
@@ -48,6 +50,8 @@ export async function generateMetadata({
     return {
       title:       `${salon.name} | ${city} Randevu — Auralis`,
       description,
+      // Faz 18: ?ref= parametresi canonical'dan çıkarılır — duplicate content önlemi
+      alternates:  { canonical: `${SITE_URL}/${slug}` },
       openGraph: {
         title:       `${salon.name} - Online Randevu`,
         description,
@@ -79,10 +83,16 @@ export async function generateMetadata({
 
 export default async function SlugPage({
   params,
+  searchParams,
 }: {
-  params: Promise<{ slug: string }>;
+  params:       Promise<{ slug: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const { slug } = await params;
+  const [{ slug }, sp] = await Promise.all([params, searchParams]);
+
+  // Faz 18: ?ref= query parametresinden referral kodu al
+  const refParam            = sp['ref'];
+  const initialReferralCode = typeof refParam === 'string' ? refParam : undefined;
 
   // ── 1. Salon PLG sayfası (Faz 16) ─────────────────────────────────────────
   const salon = await fetchSalon(slug);
@@ -96,6 +106,7 @@ export default async function SlugPage({
         salon={salon}
         services={servicesData}
         staff={staffData}
+        initialReferralCode={initialReferralCode}
       />
     );
   }

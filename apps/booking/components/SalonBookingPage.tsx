@@ -22,9 +22,11 @@ interface Props {
   staff:    StaffDto[];
   /** Canonical URL varsa <link rel="canonical"> için */
   canonicalUrl?: string;
+  /** Faz 18: URL'den gelen ?ref= kodu — BookingWidget'e iletilir */
+  initialReferralCode?: string;
 }
 
-export function SalonBookingPage({ salon, services, staff, canonicalUrl }: Props) {
+export function SalonBookingPage({ salon, services, staff, canonicalUrl, initialReferralCode }: Props) {
   const city = salon.location?.city ?? '';
 
   return (
@@ -176,6 +178,7 @@ export function SalonBookingPage({ salon, services, staff, canonicalUrl }: Props
             salon={salon}
             services={services}
             staff={staff}
+            initialReferralCode={initialReferralCode}
           />
         </section>
 

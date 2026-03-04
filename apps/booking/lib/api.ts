@@ -57,16 +57,18 @@ export interface SlotDto {
 }
 
 export interface BookingPayload {
-  tenantId:   string;
-  locationId: string;
-  staffId:    string;
-  serviceId:  string;
-  startTime:  string;
-  firstName:  string;
-  lastName:   string;
-  phone:      string;
-  email?:     string;
-  notes?:     string;
+  tenantId:     string;
+  locationId:   string;
+  staffId:      string;
+  serviceId:    string;
+  startTime:    string;
+  firstName:    string;
+  lastName:     string;
+  phone:        string;
+  email?:       string;
+  notes?:       string;
+  // Faz 18: Referral kodu (?ref= query parametresinden)
+  referralCode?: string;
 }
 
 export interface BookingResult {
@@ -76,6 +78,9 @@ export interface BookingResult {
   service:  { name: string; durationMin: number };
   staff:    { firstName: string; lastName: string };
   location: { name: string };
+  // Faz 18: Referral — yeni müşteriye üretilen kod + salon slug
+  referralCode?: string;
+  salonSlug:     string;
 }
 
 // ── API Fonksiyonları ─────────────────────────────────────────────────────────
