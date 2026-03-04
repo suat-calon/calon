@@ -30,5 +30,7 @@ import { StaffModule }                    from '../staff/staff.module';
     AppointmentLockService,
     AppointmentAvailabilityService,
   ],
+  // PublicModule tarafından kullanılır (Faz 16)
+  exports: [AppointmentService, AppointmentAvailabilityService],
 })
 export class OperationsModule {}

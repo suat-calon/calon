@@ -19,6 +19,7 @@ import { CrmModule }          from './modules/crm/crm.module';
 import { StaffModule }        from './modules/staff/staff.module';
 import { LoyaltyModule }      from './modules/loyalty/loyalty.module';
 import { OnboardingModule }  from './modules/onboarding/onboarding.module';
+import { PublicModule }      from './modules/public/public.module';
 
 @Module({
   imports: [
@@ -74,6 +75,9 @@ import { OnboardingModule }  from './modules/onboarding/onboarding.module';
 
     // ── Onboarding: Self-service kayıt + wizard (Faz 15) ─────────────────────
     OnboardingModule,
+
+    // ── Public Booking: SEO salon sayfası + booking engine (Faz 16) ──────────
+    PublicModule,
   ],
   providers: [
     // ── TenantGuard global: JWT doğrulama + tenantId enjeksiyonu ─────────────

@@ -12,6 +12,12 @@
       "runtimeExecutable": "cmd",
       "runtimeArgs": ["/c", "yarn workspace @auralis/web dev"],
       "port": 3000
+    },
+    {
+      "name": "booking",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": ["/c", "yarn workspace @auralis/booking dev"],
+      "port": 3001
     }
   ]
 }
