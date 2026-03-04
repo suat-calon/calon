@@ -58,10 +58,10 @@ export class CommissionService {
     const { tenantId, staffId, appointmentId, serviceAmount } = input;
 
     // ── 1. Personel profilini al (commissionRate için) ──────────────────────
-    // findUnique: middleware'den hariç → tenantId + isDeleted manuel kontrol
-    const staff = await tx.staffProfile.findUnique({ where: { id: staffId } });
+    // findFirst: tenantId filtresi WHERE'e enjekte edilir → RLS ikinci katman
+    const staff = await tx.staffProfile.findFirst({ where: { id: staffId, tenantId } });
 
-    if (!staff || staff.tenantId !== tenantId || staff.isDeleted) {
+    if (!staff || staff.isDeleted) {
       throw new NotFoundException(`Personel bulunamadı (staffId: ${staffId})`);
     }
 

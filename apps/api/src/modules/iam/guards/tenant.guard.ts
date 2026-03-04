@@ -2,10 +2,11 @@
  * TENANT GUARD — İZOLASYON KÖPRÜSÜNÜN GİRİŞ KAPISI
  * ──────────────────────────────────────────────────────────────────────────────
  * Her korumalı HTTP isteğinde:
- *   1. Authorization header'dan JWT'yi doğrular
+ *   1. JWT'yi önce Authorization header'dan, yoksa auralis_access cookie'den alır
+ *      (HttpOnly cookie: XSS'e karşı localStorage'dan daha güvenli)
  *   2. tenantId'yi SADECE doğrulanmış token'dan alır (body/query'den ASLA)
  *   3. AsyncLocalStorage'a (tenantContext) yazar
- *   4. Prisma middleware bu store'u okuyarak DB sorgularına enjekte eder
+ *   4. Prisma $extends interceptor bu store'u okuyarak DB sorgularına enjekte eder
  *
  * IDOR Koruması: tenantId kullanıcı girdisinden hiçbir zaman alınmaz.
  * ──────────────────────────────────────────────────────────────────────────────
@@ -55,18 +56,26 @@ export class TenantGuard implements CanActivate {
 
     const request = context.switchToHttp().getRequest<{
       headers: { authorization?: string };
+      cookies:     Record<string, string>;
       tenantId?:   string;
       userId?:     string;
       userRole?:   string;
       tenantPlan?: string;  // Plan gating (Pro+)
     }>();
 
+    // JWT önce Authorization header'dan, yoksa HttpOnly cookie'den alınır
     const authHeader = request.headers.authorization;
-    if (!authHeader?.startsWith('Bearer ')) {
-      throw new UnauthorizedException('Authorization header eksik veya hatalı.');
+    let token: string | undefined;
+
+    if (authHeader?.startsWith('Bearer ')) {
+      token = authHeader.slice(7);
+    } else if (request.cookies?.['auralis_access']) {
+      token = request.cookies['auralis_access'] as string;
     }
 
-    const token = authHeader.slice(7);
+    if (!token) {
+      throw new UnauthorizedException('Authorization header veya oturum cookie\'si eksik.');
+    }
 
     let payload: JwtPayload;
     try {

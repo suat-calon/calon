@@ -5,6 +5,7 @@
 import 'tsconfig-paths/register';
 import { NestFactory }            from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
+import cookieParser                from 'cookie-parser';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ConfigService }          from '@nestjs/config';
 import { Logger as PinoLogger }   from 'nestjs-pino';
@@ -36,6 +37,9 @@ async function bootstrap(): Promise<void> {
       },
     }),
   );
+
+  // Cookie parser — HttpOnly cookie auth için
+  app.use(cookieParser());
 
   // CORS
   app.enableCors({

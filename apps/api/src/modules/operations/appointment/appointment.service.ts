@@ -259,9 +259,9 @@ export class AppointmentService {
     actorRole?: string,
   ): Promise<Appointment> {
     // ── Adım 1: Randevuyu bul ───────────────────────────────────────────────
-    const existing = await this.prisma.appointment.findUnique({ where: { id } });
+    const existing = await this.prisma.appointment.findFirst({ where: { id, tenantId } });
 
-    if (!existing || existing.tenantId !== tenantId || existing.isDeleted) {
+    if (!existing || existing.isDeleted) {
       throw new NotFoundException('Randevu bulunamadı');
     }
 
@@ -396,10 +396,10 @@ export class AppointmentService {
     actorId?:   string,
     actorRole?: string,
   ): Promise<Appointment> {
-    // ── 1. Randevuyu bul (findUnique middleware'den hariç — manuel tenantId kontrolü) ──
-    const existing = await this.prisma.appointment.findUnique({ where: { id } });
+    // ── 1. Randevuyu bul — findFirst + tenantId filtresi enjekte edilir ──────
+    const existing = await this.prisma.appointment.findFirst({ where: { id, tenantId } });
 
-    if (!existing || existing.tenantId !== tenantId || existing.isDeleted) {
+    if (!existing || existing.isDeleted) {
       throw new NotFoundException('Randevu bulunamadı');
     }
 

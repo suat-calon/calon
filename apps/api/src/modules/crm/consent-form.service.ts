@@ -42,12 +42,12 @@ export class ConsentFormService {
     ipAddress?: string,
     userAgent?: string,
   ): Promise<ConsentForm> {
-    // Müşteri doğrulama — findUnique middleware dışı → manual tenantId kontrolü
-    const customer = await this.prisma.customer.findUnique({
-      where: { id: dto.customerId },
+    // Müşteri doğrulama — findFirst + tenantId filtresi enjekte edilir
+    const customer = await this.prisma.customer.findFirst({
+      where: { id: dto.customerId, tenantId },
     });
 
-    if (!customer || customer.tenantId !== tenantId || customer.isDeleted) {
+    if (!customer || customer.isDeleted) {
       throw new NotFoundException('Müşteri bulunamadı');
     }
 
@@ -72,12 +72,12 @@ export class ConsentFormService {
    * Middleware: ConsentForm → TENANT_SCOPED_MODELS içinde → tenantId otomatik filtre
    */
   async findByCustomer(tenantId: string, customerId: string): Promise<ConsentForm[]> {
-    // Müşteri tenant kontrolü
-    const customer = await this.prisma.customer.findUnique({
-      where: { id: customerId },
+    // Müşteri tenant kontrolü — findFirst + tenantId filtresi enjekte edilir
+    const customer = await this.prisma.customer.findFirst({
+      where: { id: customerId, tenantId },
     });
 
-    if (!customer || customer.tenantId !== tenantId || customer.isDeleted) {
+    if (!customer || customer.isDeleted) {
       throw new NotFoundException('Müşteri bulunamadı');
     }
 
@@ -91,12 +91,12 @@ export class ConsentFormService {
 
   /**
    * Tek onam formu detayı.
-   * findUnique → middleware hariç → manual tenantId kontrolü.
+   * findFirst + tenantId: WHERE tenantId filtresi enjekte edilir.
    */
   async findOne(tenantId: string, id: string): Promise<ConsentForm> {
-    const form = await this.prisma.consentForm.findUnique({ where: { id } });
+    const form = await this.prisma.consentForm.findFirst({ where: { id, tenantId } });
 
-    if (!form || form.tenantId !== tenantId) {
+    if (!form) {
       throw new NotFoundException('Onam formu bulunamadı');
     }
 

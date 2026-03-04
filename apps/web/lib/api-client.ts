@@ -1,5 +1,11 @@
 /**
- * AURALIS API CLIENT — Silent Refresh Axios Instance
+ * AURALIS API CLIENT — HttpOnly Cookie Tabanlı Axios Instance
+ *
+ * Güvenlik (v2):
+ *   • localStorage TOKEN YOKTUR — XSS saldırısına karşı kapalı
+ *   • withCredentials: true — tarayıcı HttpOnly cookie'leri otomatik gönderir
+ *   • TenantGuard, access token'ı auralis_access cookie'den okur
+ *   • Silent refresh: 401'de /auth/refresh çağrılır → yeni cookie set edilir
  */
 import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 
@@ -7,43 +13,41 @@ const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 
 const apiClient: AxiosInstance = axios.create({
   baseURL:         `${BASE_URL}/api/v1`,
-  withCredentials: true,
+  withCredentials: true,   // Cookie otomatik gönderilir (HttpOnly erişim gerekmez)
   timeout:         15_000,
 });
 
-// Request interceptor — access token ekle
-apiClient.interceptors.request.use(
-  (config: InternalAxiosRequestConfig) => {
-    const token =
-      typeof window !== 'undefined'
-        ? localStorage.getItem('auralis_access_token')
-        : null;
+// ── Silent Refresh ──────────────────────────────────────────────────────────
 
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-);
-
-// Response interceptor — Silent Refresh
 let isRefreshing = false;
-let failedQueue:  Array<{ resolve: (v: string) => void; reject: (e: unknown) => void }> = [];
+let failedQueue:  Array<{ resolve: () => void; reject: (e: unknown) => void }> = [];
 
 apiClient.interceptors.response.use(
   (response) => response,
-  async (error: { config: InternalAxiosRequestConfig & { _retry?: boolean }; response?: { status: number } }) => {
+  async (error: {
+    config: InternalAxiosRequestConfig & { _retry?: boolean };
+    response?: { status: number };
+  }) => {
     const original = error.config;
 
+    // 401 değilse veya zaten retry yapıldıysa ilet
     if (error.response?.status !== 401 || original._retry) {
       return Promise.reject(error);
     }
 
+    // /auth/ endpoint'lerindeki 401 → sonsuz döngü önleme
+    if (original.url?.includes('/auth/')) {
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login';
+      }
+      return Promise.reject(error);
+    }
+
     if (isRefreshing) {
-      return new Promise<string>((resolve, reject) => {
+      // Paralel istekler yenileme bitene kadar bekler
+      return new Promise<void>((resolve, reject) => {
         failedQueue.push({ resolve, reject });
-      }).then((token) => {
-        original.headers.Authorization = `Bearer ${token}`;
+      }).then(() => {
         return apiClient(original);
       });
     }
@@ -52,28 +56,22 @@ apiClient.interceptors.response.use(
     isRefreshing    = true;
 
     try {
-      const refreshToken = localStorage.getItem('auralis_refresh_token');
-      if (!refreshToken) throw new Error('No refresh token');
+      // auralis_refresh cookie'si withCredentials ile otomatik gönderilir
+      // Body gerekmez — server cookie'den okur ve yeni cookie set eder
+      await axios.post(
+        `${BASE_URL}/api/v1/auth/refresh`,
+        {},
+        { withCredentials: true },
+      );
 
-      const { data } = await axios.post<{
-        accessToken:  string;
-        refreshToken: string;
-      }>(`${BASE_URL}/api/v1/auth/refresh`, { refreshToken });
-
-      localStorage.setItem('auralis_access_token',  data.accessToken);
-      localStorage.setItem('auralis_refresh_token', data.refreshToken);
-
-      failedQueue.forEach(({ resolve }) => resolve(data.accessToken));
+      // Yenileme başarılı — bekleyen istekleri serbest bırak
+      failedQueue.forEach(({ resolve }) => resolve());
       failedQueue = [];
 
-      original.headers.Authorization = `Bearer ${data.accessToken}`;
       return apiClient(original);
     } catch (refreshError) {
       failedQueue.forEach(({ reject }) => reject(refreshError));
       failedQueue = [];
-
-      localStorage.removeItem('auralis_access_token');
-      localStorage.removeItem('auralis_refresh_token');
 
       if (typeof window !== 'undefined') {
         window.location.href = '/login';

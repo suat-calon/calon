@@ -108,12 +108,12 @@ export class CustomerService {
 
   /**
    * Tek müşteri kaydı.
-   * findUnique Prisma middleware'den hariç → tenantId + isDeleted manuel kontrol.
+   * findFirst + tenantId: WHERE tenantId filtresi otomatik enjekte edilir.
    */
   async findOne(tenantId: string, id: string): Promise<Customer> {
-    const customer = await this.prisma.customer.findUnique({ where: { id } });
+    const customer = await this.prisma.customer.findFirst({ where: { id, tenantId } });
 
-    if (!customer || customer.tenantId !== tenantId || customer.isDeleted) {
+    if (!customer || customer.isDeleted) {
       throw new NotFoundException('Müşteri bulunamadı');
     }
 
@@ -145,10 +145,10 @@ export class CustomerService {
     await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
 
       // ── 1. Müşteri doğrulaması ───────────────────────────────────────────────
-      // findUnique → middleware hariç → manual tenantId ve isDeleted kontrolü
-      const customer = await tx.customer.findUnique({ where: { id: customerId } });
+      // findFirst + tenantId: WHERE tenantId filtresi enjekte edilir
+      const customer = await tx.customer.findFirst({ where: { id: customerId, tenantId } });
 
-      if (!customer || customer.tenantId !== tenantId || customer.isDeleted) {
+      if (!customer || customer.isDeleted) {
         throw new NotFoundException('Müşteri bulunamadı');
       }
 

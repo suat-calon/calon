@@ -78,10 +78,10 @@ export class PaymentService {
   ): Promise<PaymentResult> {
     return this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
 
-      // ── 1. Randevuyu bul (findUnique middleware dışı → manuel tenantId kontrolü) ──
-      const appt = await tx.appointment.findUnique({ where: { id: appointmentId } });
+      // ── 1. Randevuyu bul — findFirst + tenantId filtresi enjekte edilir ────
+      const appt = await tx.appointment.findFirst({ where: { id: appointmentId, tenantId } });
 
-      if (!appt || appt.tenantId !== tenantId || appt.isDeleted) {
+      if (!appt || appt.isDeleted) {
         throw new NotFoundException('Randevu bulunamadı');
       }
 
@@ -164,10 +164,10 @@ export class PaymentService {
 
     const result = await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
 
-      // ── 1. Randevuyu bul (findUnique middleware dışı → manuel tenantId kontrolü) ──
-      const appt = await tx.appointment.findUnique({ where: { id: appointmentId } });
+      // ── 1. Randevuyu bul — findFirst + tenantId filtresi enjekte edilir ────
+      const appt = await tx.appointment.findFirst({ where: { id: appointmentId, tenantId } });
 
-      if (!appt || appt.tenantId !== tenantId || appt.isDeleted) {
+      if (!appt || appt.isDeleted) {
         throw new NotFoundException('Randevu bulunamadı');
       }
 

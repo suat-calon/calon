@@ -7,7 +7,7 @@
  *
  * Kullanım akışı:
  *   1. TenantGuard → JWT'den tenantId okur → tenantContext.run() başlatır
- *   2. PrismaService.$use() → her sorguda tenantId'yi okur → DB'ye enjekte eder
+ *   2. PrismaService.$extends interceptor → her sorguda tenantId'yi okur → DB'ye enjekte eder
  *   3. PostgreSQL RLS → set_config() ile tenant_id'yi alır → satır filtreler
  * ──────────────────────────────────────────────────────────────────────────────
  */
@@ -18,6 +18,12 @@ export interface TenantStore {
   tenantId: string;
   userId:   string;
   userRole: string;
+  /**
+   * PrismaService $extends interceptor iç bayrağı.
+   * SET CONFIG + query $transaction sarmalının tekrar tetiklenmesini önler.
+   * Kullanıcı kodu bu alanı okumamalı / yazmamalıdır.
+   */
+  __rlsConfigured?: boolean;
 }
 
 /** Singleton — tüm uygulama bu instance'ı paylaşır */

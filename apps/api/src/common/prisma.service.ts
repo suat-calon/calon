@@ -1,18 +1,23 @@
 /**
  * AURALIS PRISMA SERVICE — ÇİFT KATMANLI İZOLASYON KÖPRÜSÜ
  * ──────────────────────────────────────────────────────────────────────────────
- * Prisma v6 uyumlu implementasyon ($use middleware — deprecated ama hâlâ çalışır).
- * Prisma v7'ye geçişte $extends/query API'ye taşınacak.
+ * Prisma v6 $extends / query interceptor implementasyonu.
+ * (Eski $use middleware tamamen kaldırıldı — deprecated, Prisma v7'de mevcut değil)
  *
  * İki kritik görev:
- *   1. Uygulama katmanı filtresi: Toplu sorgularda WHERE tenantId = <current>
- *   2. PostgreSQL RLS köprüsü: set_config('app.tenant_id', ...) ile
- *      PostgreSQL kernel'ına tenant bilgisini enjekte eder
+ *   1. Uygulama katmanı filtresi: toplu sorgularda WHERE tenantId = <current>
+ *   2. PostgreSQL RLS köprüsü: $transaction([set_config, query]) ile
+ *      aynı DB bağlantısında SET CONFIG + sorgu garantisi sağlar.
  *
- * Tasarım kararları (v1.1 güncelleme):
- *   - findUnique, middleware'den HARIÇ tutulur: Prisma, unique indeks dışı
- *     alan içeren where nesnesini reddeder. RLS 2. katman olarak korumayı sağlar.
- *   - Soft-delete filtresi YALNIZCA isDeleted alanına sahip modellere uygulanır.
+ * Tasarım kararları (v2.0 — $extends):
+ *   - $extends.query.$allModels.$allOperations: tüm model+operasyonları yakalar.
+ *   - $transaction([SET_CONFIG, query(processedArgs)]): sequential batch →
+ *     her iki işlem AYNI bağlantıda çalışır → bağlantı havuzu tenant sızıntısı yok.
+ *   - __rlsConfigured flag (TenantStore): iç içe interceptor tetiklendiğinde
+ *     çift sarmalama engellenir (SET CONFIG $transaction → query → interceptor).
+ *   - findUnique hâlâ HARIÇ: unique where'e ek alan eklenmez.
+ *     (ADIM 2: findFirst + tenantId servis katmanı sorumluluğundadır)
+ *   - Object.assign(this, extended): NestJS DI referansını korur.
  * ──────────────────────────────────────────────────────────────────────────────
  */
 
@@ -25,10 +30,10 @@ import {
 import { PrismaClient } from '@prisma/client';
 import { tenantContext } from './tenant.context';
 
-// ---------------------------------------------------------------------------
-// Tenant izolasyonu uygulanan modeller (Prisma'nın küçük harfli model adları)
-// ---------------------------------------------------------------------------
-const TENANT_SCOPED_MODELS: readonly string[] = [
+// ─── Sabitler (Set → O(1) lookup) ────────────────────────────────────────────
+
+/** Tenant izolasyonu uygulanan Prisma model adları (küçük harf) */
+const TENANT_SCOPED_MODELS: ReadonlySet<string> = new Set([
   'location',        'room',             'usertenant',
   'staffprofile',    'staffworkinghour', 'staffshift',
   'servicecategory', 'service',          'staffservice',
@@ -36,33 +41,28 @@ const TENANT_SCOPED_MODELS: readonly string[] = [
   'appointment',     'transactionledger','commissionlog',
   'loyaltytransaction', 'consentform',   'refreshtoken',
   'idempotencykey',  'auditlog',         'message',
-  'campaigntemplate','customerphoto',
-];
+  'campaigntemplate','customerphoto',    'referral',
+]);
 
-// ---------------------------------------------------------------------------
-// Soft-delete filtresi YALNIZCA bu modellere uygulanır
-// (isDeleted alanı olmayan modeller bu listede yer almaz)
-// ---------------------------------------------------------------------------
-const SOFT_DELETE_MODELS: readonly string[] = [
-  'tenant',    'user',     'location',    'room',
+/** Soft-delete filtresi yalnızca bu modellere uygulanır (isDeleted alanı olanlar) */
+const SOFT_DELETE_MODELS: ReadonlySet<string> = new Set([
+  'tenant',       'user',        'location',    'room',
   'staffprofile', 'servicecategory', 'service', 'product',
-  'customer',  'appointment', 'transactionledger', 'customerphoto',
-];
+  'customer',     'appointment', 'transactionledger', 'customerphoto',
+]);
 
-// findUnique HARIÇ — Prisma unique where'e ek alan kabul etmez
-const BULK_READ_OPS = ['findFirst', 'findMany', 'count', 'aggregate', 'groupBy'] as const;
-const WRITE_OPS     = ['create', 'update', 'upsert', 'delete', 'createMany', 'updateMany', 'deleteMany'] as const;
+/** tenantId WHERE enjeksiyonu: findUnique HARIÇ bulk okumalar */
+const BULK_READ_OPS: ReadonlySet<string> = new Set([
+  'findFirst', 'findMany', 'count', 'aggregate', 'groupBy',
+]);
 
-// Prisma v6'da $use callback için yerel tip tanımı
-// (Prisma.MiddlewareParams v6'da kaldırıldı)
-type MiddlewareParams = {
-  model?:  string;
-  action:  string;
-  args:    Record<string, unknown>;
-  dataPath: string[];
-  runInTransaction: boolean;
-};
-type MiddlewareNext = (params: MiddlewareParams) => Promise<unknown>;
+/** tenantId enjeksiyonu gereken yazma işlemleri */
+const WRITE_OPS: ReadonlySet<string> = new Set([
+  'create', 'update', 'upsert', 'delete',
+  'createMany', 'updateMany', 'deleteMany',
+]);
+
+// ─── Servis ───────────────────────────────────────────────────────────────────
 
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
@@ -78,106 +78,130 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
           : []),
       ],
     });
-
-    this.registerMiddleware();
   }
 
   async onModuleInit(): Promise<void> {
     await this.$connect();
-    this.logger.log('PostgreSQL bağlantısı kuruldu');
+    // $connect() tamamlandıktan sonra extension uygulanmalı
+    this.applyExtensions();
+    this.logger.log('PostgreSQL bağlantısı kuruldu ($extends interceptor aktif)');
   }
 
   async onModuleDestroy(): Promise<void> {
     await this.$disconnect();
   }
 
-  // ---------------------------------------------------------------------------
-  // ÇİFT KATMANLI İZOLASYON MİDDLEWARE
-  // ---------------------------------------------------------------------------
-  private registerMiddleware(): void {
+  // ─── $extends: query interceptor ──────────────────────────────────────────
 
-    // ── Prisma v6'da $use kaldırıldı — guard ile kontrol et ─────────────────
+  private applyExtensions(): void {
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
+    const self = this;
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if (typeof (this as any).$use !== 'function') {
-      this.logger.warn(
-        'Prisma $use v6\'da kaldırıldı. Middleware devre dışı. ' +
-        'Tenant izolasyonu servis katmanında, RLS PostgreSQL\'de uygulanıyor.',
-      );
-      return;
-    }
+    const extended = (this as any).$extends({
+      query: {
+        $allModels: {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          async $allOperations({ model, operation, args, query }: any) {
+            const store = tenantContext.getStore();
 
-    // ── MİDDLEWARE 1: Tenant izolasyon filtresi ─────────────────────────────
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (this as any).$use(async (params: MiddlewareParams, next: MiddlewareNext) => {
-      const store = tenantContext.getStore();
+            // ── 1. Tenant context yok → filtre uygulama (health, seed, @Public) ──
+            if (!store?.tenantId) {
+              return query(args);
+            }
 
-      // Tenant context yoksa (health check, seed, migration, @Public endpoint)
-      if (!store?.tenantId) {
-        return next(params);
-      }
+            const { tenantId } = store;
+            const modelLower   = (model as string).toLowerCase();
 
-      const { tenantId } = store;
-      const modelName    = (params.model ?? '').toLowerCase();
+            // ── 2. İç içe çağrı koruması ──────────────────────────────────────
+            // SET CONFIG $transaction → query(processedArgs) → interceptor yeniden
+            // tetiklenir. Flag set ise: yalnızca filtre uygula, sarmalama yapma.
+            if (store.__rlsConfigured) {
+              return query(self.applyFilters(args, operation, modelLower, tenantId));
+            }
 
-      if (!TENANT_SCOPED_MODELS.includes(modelName)) {
-        return next(params);
-      }
+            // ── 3. Filtre enjeksiyonu ─────────────────────────────────────────
+            const processedArgs = self.applyFilters(args, operation, modelLower, tenantId);
 
-      // ── KATMAN 1: Uygulama seviyesi filtre enjeksiyonu ──
-      // findUnique HARIÇ: unique where'e ek alan eklenmez
-      if ((BULK_READ_OPS as readonly string[]).includes(params.action)) {
-        params.args['where'] = {
-          ...(params.args['where'] as Record<string, unknown> ?? {}),
+            // ── 4. Aynı bağlantıda SET CONFIG + sorgu (batch $transaction) ────
+            // $transaction dizisi: PostgreSQL aynı bağlantıyı kullanır →
+            // set_config transaction-local → başka tenant bağlamı sızmaz.
+            store.__rlsConfigured = true;
+            try {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const [, result] = await (self as any).$transaction([
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                (self as any).$executeRawUnsafe(
+                  `SELECT set_config('app.tenant_id', $1, true)`,
+                  tenantId,
+                ),
+                query(processedArgs),
+              ]);
+              return result;
+            } finally {
+              // Bayrağı her durumda temizle (hata dahil)
+              store.__rlsConfigured = false;
+            }
+          },
+        },
+      },
+    });
+
+    // NestJS DI bağımlılık referansını koruyarak extension'ı uygula
+    Object.assign(this, extended);
+  }
+
+  // ─── Filtre enjeksiyon yardımcıları ──────────────────────────────────────
+
+  private applyFilters(
+    args:      Record<string, unknown>,
+    operation: string,
+    modelName: string,
+    tenantId:  string,
+  ): Record<string, unknown> {
+    const processed: Record<string, unknown> = { ...args };
+
+    if (TENANT_SCOPED_MODELS.has(modelName)) {
+      // Bulk okuma: WHERE tenantId ekle
+      if (BULK_READ_OPS.has(operation)) {
+        processed['where'] = {
+          ...(processed['where'] as Record<string, unknown> ?? {}),
           tenantId,
         };
       }
-
-      if ((WRITE_OPS as readonly string[]).includes(params.action)) {
-        this.injectTenantWrite(params, tenantId);
+      // Yazma: operasyon tipine göre tenantId enjekte et
+      if (WRITE_OPS.has(operation)) {
+        this.injectTenantWrite(processed, operation, tenantId);
       }
+    }
 
-      // ── KATMAN 2: PostgreSQL RLS köprüsü ──
-      // set_config(..., true) = transaction-local
-      // Bağlantı havuzunda başka tenant bağlamı sızmaz
-      await this.$executeRaw`SELECT set_config('app.tenant_id', ${tenantId}, true)`;
+    // Soft-delete filtresi (tüm tenant-scoped olmayan modeller dahil)
+    if (BULK_READ_OPS.has(operation) && SOFT_DELETE_MODELS.has(modelName)) {
+      processed['where'] = {
+        ...(processed['where'] as Record<string, unknown> ?? {}),
+        isDeleted: false,
+      };
+    }
 
-      return next(params);
-    });
-
-    // ── MİDDLEWARE 2: Soft-delete filtresi ──────────────────────────────────
-    // Yalnızca isDeleted alanına sahip modeller + findUnique hariç bulk okumalar
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (this as any).$use(async (params: MiddlewareParams, next: MiddlewareNext) => {
-      const modelName = (params.model ?? '').toLowerCase();
-
-      if (
-        (BULK_READ_OPS as readonly string[]).includes(params.action) &&
-        SOFT_DELETE_MODELS.includes(modelName)
-      ) {
-        params.args['where'] = {
-          ...(params.args['where'] as Record<string, unknown> ?? {}),
-          isDeleted: false,
-        };
-      }
-      return next(params);
-    });
+    return processed;
   }
 
-  // ---------------------------------------------------------------------------
-  // YAZMA İŞLEMLERİNDE TENANT ENJEKSİYONU
-  // ---------------------------------------------------------------------------
-  private injectTenantWrite(params: MiddlewareParams, tenantId: string): void {
-    switch (params.action) {
+  private injectTenantWrite(
+    args:      Record<string, unknown>,
+    operation: string,
+    tenantId:  string,
+  ): void {
+    switch (operation) {
       case 'create':
-        params.args['data'] = {
-          ...(params.args['data'] as Record<string, unknown> ?? {}),
+        args['data'] = {
+          ...(args['data'] as Record<string, unknown> ?? {}),
           tenantId,
         };
         break;
 
       case 'createMany':
-        if (Array.isArray(params.args['data'])) {
-          params.args['data'] = (params.args['data'] as Record<string, unknown>[]).map(
+        if (Array.isArray(args['data'])) {
+          args['data'] = (args['data'] as Record<string, unknown>[]).map(
             (item) => ({ ...item, tenantId }),
           );
         }
@@ -188,8 +212,8 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
       case 'delete':
       case 'updateMany':
       case 'deleteMany':
-        params.args['where'] = {
-          ...(params.args['where'] as Record<string, unknown> ?? {}),
+        args['where'] = {
+          ...(args['where'] as Record<string, unknown> ?? {}),
           tenantId,
         };
         break;

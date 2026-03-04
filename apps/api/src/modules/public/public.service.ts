@@ -276,10 +276,10 @@ export class PublicService {
 
     return this.runInContext(dto.tenantId, async () => {
       // ── 1. Hizmet bilgisini al (endTime hesabı için) ─────────────────────
-      const service = await this.prisma.service.findUnique({
-        where: { id: dto.serviceId },
+      const service = await this.prisma.service.findFirst({
+        where: { id: dto.serviceId, tenantId: dto.tenantId },
       });
-      if (!service || service.tenantId !== dto.tenantId) {
+      if (!service) {
         throw new NotFoundException('Hizmet bulunamadı.');
       }
 

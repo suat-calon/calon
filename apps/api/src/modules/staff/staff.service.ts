@@ -98,12 +98,12 @@ export class StaffService {
   // ── findOne ─────────────────────────────────────────────────────────────────
 
   async findOne(tenantId: string, id: string): Promise<StaffProfile & { workingHours: StaffWorkingHour[] }> {
-    const staff = await this.prisma.staffProfile.findUnique({
-      where:   { id },
+    const staff = await this.prisma.staffProfile.findFirst({
+      where:   { id, tenantId },
       include: { workingHours: true },
     });
 
-    if (!staff || staff.tenantId !== tenantId || staff.isDeleted) {
+    if (!staff || staff.isDeleted) {
       throw new NotFoundException('Personel bulunamadı');
     }
 
@@ -123,8 +123,8 @@ export class StaffService {
     dto:      SetWorkingHoursDto,
   ): Promise<StaffWorkingHour[]> {
     // Personelin bu tenant'a ait olduğunu doğrula
-    const staff = await this.prisma.staffProfile.findUnique({ where: { id: staffId } });
-    if (!staff || staff.tenantId !== tenantId || staff.isDeleted) {
+    const staff = await this.prisma.staffProfile.findFirst({ where: { id: staffId, tenantId } });
+    if (!staff || staff.isDeleted) {
       throw new NotFoundException('Personel bulunamadı');
     }
 
@@ -171,8 +171,8 @@ export class StaffService {
     staffId:  string,
     dto:      CreateShiftDto,
   ): Promise<StaffShift> {
-    const staff = await this.prisma.staffProfile.findUnique({ where: { id: staffId } });
-    if (!staff || staff.tenantId !== tenantId || staff.isDeleted) {
+    const staff = await this.prisma.staffProfile.findFirst({ where: { id: staffId, tenantId } });
+    if (!staff || staff.isDeleted) {
       throw new NotFoundException('Personel bulunamadı');
     }
 
@@ -194,8 +194,8 @@ export class StaffService {
     staffId:  string,
     query:    ListShiftsQueryDto,
   ): Promise<StaffShift[]> {
-    const staff = await this.prisma.staffProfile.findUnique({ where: { id: staffId } });
-    if (!staff || staff.tenantId !== tenantId || staff.isDeleted) {
+    const staff = await this.prisma.staffProfile.findFirst({ where: { id: staffId, tenantId } });
+    if (!staff || staff.isDeleted) {
       throw new NotFoundException('Personel bulunamadı');
     }
 

@@ -299,12 +299,12 @@ export class LoyaltyService {
     customerId: string,
     query:      LoyaltyHistoryQueryDto,
   ): Promise<LoyaltyHistoryResult> {
-    // findUnique: Prisma middleware bypass → manuel tenantId kontrolü zorunlu
-    const customer = await this.prisma.customer.findUnique({
-      where: { id: customerId },
+    // findFirst: tenantId filtresi WHERE'e enjekte edilir → RLS ikinci katman
+    const customer = await this.prisma.customer.findFirst({
+      where: { id: customerId, tenantId },
     });
 
-    if (!customer || customer.tenantId !== tenantId || customer.isDeleted) {
+    if (!customer || customer.isDeleted) {
       throw new NotFoundException('Müşteri bulunamadı');
     }
 
