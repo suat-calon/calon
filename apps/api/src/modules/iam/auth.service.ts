@@ -144,16 +144,25 @@ export class AuthService {
     }
 
     // ── 3. Tenant üyeliği + plan kontrolü ───────────────────────────────────
-    const userTenant = await this.prisma.userTenant.findUnique({
-      where: {
-        // Prisma @unique([userId, tenantId]) için bileşik anahtar
-        userId_tenantId: { userId: user.id, tenantId: dto.tenantId },
-      },
-      include: { tenant: { select: { plan: true } } },
-    });
-
-    if (!userTenant) {
-      throw new UnauthorizedException('Bu işletmeye erişim yetkiniz yok.');
+    // tenantId opsiyonel: belirtilmezse kullanıcının ilk tenant'ı otomatik seçilir
+    let userTenant;
+    if (dto.tenantId) {
+      userTenant = await this.prisma.userTenant.findUnique({
+        where: { userId_tenantId: { userId: user.id, tenantId: dto.tenantId } },
+        include: { tenant: { select: { plan: true } } },
+      });
+      if (!userTenant) {
+        throw new UnauthorizedException('Bu işletmeye erişim yetkiniz yok.');
+      }
+    } else {
+      userTenant = await this.prisma.userTenant.findFirst({
+        where:   { userId: user.id },
+        orderBy: { createdAt: 'asc' },
+        include: { tenant: { select: { plan: true } } },
+      });
+      if (!userTenant) {
+        throw new UnauthorizedException('Bu kullanıcıya bağlı bir işletme bulunamadı.');
+      }
     }
 
     // ── 4. Son giriş zamanı güncelleme ──────────────────────────────────────
@@ -162,11 +171,12 @@ export class AuthService {
       data:  { lastLoginAt: new Date() },
     });
 
+    const effectiveTenantId = userTenant.tenantId;
     this.logger.log(
-      `Giriş: user=${user.email} | tenant=${dto.tenantId} | rol=${userTenant.role} | plan=${userTenant.tenant.plan}`,
+      `Giriş: user=${user.email} | tenant=${effectiveTenantId} | rol=${userTenant.role} | plan=${userTenant.tenant.plan}`,
     );
 
-    return this.generateTokenPair(user.id, dto.tenantId, userTenant.role, userTenant.tenant.plan);
+    return this.generateTokenPair(user.id, effectiveTenantId, userTenant.role, userTenant.tenant.plan);
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
