@@ -1,8 +1,10 @@
 /**
- * PUBLIC BOOKING API CLIENT — Faz 16
+ * PUBLIC BOOKING API CLIENT — Faz 16 + Faz 17
  * ──────────────────────────────────────────────────────────────────────────────
- * Server Component ve Client Component tarafından kullanılan fetch sarmalayıcıları.
- * Server Component'lerde Next.js Data Cache (revalidate: 60) aktif.
+ * Faz 16: Salon booking fetch sarmalayıcıları.
+ * Faz 17: Discovery marketplace fetch sarmalayıcıları.
+ *
+ * Server Component'lerde Next.js Data Cache (revalidate) aktif.
  */
 
 const API_BASE =
@@ -132,4 +134,109 @@ export async function createBooking(payload: BookingPayload): Promise<BookingRes
     throw new Error(err.message ?? 'Randevu oluşturulamadı.');
   }
   return res.json() as Promise<BookingResult>;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FAZ 17 TİPLERİ — Discovery
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export interface CityDto {
+  city:  string;
+  count: number;
+}
+
+export interface ServiceDiscoveryDto {
+  name:  string;
+  slug:  string;
+  count: number;
+}
+
+export interface SalonCardDto {
+  id:         string;
+  name:       string;
+  slug:       string;
+  logoUrl:    string | null;
+  brandColor: string | null;
+  location: {
+    name:    string;
+    address: string | null;
+    city:    string | null;
+    phone:   string | null;
+  } | null;
+  serviceNames: string[];
+}
+
+export interface SitemapDiscoveryDto {
+  cities:            string[];
+  cityServices:      { city: string; serviceSlug: string }[];
+  citySalonServices: { city: string; serviceSlug: string; salonSlug: string }[];
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FAZ 17 API FONKSİYONLARI — Discovery
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export async function fetchCities(): Promise<CityDto[]> {
+  try {
+    const res = await fetch(`${API_BASE}/public/discovery/cities`, {
+      next: { revalidate: 3600 },
+    });
+    if (!res.ok) return [];
+    return res.json() as Promise<CityDto[]>;
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchDiscoveryServices(): Promise<ServiceDiscoveryDto[]> {
+  try {
+    const res = await fetch(`${API_BASE}/public/discovery/services`, {
+      next: { revalidate: 3600 },
+    });
+    if (!res.ok) return [];
+    return res.json() as Promise<ServiceDiscoveryDto[]>;
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchCitySalons(city: string): Promise<SalonCardDto[]> {
+  try {
+    const res = await fetch(
+      `${API_BASE}/public/discovery/city/${encodeURIComponent(city)}`,
+      { next: { revalidate: 3600 } },
+    );
+    if (!res.ok) return [];
+    return res.json() as Promise<SalonCardDto[]>;
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchCityServiceSalons(
+  city:        string,
+  serviceSlug: string,
+): Promise<SalonCardDto[]> {
+  try {
+    const res = await fetch(
+      `${API_BASE}/public/discovery/service/${encodeURIComponent(city)}/${encodeURIComponent(serviceSlug)}`,
+      { next: { revalidate: 3600 } },
+    );
+    if (!res.ok) return [];
+    return res.json() as Promise<SalonCardDto[]>;
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchSitemapDiscovery(): Promise<SitemapDiscoveryDto | null> {
+  try {
+    const res = await fetch(`${API_BASE}/public/discovery/sitemap-data`, {
+      next: { revalidate: 3600 },
+    });
+    if (!res.ok) return null;
+    return res.json() as Promise<SitemapDiscoveryDto>;
+  } catch {
+    return null;
+  }
 }

@@ -48,3 +48,20 @@ export function todayIso(): string {
 export function toDateStr(iso: string): string {
   return new Date(iso).toISOString().slice(0, 10);
 }
+
+/**
+ * Türkçe karakterleri destekleyen URL-uyumlu slug üreteci.
+ * Örn: "Saç Kesimi" → "sac-kesimi", "İstanbul" → "istanbul"
+ */
+export function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/ı/g, 'i')
+    .replace(/ğ/g, 'g')
+    .replace(/ü/g, 'u')
+    .replace(/ş/g, 's')
+    .replace(/ö/g, 'o')
+    .replace(/ç/g, 'c')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+}
