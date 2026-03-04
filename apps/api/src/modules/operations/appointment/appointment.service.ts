@@ -86,6 +86,9 @@ async function checkOverlapRaw(
 ): Promise<void> {
   // Not: tenantId ve staffId UUID sütunlarıdır; PostgreSQL text=$1 ile karşılaştıramaz.
   // ::uuid cast ile parametre, sütun tipiyle uyumlu hale getirilir.
+  // FAZ 14.1: Filtre, GIST constraint'i ile birebir hizalı olmalı:
+  // CANCELLED ve NO_SHOW dışla; isDeleted=false zorunlu.
+  // Not: COMPLETED dışlanmaz — tamamlanmış randevular slotu bloke eder (GIST ile aynı semantik).
   const rows = excludeId
     ? await tx.$queryRaw<{ id: string }[]>`
         SELECT id FROM appointments
@@ -93,8 +96,8 @@ async function checkOverlapRaw(
           "tenantId" = ${tenantId}::uuid
           AND "staffId" = ${staffId}::uuid
           AND "isDeleted" = false
-          AND status NOT IN ('CANCELLED', 'NO_SHOW', 'COMPLETED')
-          AND tstzrange("startTime", "endTime") && tstzrange(${startTime}, ${endTime})
+          AND status NOT IN ('CANCELLED', 'NO_SHOW')
+          AND tsrange("startTime", "endTime") && tsrange(${startTime}::timestamp, ${endTime}::timestamp)
           AND id <> ${excludeId}::uuid
         LIMIT 1
       `
@@ -104,8 +107,8 @@ async function checkOverlapRaw(
           "tenantId" = ${tenantId}::uuid
           AND "staffId" = ${staffId}::uuid
           AND "isDeleted" = false
-          AND status NOT IN ('CANCELLED', 'NO_SHOW', 'COMPLETED')
-          AND tstzrange("startTime", "endTime") && tstzrange(${startTime}, ${endTime})
+          AND status NOT IN ('CANCELLED', 'NO_SHOW')
+          AND tsrange("startTime", "endTime") && tsrange(${startTime}::timestamp, ${endTime}::timestamp)
         LIMIT 1
       `;
 
