@@ -71,6 +71,7 @@ model Tenant {
   logoUrl   String?
   timezone  String       @default("Europe/Istanbul")
   locale    String       @default("tr-TR")
+  currency  String       @default("TRY")             // Para birimi (Faz 15)
 
   // Audit
   createdAt DateTime  @default(now())
@@ -98,6 +99,9 @@ model Tenant {
   usagePeriods           UsagePeriod[]
   usageEvents            UsageEvent[]
   entitlementSnapshot    TenantEntitlementSnapshot?
+
+  // Faz 15: Onboarding Wizard İdempotency
+  onboardingIdempotencies OnboardingIdempotency[]
 
   @@index([slug])
   @@index([status])
@@ -129,11 +133,12 @@ model User {
   status       UserStatus @default(INVITED)
 
   // Audit
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-  lastLoginAt  DateTime?
-  deletedAt    DateTime?
-  isDeleted    Boolean    @default(false)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  lastLoginAt     DateTime?
+  emailVerifiedAt DateTime?                          // Faz 15: e-posta doğrulama
+  deletedAt       DateTime?
+  isDeleted       Boolean    @default(false)
 
   // İlişkiler
   tenants       UserTenant[]
@@ -885,3 +890,22 @@ model FailedJob {
   @@map("failed_jobs")
 }
 
+// =============================================================================
+// BÖLÜM 15: ONBOARDING WIZARD İDEMPOTENCY (Faz 15)
+// =============================================================================
+
+/// Setup wizard'ın tekrar çalıştırılmasını önler.
+/// (tenantId, key) UNIQUE: aynı tenant + Idempotency-Key bir kez çalışır.
+model OnboardingIdempotency {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @db.Uuid
+  key       String                                   // Idempotency-Key header değeri
+  response  Json                                     // Başarılı wizard yanıtı
+  createdAt DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, key])
+  @@index([tenantId])
+  @@map("onboarding_idempotency")
+}

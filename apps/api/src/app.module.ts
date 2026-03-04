@@ -17,7 +17,8 @@ import { CatalogModule }       from './modules/catalog/catalog.module';
 import { FinanceModule }       from './modules/finance/finance.module';
 import { CrmModule }          from './modules/crm/crm.module';
 import { StaffModule }        from './modules/staff/staff.module';
-import { LoyaltyModule }     from './modules/loyalty/loyalty.module';
+import { LoyaltyModule }      from './modules/loyalty/loyalty.module';
+import { OnboardingModule }  from './modules/onboarding/onboarding.module';
 
 @Module({
   imports: [
@@ -70,6 +71,9 @@ import { LoyaltyModule }     from './modules/loyalty/loyalty.module';
 
     // ── Loyalty: Sadakat puanı motoru (Faz 11 — Pro+ plan zorunlu) ───────────
     LoyaltyModule,
+
+    // ── Onboarding: Self-service kayıt + wizard (Faz 15) ─────────────────────
+    OnboardingModule,
   ],
   providers: [
     // ── TenantGuard global: JWT doğrulama + tenantId enjeksiyonu ─────────────

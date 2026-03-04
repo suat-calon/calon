@@ -7,7 +7,8 @@ import { BillingCron }           from './billing.cron';
 import { BillingGuard }          from './guards/billing.guard';
 import { RequireFeatureGuard }   from './guards/require-feature.guard';
 import { LimitCheckService }     from './guards/limit-check.service';
-import { BillingAdminController } from '../admin/billing.admin.controller';
+import { BillingAdminController }       from '../admin/billing.admin.controller';
+import { GrowthMetricsAdminController } from '../admin/growth-metrics.admin.controller';
 
 /**
  * BillingModule — Global modül.
@@ -28,6 +29,7 @@ import { BillingAdminController } from '../admin/billing.admin.controller';
   ],
   controllers: [
     BillingAdminController,
+    GrowthMetricsAdminController,
   ],
   exports: [
     BillingService,
