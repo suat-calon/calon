@@ -50,13 +50,8 @@ export default function LoginPage() {
     setLoading(true);
     try {
       // Raw axios — apiClient interceptor'u bypass edilir (401 döngüsünü önler)
-      const { data } = await axios.post<{
-        accessToken:  string;
-        refreshToken: string;
-      }>('/api/v1/auth/login', values);
-
-      localStorage.setItem('calon_access_token',  data.accessToken);
-      localStorage.setItem('calon_refresh_token', data.refreshToken);
+      // withCredentials: true → HttpOnly calon_access / calon_refresh cookie'leri alır
+      await axios.post('/api/v1/auth/login', values, { withCredentials: true });
 
       router.push('/dashboard');
     } catch (err: unknown) {

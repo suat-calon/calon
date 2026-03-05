@@ -4,13 +4,13 @@
  * İki farklı kilit mekanizması yönetir:
  *
  * 1. HOLD LOCK (Kullanıcı yüzü)
- *    • hold:{tenantId}:{staffId}:{startTime} — TTL 5 dakika
+ *    • calon:hold:{tenantId}:{staffId}:{startTime} — TTL 5 dakika
  *    • Kullanıcı UI'da saat seçince ödeme/onay ekranına geçiş sırasında
  *      slotu geçici olarak kilitler.
  *    • API: POST /appointments/hold
  *
  * 2. CONCURRENCY LOCK (Sunucu içi — Faz 14)
- *    • lock:appointment:{tenantId}:{staffId}:{startTime} — TTL 10 saniye
+ *    • calon:lock:appointment:{tenantId}:{staffId}:{startTime} — TTL 10 saniye
  *    • AppointmentService.create() ve reschedule() içinde DB transaction
  *      başlamadan önce alınır.
  *    • Eş zamanlı isteklerin aynı slotu yarışarak oluşturmasını engeller.
@@ -25,6 +25,7 @@
 import { ConflictException, Inject, Injectable, Logger } from '@nestjs/common';
 import Redis                                              from 'ioredis';
 import { REDIS_CLIENT }                                  from '../../../common/redis.module';
+import { redisKey }                                      from '../../../common/redis.util';
 
 /** Hold lock TTL: 5 dakika (kullanıcı ödeme ekranında bekleme süresi) */
 const HOLD_TTL_SECONDS = 5 * 60;
@@ -43,7 +44,7 @@ export class AppointmentLockService {
   // ── Anahtar oluşturucular ──────────────────────────────────────────────────
 
   /**
-   * hold:{tenantId}:{staffId}:{startTime}
+   * calon:hold:{tenantId}:{staffId}:{startTime}
    * 5 dakikalık kullanıcı hold kilidi
    */
   private buildHoldKey(
@@ -52,11 +53,11 @@ export class AppointmentLockService {
     startTime: string | Date,
   ): string {
     const ts = startTime instanceof Date ? startTime.toISOString() : startTime;
-    return `hold:${tenantId}:${staffId}:${ts}`;
+    return redisKey('hold', tenantId, staffId, ts);
   }
 
   /**
-   * lock:appointment:{tenantId}:{staffId}:{startTime}
+   * calon:lock:appointment:{tenantId}:{staffId}:{startTime}
    * 10 saniyelik concurrency kilidi (transaction içi kullanım)
    */
   private buildConcurrencyKey(
@@ -65,7 +66,7 @@ export class AppointmentLockService {
     startTime: string | Date,
   ): string {
     const ts = startTime instanceof Date ? startTime.toISOString() : startTime;
-    return `lock:appointment:${tenantId}:${staffId}:${ts}`;
+    return redisKey('lock', 'appointment', tenantId, staffId, ts);
   }
 
   // ── HOLD LOCK ─────────────────────────────────────────────────────────────

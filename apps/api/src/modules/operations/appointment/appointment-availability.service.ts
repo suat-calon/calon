@@ -5,7 +5,7 @@
  * Redis'te cache'ler.
  *
  * Cache key formatı:
- *   availability:{tenantId}:{staffId}:{YYYY-MM-DD}
+ *   calon:availability:{tenantId}:{staffId}:{YYYY-MM-DD}
  *
  * TTL: 60 saniye
  *
@@ -26,6 +26,7 @@ import { Appointment }                from '@prisma/client';
 import Redis                          from 'ioredis';
 import { PrismaService }              from '../../../common/prisma.service';
 import { REDIS_CLIENT }               from '../../../common/redis.module';
+import { redisKey }                   from '../../../common/redis.util';
 
 /** Cache TTL: 60 saniye */
 const AVAILABILITY_TTL_SECONDS = 60;
@@ -50,12 +51,12 @@ export class AppointmentAvailabilityService {
   // ── Cache key ─────────────────────────────────────────────────────────────
 
   /**
-   * availability:{tenantId}:{staffId}:{YYYY-MM-DD}
+   * calon:availability:{tenantId}:{staffId}:{YYYY-MM-DD}
    * startTime'dan gün kısmı alınarak normalize edilir.
    */
   private buildKey(tenantId: string, staffId: string, date: string): string {
     // date: 'YYYY-MM-DD' formatında beklenir
-    return `availability:${tenantId}:${staffId}:${date}`;
+    return redisKey('availability', tenantId, staffId, date);
   }
 
   /**

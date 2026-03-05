@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title:       'Calon Booking',
-  description: 'Online randevu sistemi',
+  title:       'Calon — Salon Operating System',
+  description: 'Güzellik ve wellness sektörü için online randevu sistemi',
 };
 
 export default function RootLayout({

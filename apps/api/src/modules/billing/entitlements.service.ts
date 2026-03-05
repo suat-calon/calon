@@ -7,7 +7,7 @@
  *   JWT plan claim → PlanCatalog → TenantBilling.status → UsagePeriod → Redis cache
  *
  * Cache stratejisi:
- *   - Redis key: tenant:entitlements:{tenantId}, TTL: 90s
+ *   - Redis key: calon:tenant:entitlements:{tenantId}, TTL: 90s
  *   - Billing değişince BillingService.invalidateCache() çağırır → DEL
  *   - Cache miss → buildEntitlements() → Redis'e yaz
  *
@@ -22,6 +22,7 @@ import Redis                          from 'ioredis';
 
 import { PrismaService }              from '../../common/prisma.service';
 import { REDIS_CLIENT }               from '../../common/redis.module';
+import { redisKey }                   from '../../common/redis.util';
 import {
   PlanEntry,
   PlanFeatures,
@@ -50,7 +51,7 @@ export interface EntitlementsResult {
 // ── Sabitler ──────────────────────────────────────────────────────────────────
 
 const CACHE_TTL_SEC   = 90;
-const cacheKey = (tenantId: string) => `tenant:entitlements:${tenantId}`;
+const cacheKey = (tenantId: string) => redisKey('tenant', 'entitlements', tenantId);
 
 // ── Servis ────────────────────────────────────────────────────────────────────
 

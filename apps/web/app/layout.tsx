@@ -4,8 +4,8 @@ import { Toaster }       from '@/components/ui/toaster';
 import { QueryProvider } from '@/components/providers/query-provider';
 
 export const metadata: Metadata = {
-  title:       'Calon Business OS',
-  description: 'Güzellik ve wellness sektörü için Business OS',
+  title:       'Calon — Salon Operating System',
+  description: 'Güzellik ve wellness sektörü için Salon Operating System',
 };
 
 export default function RootLayout({
