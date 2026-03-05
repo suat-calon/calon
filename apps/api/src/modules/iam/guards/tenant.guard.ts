@@ -2,7 +2,7 @@
  * TENANT GUARD — İZOLASYON KÖPRÜSÜNÜN GİRİŞ KAPISI
  * ──────────────────────────────────────────────────────────────────────────────
  * Her korumalı HTTP isteğinde:
- *   1. JWT'yi önce Authorization header'dan, yoksa auralis_access cookie'den alır
+ *   1. JWT'yi önce Authorization header'dan, yoksa calon_access cookie'den alır
  *      (HttpOnly cookie: XSS'e karşı localStorage'dan daha güvenli)
  *   2. tenantId'yi SADECE doğrulanmış token'dan alır (body/query'den ASLA)
  *   3. AsyncLocalStorage'a (tenantContext) yazar
@@ -69,8 +69,8 @@ export class TenantGuard implements CanActivate {
 
     if (authHeader?.startsWith('Bearer ')) {
       token = authHeader.slice(7);
-    } else if (request.cookies?.['auralis_access']) {
-      token = request.cookies['auralis_access'] as string;
+    } else if (request.cookies?.['calon_access']) {
+      token = request.cookies['calon_access'] as string;
     }
 
     if (!token) {

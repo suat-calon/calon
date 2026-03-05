@@ -1,5 +1,5 @@
 /**
- * AURALIS API — BOOTSTRAP
+ * CALON API — BOOTSTRAP
  */
 // tsconfig-paths/register MUST be first: redirects @prisma/client → packages/database/generated/client at runtime
 import 'tsconfig-paths/register';
@@ -50,7 +50,7 @@ async function bootstrap(): Promise<void> {
   // Swagger (sadece development)
   if (config.get<string>('NODE_ENV') !== 'production') {
     const swaggerConfig = new DocumentBuilder()
-      .setTitle('Auralis Business OS API')
+      .setTitle('Calon Business OS API')
       .setDescription('Güzellik ve wellness sektörü için Business OS')
       .setVersion('1.0')
       .addBearerAuth()
@@ -72,7 +72,7 @@ async function bootstrap(): Promise<void> {
   const port = config.get<number>('PORT', 4000);
   await app.listen(port);
 
-  logger.log(`🚀 Auralis API: http://localhost:${port}/api/v1`);
+  logger.log(`🚀 Calon API: http://localhost:${port}/api/v1`);
   logger.log(`📖 Swagger:      http://localhost:${port}/api/docs`);
 }
 

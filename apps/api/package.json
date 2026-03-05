@@ -1,5 +1,5 @@
 {
-  "name": "@auralis/api",
+  "name": "@calon/api",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -13,7 +13,7 @@
     "test:e2e": "jest --config jest-e2e.config.js --runInBand --forceExit"
   },
   "dependencies": {
-    "@auralis/database": "*",
+    "@calon/database": "*",
     "@nestjs/bull": "^10.2.3",
     "@nestjs/common": "^10.4.15",
     "@nestjs/config": "^3.3.0",

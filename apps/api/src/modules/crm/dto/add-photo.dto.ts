@@ -33,12 +33,12 @@ export class AddPhotoDto {
   @IsEnum(PhotoType)
   photoType!: PhotoType;
 
-  @ApiProperty({ example: 'https://s3.eu-central-1.amazonaws.com/auralis/photos/abc.jpg', description: 'Tam boyut görsel URL' })
+  @ApiProperty({ example: 'https://s3.eu-central-1.amazonaws.com/calon/photos/abc.jpg', description: 'Tam boyut görsel URL' })
   @IsUrl({ require_tld: false })
   @IsNotEmpty()
   url!: string;
 
-  @ApiPropertyOptional({ example: 'https://s3.eu-central-1.amazonaws.com/auralis/photos/abc-thumb.jpg', description: 'Küçük boy önizleme URL' })
+  @ApiPropertyOptional({ example: 'https://s3.eu-central-1.amazonaws.com/calon/photos/abc-thumb.jpg', description: 'Küçük boy önizleme URL' })
   @IsUrl({ require_tld: false })
   @IsOptional()
   thumbnailUrl?: string;

@@ -1,29 +1,35 @@
 version: '3.9'
 
 # =============================================================================
-# AURALIS — LOCAL DEVELOPMENT STACK
+# CALON — LOCAL DEVELOPMENT STACK
 # PostgreSQL 16 + Redis 7
 # =============================================================================
+
+networks:
+  calon_network:
+    driver: bridge
 
 services:
 
   # ---------------------------------------------------------------------------
   postgres:
     image: postgres:16-alpine
-    container_name: auralis_postgres
+    container_name: calon_postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB:       auralis_dev
+      POSTGRES_DB:       calon_dev
       POSTGRES_USER:     postgres          # Superuser (migration için)
       POSTGRES_PASSWORD: postgres_secret   # Geliştirme ortamı
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      # İlk başlatmada auralis_app rolünü otomatik oluştur
+      # İlk başlatmada calon_app rolünü otomatik oluştur
       - ./docker/postgres-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - calon_network
     healthcheck:
-      test:     ["CMD-SHELL", "pg_isready -U postgres -d auralis_dev"]
+      test:     ["CMD-SHELL", "pg_isready -U postgres -d calon_dev"]
       interval: 5s
       timeout:  5s
       retries:  10
@@ -31,13 +37,15 @@ services:
   # ---------------------------------------------------------------------------
   redis:
     image: redis:7-alpine
-    container_name: auralis_redis
+    container_name: calon_redis
     restart: unless-stopped
     command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy noeviction
     ports:
       - "6379:6379"
     volumes:
       - redis_data:/data
+    networks:
+      - calon_network
     healthcheck:
       test:     ["CMD", "redis-cli", "ping"]
       interval: 5s

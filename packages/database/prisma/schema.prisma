@@ -1,5 +1,5 @@
 // =============================================================================
-// AURALIS BUSINESS OS — PRISMA SCHEMA
+// CALON BUSINESS OS — PRISMA SCHEMA
 // Mimari Anayasa: Sıfır Teknik Borç | Soft Delete | Multi-Tenant RLS
 // =============================================================================
 
@@ -64,7 +64,7 @@ enum UsageEventType {
 model Tenant {
   id        String       @id @default(uuid()) @db.Uuid
   name      String
-  slug      String       @unique               // subdomain: slug.auralis.app
+  slug      String       @unique               // subdomain: slug.calon.com.tr
   plan      TenantPlan   @default(SOLO)
   status    TenantStatus @default(ACTIVE)
   brandColor String?                            // UI özelleştirme
@@ -112,7 +112,7 @@ model Tenant {
 }
 
 enum UserRole {
-  SUPER_ADMIN    // Platform yöneticisi (Auralis)
+  SUPER_ADMIN    // Platform yöneticisi (Calon)
   TENANT_OWNER   // İşletme sahibi
   MANAGER        // Şube müdürü
   RECEPTIONIST   // Resepsiyonist

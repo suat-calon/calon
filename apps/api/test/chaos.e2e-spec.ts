@@ -8,32 +8,32 @@
  * çalışır ve test sonrası kendi verilerini temizler.
  *
  * GEREKSINIMLER:
- *   - auralis_test PostgreSQL veritabanı (migration uygulanmış)
- *   - auralis_app rolü (RLS bypass YOK — test için kritik)
+ *   - calon_test PostgreSQL veritabanı (migration uygulanmış)
+ *   - calon_app rolü (RLS bypass YOK — test için kritik)
  *   - Redis (Hold TTL testleri için; testler mock kullanır)
  *
  * ÇALIŞTIRMA:
- *   TEST_DATABASE_URL="..." yarn workspace @auralis/api jest --config jest-e2e.config.js
+ *   TEST_DATABASE_URL="..." yarn workspace @calon/api jest --config jest-e2e.config.js
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
 // ── ortam değişkeni: test DB (RLS bypass yok) ─────────────────────────────
-// Superuser auralis_db bağlantısı RLS'yi bypass eder;
-// auralis_app bağlantısı RLS politikalarını tam uygular.
+// Superuser calon_db bağlantısı RLS'yi bypass eder;
+// calon_app bağlantısı RLS politikalarını tam uygular.
 // Uygulama bağlantısı — superuser, RLS bypass (NestJS AppModule için)
 const TEST_DB_URL =
   process.env['TEST_DATABASE_URL'] ??
-  'postgresql://auralis:dev_password@localhost:5432/auralis_test';
+  'postgresql://calon:dev_password@localhost:5432/calon_test';
 
 // Seed / doğrulama için superuser bağlantısı (TEST_DB_URL ile aynı)
 const SUPER_DB_URL =
   process.env['SUPER_DATABASE_URL'] ??
-  'postgresql://auralis:dev_password@localhost:5432/auralis_test';
+  'postgresql://calon:dev_password@localhost:5432/calon_test';
 
-// Adım 3-e: auralis_app rolü ile RLS testi — superuser DEĞİL, RLS aktif
+// Adım 3-e: calon_app rolü ile RLS testi — superuser DEĞİL, RLS aktif
 const APP_DB_URL =
   process.env['APP_DATABASE_URL'] ??
-  'postgresql://auralis_app:auralis_app_dev_secret@localhost:5432/auralis_test';
+  'postgresql://calon_app:calon_app_dev_secret@localhost:5432/calon_test';
 
 process.env['DATABASE_URL'] = TEST_DB_URL;
 process.env['JWT_SECRET']   = 'chaos-test-jwt-secret-32chars!!';
@@ -610,8 +610,8 @@ describe('FAZ 10 — Kaos ve Doğrulama', () => {
       expect(leaked.length).toBe(0);
     });
 
-    it('RLS raw SQL kontrolü: auralis_app rolü tenant_id set edilmeden sorgulayınca 0 satır dönmeli', async () => {
-      // auralis_app rolü (superuser değil) ile bağlan — RLS aktif
+    it('RLS raw SQL kontrolü: calon_app rolü tenant_id set edilmeden sorgulayınca 0 satır dönmeli', async () => {
+      // calon_app rolü (superuser değil) ile bağlan — RLS aktif
       const appPrisma = new PrismaClient({ datasources: { db: { url: APP_DB_URL } } });
       await appPrisma.$connect();
 
@@ -621,7 +621,7 @@ describe('FAZ 10 — Kaos ve Doğrulama', () => {
           `SELECT id FROM appointments WHERE "tenantId" = '${tenantB.tenantId}'`
         );
 
-        console.log(`\n[ADIM 3-e] auralis_app + tenant_id unset → appointments:`, rows.length, 'satır');
+        console.log(`\n[ADIM 3-e] calon_app + tenant_id unset → appointments:`, rows.length, 'satır');
         // RLS politikası: set_config olmadan = boş tenant_id = no match
         expect(rows.length).toBe(0);
       } finally {

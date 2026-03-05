@@ -1,5 +1,5 @@
 /**
- * AURALIS PRISMA SERVICE — ÇİFT KATMANLI İZOLASYON KÖPRÜSÜ
+ * CALON PRISMA SERVICE — ÇİFT KATMANLI İZOLASYON KÖPRÜSÜ
  * ──────────────────────────────────────────────────────────────────────────────
  * Prisma v6 $extends / query interceptor implementasyonu.
  * (Eski $use middleware tamamen kaldırıldı — deprecated, Prisma v7'de mevcut değil)

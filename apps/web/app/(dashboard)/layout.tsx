@@ -16,7 +16,7 @@ export default function DashboardLayout({
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    const token = localStorage.getItem('auralis_access_token');
+    const token = localStorage.getItem('calon_access_token');
     if (!token) {
       router.replace('/login');
     } else {

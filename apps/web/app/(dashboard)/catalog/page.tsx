@@ -114,7 +114,7 @@ export default function CatalogPage() {
     <div className="min-h-screen bg-slate-50">
       {/* Üst nav */}
       <header className="border-b bg-white px-6 py-4 flex items-center gap-2 shadow-sm">
-        <span className="text-xl font-bold text-primary">Auralis</span>
+        <span className="text-xl font-bold text-primary">Calon</span>
         <span className="text-sm text-muted-foreground">/ Katalog</span>
       </header>
 

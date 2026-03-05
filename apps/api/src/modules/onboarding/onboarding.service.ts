@@ -20,6 +20,7 @@ import { PrismaService }        from '../../common/prisma.service';
 import { JwtPayload }           from '../iam/guards/tenant.guard';
 import { RegisterOnboardingDto } from './dto/register-onboarding.dto';
 import { SetupWizardDto }        from './dto/setup-wizard.dto';
+import { buildBookingLink }       from '../../common/platform';
 
 // ── Sabitler ──────────────────────────────────────────────────────────────────
 
@@ -28,7 +29,7 @@ const REFRESH_TTL_DAYS   = 30;
 const ACCESS_TTL_SEC     = 15 * 60; // 900 sn
 const ONBOARDING_TRIAL_DAYS = 14;   // Faz 15: onboarding trial 14 gün
 const BILLING_GRACE_DAYS    = 3;
-const BOOKING_BASE_URL   = process.env['BOOKING_BASE_URL'] ?? 'https://book.auralis.app';
+
 
 /** DayOfWeek dönüşüm tablosu: 0=MON … 6=SUN */
 const DAY_MAP = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'] as const;
@@ -129,7 +130,7 @@ export class OnboardingService {
       accessToken,
       refreshToken,
       tenantId:    tenant.id,
-      bookingLink: `${BOOKING_BASE_URL}/${slug}`,
+      bookingLink: buildBookingLink(slug),
     };
   }
 
@@ -158,7 +159,7 @@ export class OnboardingService {
       where:  { id: tenantId },
       select: { slug: true },
     });
-    const bookingLink = `${BOOKING_BASE_URL}/${tenantRecord.slug}`;
+    const bookingLink = buildBookingLink(tenantRecord.slug);
 
     // ── 2. Atomik wizard kurulumu ────────────────────────────────────────────
     await this.prisma.$transaction(

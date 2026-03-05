@@ -8,8 +8,8 @@
  *   - /logout   : Cookie temizleme + Refresh token iptali
  *
  * Güvenlik (v2 — HttpOnly Cookie):
- *   • accessToken  → auralis_access  cookie (HttpOnly, Secure, SameSite=Strict)
- *   • refreshToken → auralis_refresh cookie (HttpOnly, Secure, SameSite=Strict, path=/api/v1/auth)
+ *   • accessToken  → calon_access  cookie (HttpOnly, Secure, SameSite=Strict)
+ *   • refreshToken → calon_refresh cookie (HttpOnly, Secure, SameSite=Strict, path=/api/v1/auth)
  *   • localStorage TOKEN YOKTUR — XSS token çalma saldırısına karşı tamamen kapalı
  *   • İç mesaj detayları Swagger dışında istemciye gönderilmez.
  * ──────────────────────────────────────────────────────────────────────────────
@@ -45,8 +45,8 @@ import { LogoutDto }       from './dto/logout.dto';
 
 // ── Cookie sabitleri ────────────────────────────────────────────────────────
 
-const COOKIE_ACCESS  = 'auralis_access';
-const COOKIE_REFRESH = 'auralis_refresh';
+const COOKIE_ACCESS  = 'calon_access';
+const COOKIE_REFRESH = 'calon_refresh';
 
 /** access token: 15 dakika (ms) */
 const ACCESS_MAX_AGE  = 15 * 60 * 1000;
@@ -147,7 +147,7 @@ export class AuthController {
   @ApiOperation({
     summary: 'Access token yenile (Silent Refresh)',
     description:
-      'auralis_refresh cookie\'sindeki refresh token ile yeni 15 dakikalık access token alır. ' +
+      'calon_refresh cookie\'sindeki refresh token ile yeni 15 dakikalık access token alır. ' +
       'Her çağrıda eski token iptal edilir, yenisi üretilir (Token Rotation). ' +
       'İptal edilmiş token ile istek gelirse tüm oturumlar kapatılır.',
   })

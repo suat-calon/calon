@@ -4,7 +4,7 @@ import { Toaster }       from '@/components/ui/toaster';
 import { QueryProvider } from '@/components/providers/query-provider';
 
 export const metadata: Metadata = {
-  title:       'Auralis Business OS',
+  title:       'Calon Business OS',
   description: 'Güzellik ve wellness sektörü için Business OS',
 };
 

@@ -15,7 +15,7 @@ import type { MetadataRoute } from 'next';
 import { slugify }            from '@lib/utils';
 
 const API_BASE = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:4000';
-const SITE_URL = process.env['NEXT_PUBLIC_SITE_URL'] ?? 'https://book.auralis.app';
+const SITE_URL = process.env['NEXT_PUBLIC_SITE_URL'] ?? 'https://book.calon.com.tr';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   try {

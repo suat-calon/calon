@@ -8,7 +8,7 @@
  *   olduğunda devreye girer. Context yoksa tenant filtresi eklenmez →
  *   tüm aktif tenant'lar cross-tenant sorgulanabilir.
  *
- *   RLS: auralis_app table owner olduğu için marketplace_read_* politikaları
+ *   RLS: calon_app table owner olduğu için marketplace_read_* politikaları
  *   uygulanmaz (owner bypass). Mevcut uygulama sorguları etkilenmez.
  * ──────────────────────────────────────────────────────────────────────────────
  */

@@ -91,16 +91,16 @@ export function CityPage({ citySlug, cityName, salons, services }: Props) {
         <p>
           Randevu sistemi{' '}
           <a
-            href="https://auralis.app"
+            href="https://calon.com.tr"
             target="_blank"
             rel="noopener noreferrer"
             className="font-semibold text-brand-600 hover:text-brand-800 transition-colors"
           >
-            Auralis
+            Calon
           </a>{' '}
           ile güçlendirilmiştir.{' '}
           <a
-            href="https://auralis.app/register"
+            href="https://calon.com.tr/register"
             target="_blank"
             rel="noopener noreferrer"
             className="underline hover:text-gray-600 transition-colors"

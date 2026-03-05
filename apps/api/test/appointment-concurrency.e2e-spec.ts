@@ -11,7 +11,7 @@
  *   ✅ Reschedule çift kilit: eski slot lock → yeni slot lock → overlap check
  *
  * ÇALIŞTIRMA:
- *   TEST_DATABASE_URL="..." yarn workspace @auralis/api jest \
+ *   TEST_DATABASE_URL="..." yarn workspace @calon/api jest \
  *     --config jest-e2e.config.js --testPathPattern=appointment-concurrency --forceExit
  * ═══════════════════════════════════════════════════════════════════════════
  */
@@ -19,7 +19,7 @@
 // ── Ortam değişkenleri ─────────────────────────────────────────────────────
 const TEST_DB_URL =
   process.env['TEST_DATABASE_URL'] ??
-  'postgresql://auralis:dev_password@localhost:5432/auralis_test';
+  'postgresql://calon:dev_password@localhost:5432/calon_test';
 
 process.env['DATABASE_URL']   = TEST_DB_URL;
 process.env['JWT_SECRET']     = 'chaos-test-jwt-secret-32chars!!';

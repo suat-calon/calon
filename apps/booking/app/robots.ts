@@ -1,6 +1,6 @@
 import type { MetadataRoute } from 'next';
 
-const SITE_URL = process.env['NEXT_PUBLIC_SITE_URL'] ?? 'https://book.auralis.app';
+const SITE_URL = process.env['NEXT_PUBLIC_SITE_URL'] ?? 'https://book.calon.com.tr';
 
 export default function robots(): MetadataRoute.Robots {
   return {

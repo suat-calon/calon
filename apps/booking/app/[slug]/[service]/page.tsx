@@ -60,7 +60,7 @@ export async function generateMetadata({
   const salons = await fetchCityServiceSalons(slug, service);
   const city   = salons[0]?.location?.city ?? slug;
 
-  const title       = `${city}'da ${serviceName} | Online Randevu — Auralis`;
+  const title       = `${city}'da ${serviceName} | Online Randevu — Calon`;
   const description = `${city} bölgesinde ${serviceName} hizmeti sunan ${salons.length} salonu keşfedin ve online randevu alın.`;
 
   return {
@@ -68,7 +68,7 @@ export async function generateMetadata({
     description,
     openGraph: { title, description, type: 'website' },
     alternates: {
-      canonical: `${process.env['NEXT_PUBLIC_SITE_URL'] ?? 'https://book.auralis.app'}/${slug}/${service}`,
+      canonical: `${process.env['NEXT_PUBLIC_SITE_URL'] ?? 'https://book.calon.com.tr'}/${slug}/${service}`,
     },
     robots: { index: true, follow: true },
   };
@@ -151,12 +151,12 @@ export default async function CityServicePage({
         <p>
           Randevu sistemi{' '}
           <a
-            href="https://auralis.app"
+            href="https://calon.com.tr"
             target="_blank"
             rel="noopener noreferrer"
             className="font-semibold text-brand-600 hover:text-brand-800 transition-colors"
           >
-            Auralis
+            Calon
           </a>{' '}
           ile güçlendirilmiştir.
         </p>

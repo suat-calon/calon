@@ -4,7 +4,7 @@
  * Base: /api/v1/public/discovery
  *
  * Tüm endpoint'ler @Public() → JWT, TenantGuard, BillingGuard bypass.
- * Cross-tenant okuma: marketplace RLS politikaları etkin; auralis_app
+ * Cross-tenant okuma: marketplace RLS politikaları etkin; calon_app
  * table owner olduğu için bypass — uygulama sorguları etkilenmez.
  * ──────────────────────────────────────────────────────────────────────────────
  */

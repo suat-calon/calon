@@ -52,7 +52,7 @@ const STEPS: { id: Step; label: string }[] = [
 const STEP_ORDER: Step[] = ['service', 'staff', 'date', 'slot', 'form', 'confirm'];
 
 // ── Sabitler ──────────────────────────────────────────────────────────────────
-const SITE_URL = process.env['NEXT_PUBLIC_BOOKING_URL'] ?? 'https://book.auralis.app';
+const SITE_URL = process.env['NEXT_PUBLIC_BOOKING_URL'] ?? 'https://book.calon.com.tr';
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 

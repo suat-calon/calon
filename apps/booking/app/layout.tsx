@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title:       'Auralis Booking',
+  title:       'Calon Booking',
   description: 'Online randevu sistemi',
 };
 

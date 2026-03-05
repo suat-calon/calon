@@ -55,8 +55,8 @@ export default function LoginPage() {
         refreshToken: string;
       }>('/api/v1/auth/login', values);
 
-      localStorage.setItem('auralis_access_token',  data.accessToken);
-      localStorage.setItem('auralis_refresh_token', data.refreshToken);
+      localStorage.setItem('calon_access_token',  data.accessToken);
+      localStorage.setItem('calon_refresh_token', data.refreshToken);
 
       router.push('/dashboard');
     } catch (err: unknown) {
@@ -74,7 +74,7 @@ export default function LoginPage() {
   return (
     <Card className="w-full max-w-md">
       <CardHeader className="space-y-1">
-        <CardTitle className="text-2xl font-bold">Auralis'e Giriş Yap</CardTitle>
+        <CardTitle className="text-2xl font-bold">Calon'a Giriş Yap</CardTitle>
         <CardDescription>E-posta ve şifrenizle oturum açın</CardDescription>
       </CardHeader>
 

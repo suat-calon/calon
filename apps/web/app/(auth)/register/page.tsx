@@ -88,7 +88,7 @@ export default function RegisterPage() {
     <Card className="w-full max-w-lg">
       <CardHeader className="space-y-1">
         <CardTitle className="text-2xl font-bold">Hesap Oluştur</CardTitle>
-        <CardDescription>İşletmeniz için Auralis hesabı açın</CardDescription>
+        <CardDescription>İşletmeniz için Calon hesabı açın</CardDescription>
       </CardHeader>
 
       <CardContent>

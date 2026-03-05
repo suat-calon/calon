@@ -1,5 +1,5 @@
 /**
- * AURALIS TENANT CONTEXT
+ * CALON TENANT CONTEXT
  * ──────────────────────────────────────────────────────────────────────────────
  * AsyncLocalStorage tabanlı tenant context.
  * Node.js'in native "thread-local" alternatifi: Her HTTP isteği kendi
@@ -34,7 +34,7 @@ export function getTenantStore(): TenantStore {
   const store = tenantContext.getStore();
   if (!store) {
     throw new Error(
-      '[Auralis] TenantStore bulunamadı. ' +
+      '[Calon] TenantStore bulunamadı. ' +
       'Bu servis TenantGuard korumasız bir endpoint\'ten mi çağrıldı?',
     );
   }

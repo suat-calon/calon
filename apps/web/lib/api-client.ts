@@ -1,10 +1,10 @@
 /**
- * AURALIS API CLIENT — HttpOnly Cookie Tabanlı Axios Instance
+ * CALON API CLIENT — HttpOnly Cookie Tabanlı Axios Instance
  *
  * Güvenlik (v2):
  *   • localStorage TOKEN YOKTUR — XSS saldırısına karşı kapalı
  *   • withCredentials: true — tarayıcı HttpOnly cookie'leri otomatik gönderir
- *   • TenantGuard, access token'ı auralis_access cookie'den okur
+ *   • TenantGuard, access token'ı calon_access cookie'den okur
  *   • Silent refresh: 401'de /auth/refresh çağrılır → yeni cookie set edilir
  */
 import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
@@ -56,7 +56,7 @@ apiClient.interceptors.response.use(
     isRefreshing    = true;
 
     try {
-      // auralis_refresh cookie'si withCredentials ile otomatik gönderilir
+      // calon_refresh cookie'si withCredentials ile otomatik gönderilir
       // Body gerekmez — server cookie'den okur ve yeni cookie set eder
       await axios.post(
         `${BASE_URL}/api/v1/auth/refresh`,

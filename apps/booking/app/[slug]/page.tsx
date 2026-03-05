@@ -31,7 +31,7 @@ import { slugify }    from '@lib/utils';
 import { SalonBookingPage } from '@components/SalonBookingPage';
 import { CityPage }         from '@components/CityPage';
 
-const SITE_URL = process.env['NEXT_PUBLIC_BOOKING_URL'] ?? 'https://book.auralis.app';
+const SITE_URL = process.env['NEXT_PUBLIC_BOOKING_URL'] ?? 'https://book.calon.com.tr';
 
 // ── Metadata ───────────────────────────────────────────────────────────────────
 
@@ -48,7 +48,7 @@ export async function generateMetadata({
     const city        = salon.location?.city ?? 'Türkiye';
     const description = `${salon.name} salonunda online randevu alın. ${city} bölgesinde profesyonel güzellik hizmetleri.`;
     return {
-      title:       `${salon.name} | ${city} Randevu — Auralis`,
+      title:       `${salon.name} | ${city} Randevu — Calon`,
       description,
       // Faz 18: ?ref= parametresi canonical'dan çıkarılır — duplicate content önlemi
       alternates:  { canonical: `${SITE_URL}/${slug}` },
@@ -69,14 +69,14 @@ export async function generateMetadata({
     const city        = salons[0]?.location?.city ?? slug;
     const description = `${city} bölgesindeki güzellik salonlarını keşfedin ve online randevu alın.`;
     return {
-      title:       `${city} Salonları | Online Randevu — Auralis`,
+      title:       `${city} Salonları | Online Randevu — Calon`,
       description,
       openGraph:   { title: `${city} Salonları`, description, type: 'website' },
       robots:      { index: true, follow: true },
     };
   }
 
-  return { title: 'Bulunamadı | Auralis' };
+  return { title: 'Bulunamadı | Calon' };
 }
 
 // ── Sayfa ──────────────────────────────────────────────────────────────────────

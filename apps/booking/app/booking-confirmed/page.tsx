@@ -12,12 +12,12 @@ import { Metadata }   from 'next';
 import { CheckCircle } from 'lucide-react';
 import { ShareSection } from './ShareSection';
 
-const SITE_URL = process.env['NEXT_PUBLIC_BOOKING_URL'] ?? 'https://book.auralis.app';
+const SITE_URL = process.env['NEXT_PUBLIC_BOOKING_URL'] ?? 'https://book.calon.com.tr';
 
 // ── Metadata ───────────────────────────────────────────────────────────────────
 
 export const metadata: Metadata = {
-  title:      'Randevunuz Oluşturuldu | Auralis',
+  title:      'Randevunuz Oluşturuldu | Calon',
   description: 'Randevunuz başarıyla oluşturuldu. Arkadaşlarınızı davet ederek puan kazanın.',
   // Canonical ref parametresi olmadan — SEO duplicate content koruması
   alternates:  { canonical: `${SITE_URL}/booking-confirmed` },
@@ -105,12 +105,12 @@ export default async function BookingConfirmedPage({
       <p className="mt-8 text-gray-400 text-xs text-center">
         Randevu sistemi{' '}
         <a
-          href="https://auralis.app"
+          href="https://calon.com.tr"
           target="_blank"
           rel="noopener noreferrer"
           className="font-semibold text-brand-600"
         >
-          Auralis
+          Calon
         </a>{' '}
         ile güçlendirilmiştir.
       </p>

@@ -27,7 +27,7 @@ import { slugify } from '@lib/utils';
 
 import { SalonBookingPage } from '@components/SalonBookingPage';
 
-const SITE_URL = process.env['NEXT_PUBLIC_SITE_URL'] ?? 'https://book.auralis.app';
+const SITE_URL = process.env['NEXT_PUBLIC_SITE_URL'] ?? 'https://book.calon.com.tr';
 
 // ── ISR ───────────────────────────────────────────────────────────────────────
 export const revalidate = 3600;
@@ -70,13 +70,13 @@ export async function generateMetadata({
     fetchDiscoveryServices(),
   ]);
 
-  if (!salon) return { title: 'Salon Bulunamadı | Auralis' };
+  if (!salon) return { title: 'Salon Bulunamadı | Calon' };
 
   const city        = salon.location?.city ?? slug;
   const matchedSvc  = allServices.find((s) => s.slug === service);
   const serviceName = matchedSvc?.name ?? service.replace(/-/g, ' ');
 
-  const title       = `${salon.name} — ${serviceName} | ${city} — Auralis`;
+  const title       = `${salon.name} — ${serviceName} | ${city} — Calon`;
   const description = `${city} bölgesinde ${salon.name} salonunda ${serviceName} için online randevu alın.`;
   const canonical   = `${SITE_URL}/${slug}/${service}/${salonSlug}`;
 

@@ -16,8 +16,8 @@ export default function DashboardPage() {
   const router = useRouter();
 
   function handleLogout() {
-    localStorage.removeItem('auralis_access_token');
-    localStorage.removeItem('auralis_refresh_token');
+    localStorage.removeItem('calon_access_token');
+    localStorage.removeItem('calon_refresh_token');
     router.replace('/login');
   }
 
@@ -26,7 +26,7 @@ export default function DashboardPage() {
       {/* Üst nav */}
       <header className="border-b bg-white px-6 py-4 flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-2">
-          <span className="text-xl font-bold text-primary">Auralis</span>
+          <span className="text-xl font-bold text-primary">Calon</span>
           <span className="text-sm text-muted-foreground">Business OS</span>
         </div>
         <Button variant="ghost" size="sm" onClick={handleLogout}>
@@ -40,7 +40,7 @@ export default function DashboardPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
           <p className="text-muted-foreground mt-1">
-            Auralis Business OS — Faz 4 tamamlandı.
+            Calon Business OS — Faz 4 tamamlandı.
           </p>
         </div>
 
