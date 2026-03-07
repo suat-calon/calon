@@ -3,6 +3,12 @@
  * ──────────────────────────────────────────────────────────────────────────────
  * Wizard refresh edildiğinde state kaybolmaması için localStorage persist.
  * Zustand v5 + zustand/middleware (persist)
+ *
+ * Güvenlik (v2 — Faz 21.5):
+ *   • tenantId, serviceId, staffId, locationId PERSIST EDİLMEZ.
+ *   • Bu ID'ler yalnızca backend /onboarding/status API'nden alınır.
+ *   • Persist'e yalnızca UI navigasyonu için gereken minimum state yazılır:
+ *     onboardingSessionId, currentStep, tenantSlug, bookingLink.
  */
 
 import { create } from 'zustand';
@@ -64,16 +70,15 @@ export const useOnboardingStore = create<OnboardingState & OnboardingActions>()(
       reset:         ()                           => set(initialState),
     }),
     {
-      name:    'calon-onboarding',
-      // Yalnızca state alanlarını persist et (action'ları değil)
+      name: 'calon-onboarding',
+      /**
+       * Güvenlik: sunucu tarafından doğrulanması gereken ID'ler PERSIST EDİLMEZ.
+       * tenantId, serviceId, staffId, locationId → her oturumda /onboarding/status'tan alınır.
+       */
       partialize: (state) => ({
         onboardingSessionId: state.onboardingSessionId,
         currentStep:         state.currentStep,
-        tenantId:            state.tenantId,
         tenantSlug:          state.tenantSlug,
-        locationId:          state.locationId,
-        serviceId:           state.serviceId,
-        staffId:             state.staffId,
         bookingLink:         state.bookingLink,
       }),
     },

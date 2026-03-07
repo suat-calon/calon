@@ -17,7 +17,7 @@ import * as crypto       from 'crypto';
 
 const prisma = new PrismaClient({
   datasources: {
-    db: { url: process.env['DATABASE_URL'] ?? 'postgresql://auralis_app:auralis_app_dev_secret@localhost:5432/auralis_dev?schema=public' },
+    db: { url: process.env['DATABASE_URL'] ?? 'postgresql://calon_app:calon_app_dev_secret@localhost:5432/calon_dev?schema=public' },
   },
 });
 
@@ -37,7 +37,7 @@ async function main(): Promise<void> {
 
   for (let i = 1; i <= TENANT_COUNT; i++) {
     const tenantName = `LoadTest Tenant ${i}`;
-    const email      = `loadtest${i}@auralis-soak.test`;
+    const email      = `loadtest${i}@calon-soak.test`;
     const plan       = (['SOLO', 'BOUTIQUE', 'ENTERPRISE'] as const)[i % 3];
 
     // Tenant upsert (idempotent)
