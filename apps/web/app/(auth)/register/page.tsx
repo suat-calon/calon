@@ -7,7 +7,6 @@ import axios           from 'axios';
 import { useForm }     from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z }           from 'zod';
-
 import { Button } from '@/components/ui/button';
 import { Input }  from '@/components/ui/input';
 import {
@@ -27,6 +26,9 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { toast } from '@/hooks/use-toast';
+import { useOnboardingStore } from '@/stores/onboarding.store';
+
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 
 // ── Zod şeması ────────────────────────────────────────────────────────────────
 const registerSchema = z.object({
@@ -35,11 +37,6 @@ const registerSchema = z.object({
   email:      z.string().email('Geçerli bir e-posta girin'),
   password:   z.string().min(8, 'Şifre en az 8 karakter olmalı'),
   tenantName: z.string().min(2, 'İşletme adı en az 2 karakter olmalı'),
-  tenantSlug: z
-    .string()
-    .min(3, 'URL ön eki en az 3 karakter olmalı')
-    .max(50, 'URL ön eki en fazla 50 karakter olabilir')
-    .regex(/^[a-z0-9-]+$/, 'Sadece küçük harf, rakam ve tire kullanın'),
 });
 
 type RegisterFormValues = z.infer<typeof registerSchema>;
@@ -48,30 +45,41 @@ type RegisterFormValues = z.infer<typeof registerSchema>;
 export default function RegisterPage() {
   const router  = useRouter();
   const [loading, setLoading] = useState(false);
+  const { setTenant, setSession, reset } = useOnboardingStore();
 
   const form = useForm<RegisterFormValues>({
     resolver:      zodResolver(registerSchema),
-    defaultValues: {
-      firstName:  '',
-      lastName:   '',
-      email:      '',
-      password:   '',
-      tenantName: '',
-      tenantSlug: '',
-    },
+    defaultValues: { firstName: '', lastName: '', email: '', password: '', tenantName: '' },
   });
 
   async function onSubmit(values: RegisterFormValues) {
     setLoading(true);
     try {
-      // Raw axios — refresh interceptor bypass
-      await axios.post('/api/v1/auth/register', values);
+      reset(); // Önceki oturumu temizle
 
-      toast({
-        title:       'Kayıt başarılı!',
-        description: 'Hesabınız oluşturuldu. Şimdi giriş yapabilirsiniz.',
-      });
-      router.push('/login');
+      const response = await axios.post<{
+        tenantId:    string;
+        tenantSlug?: string;
+        bookingLink: string;
+      }>(
+        `${BASE_URL}/api/v1/onboarding/register`,
+        {
+          email:     values.email,
+          password:  values.password,
+          firstName: values.firstName,
+          lastName:  values.lastName,
+          tenant: { name: values.tenantName },
+        },
+        { withCredentials: true },
+      );
+
+      const { tenantId, bookingLink } = response.data;
+      const slug = bookingLink.split('/').pop() ?? '';
+
+      setTenant(tenantId, slug, bookingLink);
+      setSession(crypto.randomUUID());
+
+      router.push('/onboarding');
     } catch (err: unknown) {
       const message =
         axios.isAxiosError(err)
@@ -88,7 +96,7 @@ export default function RegisterPage() {
     <Card className="w-full max-w-lg">
       <CardHeader className="space-y-1">
         <CardTitle className="text-2xl font-bold">Hesap Oluştur</CardTitle>
-        <CardDescription>İşletmeniz için Calon hesabı açın</CardDescription>
+        <CardDescription>İşletmeniz için Calon hesabı açın — 5 dakikada hazır</CardDescription>
       </CardHeader>
 
       <CardContent>
@@ -133,12 +141,7 @@ export default function RegisterPage() {
                 <FormItem>
                   <FormLabel>E-posta</FormLabel>
                   <FormControl>
-                    <Input
-                      type="email"
-                      placeholder="ornek@salon.com"
-                      autoComplete="email"
-                      {...field}
-                    />
+                    <Input type="email" placeholder="ornek@salon.com" autoComplete="email" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -153,12 +156,7 @@ export default function RegisterPage() {
                 <FormItem>
                   <FormLabel>Şifre</FormLabel>
                   <FormControl>
-                    <Input
-                      type="password"
-                      placeholder="En az 8 karakter"
-                      autoComplete="new-password"
-                      {...field}
-                    />
+                    <Input type="password" placeholder="En az 8 karakter" autoComplete="new-password" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -173,22 +171,7 @@ export default function RegisterPage() {
                 <FormItem>
                   <FormLabel>İşletme Adı</FormLabel>
                   <FormControl>
-                    <Input placeholder="Güzellik Salonu Ayşe" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Tenant slug */}
-            <FormField
-              control={form.control}
-              name="tenantSlug"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>URL Ön Eki</FormLabel>
-                  <FormControl>
-                    <Input placeholder="guzellik-salonu-ayse" {...field} />
+                    <Input placeholder="Luna Salon" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -196,7 +179,7 @@ export default function RegisterPage() {
             />
 
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Hesap oluşturuluyor…' : 'Hesap Oluştur'}
+              {loading ? 'Hesap oluşturuluyor…' : 'Hesabı Oluştur & Devam Et'}
             </Button>
           </form>
         </Form>

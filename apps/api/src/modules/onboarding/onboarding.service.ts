@@ -1,8 +1,12 @@
 /**
  * ONBOARDING SERVICE — Self-Onboarding Wizard
  * ──────────────────────────────────────────────────────────────────────────────
- * A) register()     → atomik User + Tenant + UserTenant + TenantBilling (TRIAL)
- * B) setupWizard()  → idempotent toplu veri kurulumu (Location, Services, Staff…)
+ * A) register()           → atomik User + Tenant + UserTenant + TenantBilling (TRIAL)
+ * B) setupWizard()        → idempotent toplu veri kurulumu (Location, Services, Staff…)
+ * C) getStatus()          → wizard durumunu döner (adım tespiti için)
+ * D) createWizardLocation → Faz 21 adım-1: konum oluşturur
+ * E) createWizardService  → Faz 21 adım-2: hizmet oluşturur (oto-kategori)
+ * F) createWizardStaff    → Faz 21 adım-3: personel oluşturur
  * ──────────────────────────────────────────────────────────────────────────────
  */
 
@@ -10,6 +14,7 @@ import {
   Injectable,
   ConflictException,
   Logger,
+  NotFoundException,
 } from '@nestjs/common';
 import { JwtService }     from '@nestjs/jwt';
 import { Prisma }         from '@prisma/client';
@@ -20,6 +25,9 @@ import { PrismaService }        from '../../common/prisma.service';
 import { JwtPayload }           from '../iam/guards/tenant.guard';
 import { RegisterOnboardingDto } from './dto/register-onboarding.dto';
 import { SetupWizardDto }        from './dto/setup-wizard.dto';
+import { WizardLocationDto }     from './dto/wizard-location.dto';
+import { WizardServiceDto }      from './dto/wizard-service.dto';
+import { WizardStaffDto }        from './dto/wizard-staff.dto';
 import { buildBookingLink }       from '../../common/platform';
 
 // ── Sabitler ──────────────────────────────────────────────────────────────────
@@ -276,6 +284,128 @@ export class OnboardingService {
     );
 
     return wizardResponse;
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // C) GET STATUS — Wizard adımını tespit et
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  async getStatus(tenantId: string): Promise<{
+    currentStep: number;
+    tenantId:    string;
+    tenantSlug:  string;
+    locationId:  string | null;
+    serviceId:   string | null;
+    staffId:     string | null;
+    bookingLink: string;
+  }> {
+    const tenant = await this.prisma.tenant.findFirst({
+      where: { id: tenantId, isDeleted: false },
+      include: {
+        locations: { where: { isDeleted: false }, take: 1, orderBy: { createdAt: 'asc' } },
+        services:  { where: { isDeleted: false }, take: 1, orderBy: { createdAt: 'asc' } },
+        staff:     { where: { isDeleted: false }, take: 1, orderBy: { createdAt: 'asc' } },
+      },
+    });
+
+    if (!tenant) throw new NotFoundException(`Tenant bulunamadı: ${tenantId}`);
+
+    const locationId = tenant.locations[0]?.id ?? null;
+    const serviceId  = tenant.services[0]?.id  ?? null;
+    const staffId    = tenant.staff[0]?.id      ?? null;
+
+    // Adım belirleme: tamamlanan son adıma göre bir sonrakini göster
+    let currentStep = 1;
+    if (locationId) currentStep = 2;
+    if (locationId && serviceId) currentStep = 3;
+    if (locationId && serviceId && staffId) currentStep = 4;
+
+    return {
+      currentStep,
+      tenantId,
+      tenantSlug:  tenant.slug,
+      locationId,
+      serviceId,
+      staffId,
+      bookingLink: buildBookingLink(tenant.slug),
+    };
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // D) CREATE WIZARD LOCATION — Faz 21 Adım 1
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  async createWizardLocation(tenantId: string, dto: WizardLocationDto) {
+    const location = await this.prisma.location.create({
+      data: {
+        tenantId,
+        name:    dto.name,
+        city:    dto.city,
+        phone:   dto.phone,
+        address: dto.address,
+      },
+    });
+
+    this.logger.log(`[Wizard] Location oluşturuldu: ${location.id} (tenant=${tenantId})`);
+    return { locationId: location.id };
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // E) CREATE WIZARD SERVICE — Faz 21 Adım 2
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  async createWizardService(tenantId: string, dto: WizardServiceDto) {
+    // Varsayılan "Genel" kategorisini bul ya da oluştur
+    let category = await this.prisma.serviceCategory.findFirst({
+      where: { tenantId, name: 'Genel', isDeleted: false },
+    });
+    if (!category) {
+      category = await this.prisma.serviceCategory.create({
+        data: { tenantId, name: 'Genel' },
+      });
+    }
+
+    const service = await this.prisma.service.create({
+      data: {
+        tenantId,
+        categoryId:  category.id,
+        name:        dto.name,
+        durationMin: dto.durationMin,
+        price:       dto.price,
+      },
+    });
+
+    this.logger.log(`[Wizard] Service oluşturuldu: ${service.id} (tenant=${tenantId})`);
+    return { serviceId: service.id };
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // F) CREATE WIZARD STAFF — Faz 21 Adım 3
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  async createWizardStaff(tenantId: string, dto: WizardStaffDto) {
+    // locationId'nin bu tenant'a ait olduğunu doğrula
+    const location = await this.prisma.location.findFirst({
+      where: { id: dto.locationId, tenantId, isDeleted: false },
+    });
+    if (!location) {
+      throw new NotFoundException(
+        `Location bulunamadı veya bu tenant'a ait değil: ${dto.locationId}`,
+      );
+    }
+
+    const staff = await this.prisma.staffProfile.create({
+      data: {
+        tenantId,
+        locationId: dto.locationId,
+        firstName:  dto.firstName,
+        lastName:   dto.lastName,
+        title:      dto.title,
+      },
+    });
+
+    this.logger.log(`[Wizard] Staff oluşturuldu: ${staff.id} (tenant=${tenantId})`);
+    return { staffId: staff.id };
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
