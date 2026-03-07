@@ -1,5 +1,6 @@
 'use client';
 
+import { useState }  from 'react';
 import { useRouter } from 'next/navigation';
 import { LogOut }    from 'lucide-react';
 
@@ -11,14 +12,23 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import apiClient from '@/lib/api-client';
 
 export default function DashboardPage() {
-  const router = useRouter();
+  const router              = useRouter();
+  const [loading, setLoading] = useState(false);
 
-  function handleLogout() {
-    localStorage.removeItem('calon_access_token');
-    localStorage.removeItem('calon_refresh_token');
-    router.replace('/login');
+  async function handleLogout() {
+    setLoading(true);
+    try {
+      // POST /auth/logout → sunucu calon_access + calon_refresh cookie'lerini temizler
+      await apiClient.post('/auth/logout');
+    } catch {
+      // logout her koşulda yönlendirmeli (idempotent)
+    } finally {
+      setLoading(false);
+      router.replace('/login');
+    }
   }
 
   return (
@@ -29,9 +39,9 @@ export default function DashboardPage() {
           <span className="text-xl font-bold text-primary">Calon</span>
           <span className="text-sm text-muted-foreground">Business OS</span>
         </div>
-        <Button variant="ghost" size="sm" onClick={handleLogout}>
+        <Button variant="ghost" size="sm" onClick={handleLogout} disabled={loading}>
           <LogOut className="mr-2 h-4 w-4" />
-          Çıkış Yap
+          {loading ? 'Çıkılıyor…' : 'Çıkış Yap'}
         </Button>
       </header>
 
@@ -40,7 +50,7 @@ export default function DashboardPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
           <p className="text-muted-foreground mt-1">
-            Calon Business OS — Faz 4 tamamlandı.
+            Calon Business OS — Faz 21 tamamlandı.
           </p>
         </div>
 
@@ -48,7 +58,7 @@ export default function DashboardPage() {
           <StatusCard title="IAM"        description="JWT + Refresh token"        badge="Faz 1 ✓" />
           <StatusCard title="Randevu"    description="XState + GIST çakışma"       badge="Faz 2 ✓" />
           <StatusCard title="Stok"       description="BullMQ async worker"         badge="Faz 3 ✓" />
-          <StatusCard title="Katalog"    description="Ürün & Hizmet CRUD"          badge="Faz 3 ✓" />
+          <StatusCard title="Onboarding" description="Self-Onboarding Wizard"      badge="Faz 21 ✓" />
         </div>
 
         <Card>

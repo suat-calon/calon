@@ -3,25 +3,29 @@
 import { useEffect, useState } from 'react';
 import { useRouter }           from 'next/navigation';
 
+import apiClient from '@/lib/api-client';
+
 /**
  * Dashboard route grubu layout — kimlik doğrulama kapısı.
- * localStorage'da access token yoksa /login'e yönlendirir.
+ *
+ * Güvenlik (v2):
+ *   - localStorage token kontrolü YOKTUR (XSS saldırısına kapalı)
+ *   - GET /auth/me endpoint'i HttpOnly cookie üzerinden oturumu doğrular
+ *   - 401 gelirse /login'e yönlendirir, silent refresh apiClient interceptor'u üstlenir
  */
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const router  = useRouter();
-  const [ready, setReady] = useState(false);
+  const router              = useRouter();
+  const [ready, setReady]   = useState(false);
 
   useEffect(() => {
-    const token = localStorage.getItem('calon_access_token');
-    if (!token) {
-      router.replace('/login');
-    } else {
-      setReady(true);
-    }
+    apiClient
+      .get('/auth/me')
+      .then(() => setReady(true))
+      .catch(() => router.replace('/login'));
   }, [router]);
 
   if (!ready) {

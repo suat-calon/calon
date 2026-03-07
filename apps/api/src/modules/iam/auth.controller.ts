@@ -17,6 +17,7 @@
 
 import {
   Controller,
+  Get,
   Post,
   Body,
   Req,
@@ -89,6 +90,30 @@ function clearCookies(res: Response): void {
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
+
+  // ─── KİMLİK ──────────────────────────────────────────────────────────────
+  @Get('me')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Oturumdaki kullanıcı bilgisi',
+    description:
+      'TenantGuard tarafından doğrulanmış access token\'dan kullanıcı + tenant bilgisini döner. ' +
+      'Dashboard layout kimlik kontrolü için kullanılır (localStorage\'sız).',
+  })
+  @ApiOkResponse({
+    description: 'Oturum geçerli',
+    schema: { example: { userId: 'uuid', tenantId: 'uuid', role: 'TENANT_OWNER' } },
+  })
+  @ApiUnauthorizedResponse({ description: 'Geçersiz veya süresi dolmuş cookie' })
+  me(
+    @Req() req: { userId?: string; tenantId?: string; userRole?: string },
+  ): { userId: string; tenantId: string; role: string } {
+    return {
+      userId:   req.userId   ?? '',
+      tenantId: req.tenantId ?? '',
+      role:     req.userRole ?? '',
+    };
+  }
 
   // ─── KAYIT ──────────────────────────────────────────────────────────────
   @Public()
