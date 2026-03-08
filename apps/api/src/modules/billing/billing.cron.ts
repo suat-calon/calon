@@ -36,6 +36,7 @@ export class BillingCron {
     await Promise.all([
       this.transitionTrialToPastDue(now),
       this.transitionPastDueToSuspended(now),
+      this.transitionExpiredActivePeriods(now),   // Faz 22.5: period renewal
     ]);
 
     this.logger.log('[BillingCron] Geçiş denetimi tamamlandı.');
@@ -137,6 +138,63 @@ export class BillingCron {
       trialToPastDue:      trialIds.length,
       pastDueToSuspended:  graceIds.length,
     };
+  }
+
+  // ── ACTIVE period sona erdi → PAST_DUE (Faz 22.5) ──────────────────────────
+
+  /**
+   * ACTIVE BillingPeriod'u sona eren tenant'ları PAST_DUE'ya geçir.
+   * Akış:
+   *   1. ACTIVE dönemler içinde periodEnd < now olanları bul.
+   *   2. Her dönemi CLOSED olarak işaretle (immutable kural: sadece status değişir).
+   *   3. Tenant'ın TenantBilling.status ACTIVE ise PAST_DUE yap.
+   *   4. graceUntil = now + 3 gün güncelle (renewal grace window).
+   *   5. Entitlement cache'i invalidate et.
+   *
+   * Neden burada? BillingService.activate() dönemi kapatan adımı içermiyor;
+   * renewal lifecycle billing.cron sorumluluğundadır.
+   */
+  private async transitionExpiredActivePeriods(now: Date): Promise<void> {
+    // Süresi dolmuş ACTIVE dönemler
+    const expiredPeriods = await this.prisma.billingPeriod.findMany({
+      where: {
+        status:    'ACTIVE',
+        periodEnd: { lt: now },
+      },
+      select: { id: true, tenantId: true },
+    });
+
+    if (expiredPeriods.length === 0) return;
+
+    const periodIds = expiredPeriods.map(p => p.id);
+    const tenantIds = [...new Set(expiredPeriods.map(p => p.tenantId))];
+
+    // Dönemleri CLOSED yap (immutable ledger: sadece status değişir)
+    await this.prisma.billingPeriod.updateMany({
+      where: { id: { in: periodIds } },
+      data:  { status: 'CLOSED' },
+    });
+
+    // ACTIVE tenant'ları PAST_DUE'ya geçir (graceUntil = now + 3 gün)
+    const graceUntil = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+
+    await this.prisma.tenantBilling.updateMany({
+      where: {
+        tenantId: { in: tenantIds },
+        status:   'ACTIVE',           // PAST_DUE/SUSPENDED zaten işlenmiş olabilir
+      },
+      data: {
+        status:     'PAST_DUE',
+        graceUntil,
+      },
+    });
+
+    await Promise.all(tenantIds.map(id => this.entitlements.invalidate(id)));
+
+    this.logger.warn(
+      `[BillingCron] ACTIVE period→PAST_DUE: ${tenantIds.length} tenant ` +
+      `(${tenantIds.join(', ')}) — ${periodIds.length} dönem CLOSED`,
+    );
   }
 
   /**

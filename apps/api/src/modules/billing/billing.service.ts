@@ -27,6 +27,7 @@ import { BillingStatus, BillingCycle, TenantPlan, UsageEventType, Prisma } from 
 import { PrismaService }        from '../../common/prisma.service';
 import { EntitlementsService }  from './entitlements.service';
 import { getPlanEntry, getPlanPrice } from './plan.catalog';
+import { addCycle }                   from './billing.utils';
 
 // ── Sabitler ──────────────────────────────────────────────────────────────────
 
@@ -407,6 +408,29 @@ export class BillingService {
       // Plan güncelle + BillingStatus → ACTIVE
       await this.setPlan(attempt.tenantId, attempt.plan);
       await this.activate(attempt.tenantId, providerPaymentId, attempt.cycle);
+
+      // Faz 22.5: İmmutable billing ledger kaydı oluştur
+      const periodStart = new Date();
+      const periodEnd   = addCycle(periodStart, attempt.cycle);
+      await this.prisma.billingPeriod.create({
+        data: {
+          tenantId:          attempt.tenantId,
+          plan:              attempt.plan,
+          cycle:             attempt.cycle,
+          status:            'ACTIVE',
+          amountCents:       attempt.amountCents,
+          currency:          attempt.currency,
+          periodStart,
+          periodEnd,
+          attemptId:         attempt.id,
+          providerPaymentId,
+        },
+      });
+      this.logger.log(
+        `[Billing] BillingPeriod oluşturuldu: tenant=${attempt.tenantId} ` +
+        `plan=${attempt.plan} cycle=${attempt.cycle} ` +
+        `periodStart=${periodStart.toISOString()} periodEnd=${periodEnd.toISOString()}`,
+      );
     } else {
       await this.prisma.billingAttempt.update({
         where: { id: attemptId },

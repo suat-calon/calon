@@ -112,6 +112,9 @@ model Tenant {
   // Faz 22: Abonelik Billing Katmanı
   billingAttempts         BillingAttempt[]
 
+  // Faz 22.5: Billing Ledger
+  billingPeriods          BillingPeriod[]
+
   @@index([slug])
   @@index([status])
   @@map("tenants")
@@ -1034,6 +1037,42 @@ model BillingAttempt {
   @@index([tenantId, plan])
   @@index([tenantId, status])
   @@map("billing_attempts")
+}
+
+// =============================================================================
+// BÖLÜM 22.5: BILLING LEDGER (Faz 22.5)
+// =============================================================================
+
+/// Abonelik dönemi ledger kaydı — immutable billing history.
+/// Kural: kayıtlar sadece status alanı üzerinden değiştirilebilir (ACTIVE → CLOSED/REFUNDED).
+/// UPDATE yapılmayacak; her ödeme yeni bir satır oluşturur.
+enum BillingPeriodStatus {
+  ACTIVE    // Dönem devam ediyor
+  CLOSED    // Dönem kapandı (yenileme tamamlandı veya iptal)
+  REFUNDED  // İade edildi
+}
+
+model BillingPeriod {
+  id                String              @id @default(uuid()) @db.Uuid
+  tenantId          String              @db.Uuid
+  plan              TenantPlan
+  cycle             BillingCycle
+  status            BillingPeriodStatus @default(ACTIVE)
+  amountCents       Int                              // Ödenen tutar snapshot (değişmez)
+  currency          String              @default("TRY")
+  periodStart       DateTime
+  periodEnd         DateTime
+  attemptId         String?             @db.Uuid     // Kaynak BillingAttempt.id
+  providerPaymentId String?                          // İyzico paymentId
+  createdAt         DateTime            @default(now())
+  // updatedAt kasıtlı yok — immutable ledger kuralı
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId, periodStart])
+  @@index([tenantId, status])
+  @@index([attemptId])
+  @@map("billing_periods")
 }
 
 /// Gelen webhook olayları — idempotency kalkanı.
