@@ -26,7 +26,7 @@ import { BillingStatus, BillingCycle, TenantPlan, UsageEventType, Prisma } from 
 
 import { PrismaService }        from '../../common/prisma.service';
 import { EntitlementsService }  from './entitlements.service';
-import { getPlanEntry }         from './plan.catalog'; // activate() içinde plan bazlı SMS/AI hesabı için
+import { getPlanEntry, getPlanPrice } from './plan.catalog';
 
 // ── Sabitler ──────────────────────────────────────────────────────────────────
 
@@ -331,6 +331,91 @@ export class BillingService {
       throw new NotFoundException(`TenantBilling bulunamadı: ${tenantId}`);
     }
     return billing;
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // FAZ 22 — BILLING ATTEMPT METHODS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Abonelik ödeme girişimi oluştur veya mevcut PENDING girişimi döndür.
+   * expiresAt: 30 dakika — cron bu süre sonunda FAILED yapar.
+   * Concurrency guard: partial UNIQUE index (tenantId, plan, cycle) WHERE PENDING.
+   */
+  async createBillingAttempt(
+    tenantId: string,
+    plan:     TenantPlan,
+    cycle:    BillingCycle,
+  ): Promise<{ attemptId: string; amountCents: number; currency: string }> {
+    const { amountCents, currency } = getPlanPrice(plan, cycle);
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 dakika TTL
+
+    // Dedup: süresi dolmamış mevcut PENDING girişimi varsa onu döndür
+    const existing = await this.prisma.billingAttempt.findFirst({
+      where: {
+        tenantId,
+        plan,
+        cycle,
+        status:    'PENDING',
+        expiresAt: { gt: new Date() },
+      },
+    });
+    if (existing) {
+      this.logger.log(`[Billing] Mevcut PENDING girişim yeniden kullanılıyor: ${existing.id}`);
+      return { attemptId: existing.id, amountCents: existing.amountCents, currency: existing.currency };
+    }
+
+    const attempt = await this.prisma.billingAttempt.create({
+      data: { tenantId, plan, cycle, amountCents, currency, status: 'PENDING', expiresAt },
+    });
+
+    this.logger.log(
+      `[Billing] Girişim oluşturuldu: tenantId=${tenantId} plan=${plan} cycle=${cycle} amount=${amountCents}`,
+    );
+    return { attemptId: attempt.id, amountCents, currency };
+  }
+
+  /**
+   * Webhook → FSM geçişi.
+   * Q5: FAILED→SUCCEEDED geçişine izin verilir (cron expiry sonrası geç webhook).
+   * SUCCEEDED terminaldir — tekrar girişe izin verilmez.
+   */
+  async resolveWebhookPayment(
+    attemptId:         string,
+    isSuccess:         boolean,
+    providerPaymentId: string,
+  ): Promise<void> {
+    const attempt = await this.prisma.billingAttempt.findUnique({
+      where: { id: attemptId },
+    });
+    if (!attempt) {
+      this.logger.warn(`[Billing] Girişim bulunamadı: ${attemptId}`);
+      return;
+    }
+    // SUCCEEDED terminaldir — activate() zaten çalıştı, tekrar çalıştırma
+    if (attempt.status === 'SUCCEEDED') {
+      this.logger.log(`[Billing] Girişim zaten başarıyla işlendi: ${attemptId}`);
+      return;
+    }
+    // FAILED→SUCCEEDED geçişine izin verilir (cron FAILED yaptıktan sonra geç webhook)
+
+    if (isSuccess) {
+      await this.prisma.billingAttempt.update({
+        where: { id: attemptId },
+        data:  { status: 'SUCCEEDED', providerPaymentId },
+      });
+      // Plan güncelle + BillingStatus → ACTIVE
+      await this.setPlan(attempt.tenantId, attempt.plan);
+      await this.activate(attempt.tenantId, providerPaymentId, attempt.cycle);
+    } else {
+      await this.prisma.billingAttempt.update({
+        where: { id: attemptId },
+        data:  { status: 'FAILED', providerPaymentId },
+      });
+      this.logger.warn(
+        `[Billing] Webhook FAILURE: attemptId=${attemptId} tenantId=${attempt.tenantId}`,
+      );
+    }
   }
 }
 

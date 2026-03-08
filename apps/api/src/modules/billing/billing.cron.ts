@@ -138,4 +138,36 @@ export class BillingCron {
       pastDueToSuspended:  graceIds.length,
     };
   }
+
+  /**
+   * Her 10 dakikada bir — TTL'i geçmiş PENDING BillingAttempt'leri FAILED yap.
+   * Cron/webhook race guard: webhook zaten paymentId set etmişse hiç dokunma.
+   */
+  @Cron('*/10 * * * *')
+  async expireStaleAttempts(): Promise<void> {
+    const result = await this.prisma.billingAttempt.updateMany({
+      where: {
+        status:            'PENDING',
+        expiresAt:         { lt: new Date() },
+        providerPaymentId: null, // webhook zaten yanıt verdiyse sona erdirme
+      },
+      data: { status: 'FAILED' },
+    });
+    if (result.count > 0) {
+      this.logger.warn(`[BillingCron] ${result.count} stale attempt FAILED yapıldı`);
+    }
+  }
+
+  /**
+   * Her ayın 1'inde 03:00 — 90 günden eski webhook_events satırlarını sil.
+   * 90 gün: chargeback/dispute penceresini karşılar; tabloyu sınırsız büyümeden korur.
+   */
+  @Cron('0 3 1 * *')
+  async pruneWebhookEvents(): Promise<void> {
+    const cutoff = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+    const deleted = await this.prisma.$executeRaw`
+      DELETE FROM webhook_events WHERE "createdAt" < ${cutoff}
+    `;
+    this.logger.log(`[BillingCron] ${deleted} eski webhook_events satırı silindi (>90 gün)`);
+  }
 }

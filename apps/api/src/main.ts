@@ -16,6 +16,8 @@ async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule, {
     // Pino devralana kadar NestJS built-in logger kapalı
     bufferLogs: true,
+    // rawBody: BillingWebhookController'da x-iyz-signature doğrulaması için gerekli
+    rawBody: true,
   });
 
   // Pino structured logger'ı NestJS'in varsayılan logger'ı olarak ayarla

@@ -109,6 +109,9 @@ model Tenant {
   // Faz 19: İyzico Ödeme Motoru
   payments                Payment[]
 
+  // Faz 22: Abonelik Billing Katmanı
+  billingAttempts         BillingAttempt[]
+
   @@index([slug])
   @@index([status])
   @@map("tenants")
@@ -993,4 +996,60 @@ model Payment {
 
   @@index([tenantId])
   @@map("payments")
+}
+
+// =============================================================================
+// BÖLÜM 22: ABONELIK & BİLLİNG KATMANI (Faz 22)
+// =============================================================================
+
+enum BillingAttemptStatus {
+  PENDING    // Ödeme formu başlatıldı, webhook bekleniyor
+  SUCCEEDED  // İyzico webhook → başarılı ödeme, tenant aktif
+  FAILED     // İyzico webhook → başarısız ya da cron TTL doldu
+}
+
+/// Abonelik ödeme girişimi. conversationId = attemptId (İyzico'ya gönderilir).
+/// providerPaymentId NOT UNIQUE — idempotency webhook_events.providerEventId @unique üzerinden sağlanır.
+/// expiresAt: 30 dakika sonra cron tarafından FAILED yapılır (cron/webhook race guard ile).
+model BillingAttempt {
+  id                String               @id @default(uuid()) @db.Uuid
+  tenantId          String               @db.Uuid
+  plan              TenantPlan
+  cycle             BillingCycle
+  amountCents       Int                              // Fiyat snapshot — PLAN_PRICES değişse bile korunur
+  currency          String               @default("TRY")
+  status            BillingAttemptStatus @default(PENDING)
+  providerPaymentId String?                          // İyzico paymentId (webhook'ta gelir)
+  providerMeta      Json?
+
+  expiresAt DateTime                                // TTL: oluşturulma + 30 dakika
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+  @@index([status, expiresAt])
+  @@index([tenantId, plan])
+  @@index([tenantId, status])
+  @@map("billing_attempts")
+}
+
+/// Gelen webhook olayları — idempotency kalkanı.
+/// providerEventId @unique: aynı iyzico olayı iki kez işlenmez (P2002 → 200 dön).
+model WebhookEvent {
+  id              String    @id @default(uuid()) @db.Uuid
+  source          String                             // 'iyzico_billing' | 'iyzico_payment'
+  providerEventId String    @unique                 // paymentId ?? iyziReferenceCode
+  eventType       String                             // 'checkout_payment' veya status değeri
+  payload         Json
+  tenantId        String?   @db.Uuid                // null ise attempt bulunamadı
+  processedAt     DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([source, eventType])
+  @@index([tenantId])
+  @@map("webhook_events")
 }

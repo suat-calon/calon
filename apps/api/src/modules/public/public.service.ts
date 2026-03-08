@@ -15,6 +15,7 @@ import {
   Logger,
   NotFoundException,
   ConflictException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { InjectQueue }    from '@nestjs/bull';
 import { Queue }          from 'bull';
@@ -305,6 +306,14 @@ export class PublicService {
       include: { billing: { select: { status: true } } },
     });
     if (!tenant) throw new NotFoundException('Salon aktif değil.');
+
+    // Faz 22: SUSPENDED tenant'lar public booking yapamaz.
+    // BillingGuard @Public() endpoint'lerde çalışmaz; bu yüzden burada kontrol edilir.
+    if (tenant.billing?.status === 'SUSPENDED') {
+      throw new ForbiddenException(
+        'Bu işletmenin aboneliği askıya alındı. Lütfen daha sonra tekrar deneyin.',
+      );
+    }
 
     return this.runInContext(dto.tenantId, async () => {
       // ── 1. Hizmet bilgisini al (endTime hesabı için) ─────────────────────

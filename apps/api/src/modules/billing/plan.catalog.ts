@@ -7,8 +7,13 @@
  *
  * TRIAL: Ayrı bir plan DEĞİLDİR. BOUTIQUE feature set'i + düşük quota.
  * Hesaplama: status === TRIAL ise TRIAL_OVERRIDE uygulanır.
+ *
+ * PLAN_PRICES: Faz 22 — abonelik fiyat kataloğu.
+ * TODO(future): Bölgesel fiyatlandırma veya plan yönetimi gerektiğinde DB'ye taşı.
  * ──────────────────────────────────────────────────────────────────────────────
  */
+
+import type { BillingCycle, TenantPlan } from '@prisma/client';
 
 // ── Tip Tanımları ─────────────────────────────────────────────────────────────
 
@@ -132,4 +137,37 @@ export const TRIAL_OVERRIDE: PlanEntry = {
  */
 export function getPlanEntry(plan: string): PlanEntry {
   return PlanCatalog[plan] ?? PlanCatalog['SOLO'];
+}
+
+// ── Faz 22: Abonelik Fiyat Kataloğu ──────────────────────────────────────────
+// TODO(future): Bölgesel fiyatlandırma veya dinamik plan yönetimi gerektiğinde
+//               bu sabit değerleri bir DB fiyatlandırma tablosuna taşı.
+
+export const PLAN_PRICES: Record<
+  TenantPlan,
+  Record<BillingCycle, { amountCents: number; currency: string }>
+> = {
+  SOLO: {
+    MONTHLY: { amountCents:   39_900, currency: 'TRY' },
+    YEARLY:  { amountCents:  399_000, currency: 'TRY' },
+  },
+  BOUTIQUE: {
+    MONTHLY: { amountCents:   99_900, currency: 'TRY' },
+    YEARLY:  { amountCents:  999_000, currency: 'TRY' },
+  },
+  ENTERPRISE: {
+    MONTHLY: { amountCents:  299_900, currency: 'TRY' },
+    YEARLY:  { amountCents: 2_999_000, currency: 'TRY' },
+  },
+};
+
+/**
+ * Plan ve döngüye göre fiyat döner.
+ * amountCents: kuruş cinsinden (örn. 39_900 = 399.00 TL)
+ */
+export function getPlanPrice(
+  plan:  TenantPlan,
+  cycle: BillingCycle,
+): { amountCents: number; currency: string } {
+  return PLAN_PRICES[plan]?.[cycle] ?? { amountCents: 0, currency: 'TRY' };
 }
