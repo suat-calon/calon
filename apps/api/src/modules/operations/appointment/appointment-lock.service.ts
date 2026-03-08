@@ -4,7 +4,7 @@
  * İki farklı kilit mekanizması yönetir:
  *
  * 1. HOLD LOCK (Kullanıcı yüzü)
- *    • calon:hold:{tenantId}:{staffId}:{startTime} — TTL 5 dakika
+ *    • calon:hold:{tenantId}:{staffId}:{startTime} — TTL 10 dakika
  *    • Kullanıcı UI'da saat seçince ödeme/onay ekranına geçiş sırasında
  *      slotu geçici olarak kilitler.
  *    • API: POST /appointments/hold
@@ -27,8 +27,8 @@ import Redis                                              from 'ioredis';
 import { REDIS_CLIENT }                                  from '../../../common/redis.module';
 import { redisKey }                                      from '../../../common/redis.util';
 
-/** Hold lock TTL: 5 dakika (kullanıcı ödeme ekranında bekleme süresi) */
-const HOLD_TTL_SECONDS = 5 * 60;
+/** Hold lock TTL: 10 dakika (kullanıcı ödeme/onay ekranında bekleme süresi) */
+const HOLD_TTL_SECONDS = 10 * 60;
 
 /** Concurrency lock TTL: 10 saniye (DB transaction süresinden uzun olmalı) */
 const CONCURRENCY_TTL_SECONDS = 10;
@@ -109,6 +109,56 @@ export class AppointmentLockService {
     const key     = this.buildHoldKey(tenantId, staffId, startTime);
     const deleted = await this.redis.del(key);
     this.logger.debug(`Hold kilidi serbest (deleted=${deleted}): ${key}`);
+  }
+
+  /**
+   * Belirli bir gün için aktif hold kilitleri olan başlangıç zamanlarını döndürür.
+   *
+   * Availability hesaplamasında kullanılır: Redis'te kilitli slotlar DB sorgusu
+   * dışında da müsait görünmemeli.
+   *
+   * Pattern: calon:hold:{tenantId}:{staffId}:*
+   * Sonuçlar `date` (YYYY-MM-DD) ile başlayan startTime ISO string'lerine filtreler.
+   *
+   * Redis bağlantı hatasında boş dizi döner (graceful fallback — availability
+   * hesabı sadece DB slotlarına düşer, double-booking riski kabul edilir).
+   */
+  async getHeldSlots(
+    tenantId: string,
+    staffId:  string,
+    date:     string, // YYYY-MM-DD
+  ): Promise<string[]> {
+    try {
+      // calon:hold:{tenantId}:{staffId}:* — tüm hold kilitlerini SCAN ile tara
+      // KEYS O(n) yerine cursor-tabanlı SCAN: production'da bloklamaz
+      const pattern = redisKey('hold', tenantId, staffId, '*');
+      const keys: string[] = [];
+      let cursor = '0';
+
+      do {
+        const [nextCursor, batch] = await this.redis.scan(
+          cursor,
+          'MATCH', pattern,
+          'COUNT', 100,
+        );
+        cursor = nextCursor;
+        keys.push(...batch);
+      } while (cursor !== '0');
+
+      if (keys.length === 0) return [];
+
+      // Anahtarın son parçası startTime ISO string'i; gün eşleştir
+      return keys
+        .map((k) => {
+          // redisKey separator ':' — son segment'i al
+          const parts = k.split(':');
+          return parts[parts.length - 1] ?? '';
+        })
+        .filter((ts) => ts.startsWith(date)); // 2025-06-15T... gibi
+    } catch (err) {
+      this.logger.warn(`getHeldSlots Redis hatası (graceful fallback): ${(err as Error).message}`);
+      return [];
+    }
   }
 
   // ── CONCURRENCY LOCK (Faz 14) ─────────────────────────────────────────────

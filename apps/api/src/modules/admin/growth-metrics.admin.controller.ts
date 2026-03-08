@@ -73,11 +73,13 @@ export class GrowthMetricsAdminController {
 
     // ── 3. Bugünkü aktif randevu sayısı ──────────────────────────────────────
     // Filtre: status NOT IN (CANCELLED, NO_SHOW), isDeleted=false, startTime bugün
+    // Faz 21.9: isTestBooking=true randevular finansal metrikten dışlanır (hizmet katmanı).
     const bookingsToday = await this.prisma.appointment.count({
       where: {
-        isDeleted: false,
-        status:    { notIn: ['CANCELLED', 'NO_SHOW'] },
-        startTime: { gte: todayStart, lt: tomorrowStart },
+        isDeleted:     false,
+        isTestBooking: false,
+        status:        { notIn: ['CANCELLED', 'NO_SHOW'] },
+        startTime:     { gte: todayStart, lt: tomorrowStart },
       },
     });
 

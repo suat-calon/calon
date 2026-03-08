@@ -1,5 +1,17 @@
 'use client';
 
+/**
+ * STEP 5 — Test Rezervasyonu (Faz 21.6)
+ * ──────────────────────────────────────────────────────────────────────────────
+ * Booking linkini Step4 ile aynı resolveBookingLink() yardımcısıyla çözer.
+ * Bu sayede store'da bookingLink null olsa bile tenantSlug'dan üretilir.
+ *
+ * Test randevusu semantiği (Faz 21.9 — B6):
+ *   Kullanıcı booking sayfasını açarak manuel olarak test rezervasyonu yapar.
+ *   Sunucu tarafında public.service.ts, TRIAL tenant + ilk randevu tespiti yaparak
+ *   isTestBooking=true atar. Frontend'in bu konuda ek işlem yapması gerekmez.
+ */
+
 import { useState }   from 'react';
 import { useRouter }  from 'next/navigation';
 import { CalendarCheck, ExternalLink, PartyPopper } from 'lucide-react';
@@ -10,13 +22,23 @@ import {
 } from '@/components/ui/card';
 import { useOnboardingStore } from '@/stores/onboarding.store';
 
+const BOOKING_BASE =
+  process.env.NEXT_PUBLIC_BOOKING_URL ?? 'https://book.calon.com.tr';
+
+function resolveBookingLink(bookingLink: string | null, tenantSlug: string | null): string {
+  if (bookingLink) return bookingLink;
+  if (tenantSlug)  return `${BOOKING_BASE}/${tenantSlug}`;
+  return '';
+}
+
 export function Step5TestBooking() {
   const router    = useRouter();
   const store     = useOnboardingStore();
   const [done, setDone] = useState(false);
-  const link = store.bookingLink ?? '';
+  const link = resolveBookingLink(store.bookingLink, store.tenantSlug);
 
   function openBookingPage() {
+    if (!link) return;
     window.open(link, '_blank', 'noopener,noreferrer');
     // Test rezervasyonu sayfası açılınca tamamlandı kabul et
     setDone(true);
@@ -55,7 +77,7 @@ export function Step5TestBooking() {
         </div>
         <CardDescription>
           Booking motorunun düzgün çalıştığını doğrulamak için bir test rezervasyonu yapın.
-          Bu randevu test olarak işaretlenecektir.
+          Bu randevu test olarak işaretlenecek ve gelir metriklerini etkilemeyecektir.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -70,7 +92,11 @@ export function Step5TestBooking() {
           </ol>
         </div>
 
-        <Button className="w-full gap-2" onClick={openBookingPage}>
+        <Button
+          className="w-full gap-2"
+          onClick={openBookingPage}
+          disabled={!link}
+        >
           <ExternalLink className="h-4 w-4" />
           Booking Sayfasını Aç
         </Button>

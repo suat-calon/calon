@@ -19,13 +19,23 @@ import {
 import { InjectQueue }    from '@nestjs/bull';
 import { Queue }          from 'bull';
 import { randomBytes }    from 'crypto';
-import { DayOfWeek, TenantStatus } from '@prisma/client';
+import { DayOfWeek, TenantStatus, AppointmentStatus } from '@prisma/client';
+
+// ── Türkçe destekli slugify ───────────────────────────────────────────────────
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/ı/g, 'i').replace(/ğ/g, 'g').replace(/ü/g, 'u')
+    .replace(/ş/g, 's').replace(/ö/g, 'o').replace(/ç/g, 'c')
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
 
 import { PrismaService }                  from '../../common/prisma.service';
 import { tenantContext }                  from '../../common/tenant.context';
 import { QUEUE_NAMES }                    from '../../common/queue/queue-names';
 import { AppointmentService }             from '../operations/appointment/appointment.service';
 import { AppointmentAvailabilityService } from '../operations/appointment/appointment-availability.service';
+import { AppointmentLockService }         from '../operations/appointment/appointment-lock.service';
 import { BookPublicDto }                  from './dto/book-public.dto';
 
 // ── Referral job payload ───────────────────────────────────────────────────
@@ -92,15 +102,19 @@ export interface SlotDto {
 }
 
 export interface BookingResultDto {
-  appointmentId: string;
-  startTime:     string;
-  endTime:       string;
+  appointmentId:  string;
+  startTime:      string;
+  endTime:        string;
   service:  { name: string; durationMin: number };
   staff:    { firstName: string; lastName: string };
   location: { name: string };
   // Faz 18: Referral
-  referralCode?: string;  // Yeni müşterinin üretilen kodu (paylaşım için)
-  salonSlug:     string;  // Share URL oluşturmak için
+  referralCode?: string;       // Yeni müşterinin üretilen kodu (paylaşım için)
+  salonSlug:     string;       // Share URL oluşturmak için
+  // Faz 19: Ödeme akışı + canonical URL
+  requiresPayment: boolean;    // true → BookingWidget PaymentRequired adımını açar
+  citySlug:        string | null; // Canonical URL: /{citySlug}/{serviceSlug}/{salonSlug}
+  serviceSlug:     string | null; // Canonical URL bileşeni
 }
 
 @Injectable()
@@ -111,6 +125,7 @@ export class PublicService {
     private readonly prisma:        PrismaService,
     private readonly appointments:  AppointmentService,
     private readonly availability:  AppointmentAvailabilityService,
+    private readonly lockService:   AppointmentLockService,
     @InjectQueue(QUEUE_NAMES.REFERRAL_PROCESS)
     private readonly referralQueue: Queue<ReferralJobPayload>,
   ) {}
@@ -254,9 +269,18 @@ export class PublicService {
       );
 
       // Dolu slotlarla çakışanları çıkar
-      const freeSlots = candidates.filter((slot) =>
+      const afterOccupied = candidates.filter((slot) =>
         !this.overlapsAny(slot, occupied),
       );
+
+      // Faz 20: Redis hold kilitleri de müsait değil — double-booking önlemi
+      // Hold süresi 600s; availability yanıtında kilitli slotları gizle.
+      const heldStartTimes = new Set(
+        await this.lockService.getHeldSlots(tenantId, staffId, date),
+      );
+      const freeSlots = heldStartTimes.size === 0
+        ? afterOccupied
+        : afterOccupied.filter((slot) => !heldStartTimes.has(slot.startTime));
 
       return freeSlots;
     });
@@ -269,8 +293,16 @@ export class PublicService {
   async book(dto: BookPublicDto): Promise<BookingResultDto> {
     // Tenant'ı doğrula (public endpoint → slug değil tenantId geliyor,
     // ama salon sayfasından alındığı için zaten güvenilir kabul edilir)
+    // Faz 21.9: TRIAL tenant'lar da test rezervasyonu yapabilir.
+    // TenantStatus.TRIAL diye bir değer yoktur; TRIAL olan salon billing.status=TRIAL
+    // taşır ama tenant.status=ACTIVE'tir. Dolayısıyla burada yalnızca ACTIVE kontrol edilir.
     const tenant = await this.prisma.tenant.findFirst({
-      where: { id: dto.tenantId, isDeleted: false, status: { in: [TenantStatus.ACTIVE] } },
+      where: {
+        id:        dto.tenantId,
+        isDeleted: false,
+        status:    TenantStatus.ACTIVE,
+      },
+      include: { billing: { select: { status: true } } },
     });
     if (!tenant) throw new NotFoundException('Salon aktif değil.');
 
@@ -326,20 +358,41 @@ export class PublicService {
       if (!location) throw new NotFoundException('Lokasyon bulunamadı.');
 
       // ── 5. Randevu oluştur (GIST + Redis lock korumalı) ──────────────────
+      // Faz 19: requiresDeposit=true ise randevu PENDING_PAYMENT ile başlar
+      const initialStatus: AppointmentStatus = service.requiresDeposit
+        ? AppointmentStatus.PENDING_PAYMENT
+        : AppointmentStatus.PENDING;
+
+      // ── Faz 21.9: isTestBooking tespiti (hizmet katmanı — app logic değil) ─
+      // TRIAL tenant'ın ilk randevusu test olarak işaretlenir.
+      // Koşul: billing.status = TRIAL AND mevcut randevu sayısı = 0
+      const billingStatus = tenant.billing?.status;
+      const isTestBooking = billingStatus === 'TRIAL'
+        ? (await this.prisma.appointment.count({
+            where: { tenantId: dto.tenantId, isDeleted: false },
+          })) === 0
+        : false;
+
+      if (isTestBooking) {
+        this.logger.log(`[isTestBooking] İlk test randevusu tespit edildi: tenant=${dto.tenantId}`);
+      }
+
       let appointment;
       try {
         appointment = await this.appointments.create(
           dto.tenantId,
           {
-            customerId: customer.id,
-            staffId:    dto.staffId,
-            serviceId:  dto.serviceId,
-            locationId: dto.locationId,
-            startTime:  startTime.toISOString(),
-            endTime:    endTime.toISOString(),
-            source:     'ONLINE' as const,
-            notes:      dto.notes,
-            totalPrice: Number(service.price),
+            customerId:   customer.id,
+            staffId:      dto.staffId,
+            serviceId:    dto.serviceId,
+            locationId:   dto.locationId,
+            startTime:    startTime.toISOString(),
+            endTime:      endTime.toISOString(),
+            source:       'ONLINE' as const,
+            notes:        dto.notes,
+            totalPrice:   Number(service.price),
+            status:       initialStatus,
+            isTestBooking,
           },
           'public-booking',
         );
@@ -347,6 +400,10 @@ export class PublicService {
         if (err instanceof ConflictException) throw err;
         throw err;
       }
+
+      // ── 5a. Canonical URL bileşenleri ────────────────────────────────────
+      const citySlug    = location.city ? slugify(location.city) : null;
+      const serviceSlug = slugify(service.name);
 
       this.logger.log(
         `Public booking: appt=${appointment.id} | tenant=${dto.tenantId} | staff=${dto.staffId}`,
@@ -378,6 +435,10 @@ export class PublicService {
         // Faz 18: Referral
         referralCode: isNewCustomer ? (customer.referralCode ?? undefined) : undefined,
         salonSlug:    tenant.slug,
+        // Faz 19: Ödeme akışı + canonical URL
+        requiresPayment: service.requiresDeposit,
+        citySlug,
+        serviceSlug,
       };
     });
   }

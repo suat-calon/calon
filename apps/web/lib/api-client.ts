@@ -6,8 +6,16 @@
  *   • withCredentials: true — tarayıcı HttpOnly cookie'leri otomatik gönderir
  *   • TenantGuard, access token'ı calon_access cookie'den okur
  *   • Silent refresh: 401'de /auth/refresh çağrılır → yeni cookie set edilir
+ *
+ * Güvenlik (v3 — Faz 21.6):
+ *   • axios.defaults.withCredentials = true — global güvenlik ağı.
+ *     apiClient.create() zaten açıkça set eder; bu satır raw axios.post/get
+ *     çağrılarını (register sayfası gibi) da kapsar.
  */
 import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
+
+// Global güvenlik: tüm axios örnekleri için withCredentials varsayılanı
+axios.defaults.withCredentials = true;
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 

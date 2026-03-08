@@ -200,6 +200,10 @@ export class AppointmentService {
             internalNotes: dto.internalNotes,
             totalPrice:    dto.totalPrice,
             depositPaid:   dto.depositPaid,
+            // Faz 19: Opsiyonel başlangıç durumu (PENDING_PAYMENT for deposit flow)
+            ...(dto.status !== undefined && { status: dto.status }),
+            // Faz 21.9: Test rezervasyonu — public.service.ts tarafından set edilir
+            ...(dto.isTestBooking === true && { isTestBooking: true }),
           },
         });
       });

@@ -55,7 +55,10 @@ services:
 volumes:
   # Faz 21.5: Calon brand — volume'lar compose-managed named volume olarak tanımlandı.
   # İlk çalıştırmada Docker Compose otomatik oluşturur.
+  # Faz 21.6: external: false — Docker Compose'un kendi yönetiminde; dışarıdan pre-created değil.
   postgres_data:
     name: calon_postgres_data
+    external: false
   redis_data:
     name: calon_redis_data
+    external: false

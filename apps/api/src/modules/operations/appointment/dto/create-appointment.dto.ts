@@ -1,10 +1,11 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { AppointmentSource }               from '@prisma/client';
+import { AppointmentSource, AppointmentStatus } from '@prisma/client';
 import {
   IsUUID,
   IsISO8601,
   IsEnum,
   IsString,
+  IsBoolean,
   IsNumber,
   IsOptional,
   Min,
@@ -80,4 +81,20 @@ export class CreateAppointmentDto {
   @Min(0)
   @IsOptional()
   depositPaid?: number;
+
+  // ── Faz 19: İlk durum (ödeme gerektiren randevular PENDING_PAYMENT ile başlar) ──
+
+  @ApiPropertyOptional({ enum: AppointmentStatus, example: AppointmentStatus.PENDING })
+  @IsEnum(AppointmentStatus)
+  @IsOptional()
+  status?: AppointmentStatus;
+
+  // ── Faz 21.9: Test rezervasyonu işareti ────────────────────────────────
+  // HTTP endpoint'lerinden KABUL EDİLMEZ — yalnızca sunucu içi servisten set edilir.
+  // public.service.ts: TRIAL tenant + ilk randevu tespitinde true atar.
+  // growths-metrics: isTestBooking=true randevular finansal sorgulardan dışlanır.
+  @ApiPropertyOptional({ example: false, description: 'Sunucu tarafından atanır — HTTP body\'den reddedilir.' })
+  @IsBoolean()
+  @IsOptional()
+  isTestBooking?: boolean;
 }

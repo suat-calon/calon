@@ -26,7 +26,7 @@ BASE_URL="${1:-http://localhost:4000}"
 CHAOS_DURATION="${2:-60}"
 API="${BASE_URL}/api/v1"
 
-REDIS_CONTAINER="${REDIS_CONTAINER:-auralis_redis}"
+REDIS_CONTAINER="${REDIS_CONTAINER:-calon_redis}"
 RESULTS_DIR="test/results"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 REPORT="${RESULTS_DIR}/chaos-${TIMESTAMP}.json"

@@ -1,8 +1,8 @@
 /**
- * auralis_test post-push kurulum scripti
+ * calon_test post-push kurulum scripti
  * prisma db push'tan sonra çalıştırılır:
  *   - btree_gist + uuid-ossp uzantıları
- *   - auralis_app rolü + şifre + izinler
+ *   - calon_app rolü + şifre + izinler
  *   - GIST EXCLUDE kısıtlamaları
  *   - RLS politikaları
  */
@@ -10,37 +10,37 @@
 import { PrismaClient } from '../../../packages/database/generated/client/index.js';
 
 const SUPER_URL = process.env.DATABASE_URL ??
-  'postgresql://auralis:dev_password@localhost:5432/auralis_test';
+  'postgresql://calon:dev_password@localhost:5432/calon_test';
 
 const p = new PrismaClient({ datasources: { db: { url: SUPER_URL } } });
 
 async function run() {
   await p.$connect();
-  console.log('🔧 auralis_test post-push kurulum başlıyor...');
+  console.log('🔧 calon_test post-push kurulum başlıyor...');
 
   // 1. Uzantılar
   await p.$executeRawUnsafe(`CREATE EXTENSION IF NOT EXISTS "btree_gist"`);
   await p.$executeRawUnsafe(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`);
   console.log('  ✅ Uzantılar: btree_gist, uuid-ossp');
 
-  // 2. auralis_app rolü
+  // 2. calon_app rolü
   await p.$executeRawUnsafe(`
     DO $$
     BEGIN
-      IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'auralis_app') THEN
-        CREATE ROLE auralis_app LOGIN PASSWORD 'auralis_app_dev_secret';
+      IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'calon_app') THEN
+        CREATE ROLE calon_app LOGIN PASSWORD 'calon_app_dev_secret';
       ELSE
-        ALTER ROLE auralis_app WITH PASSWORD 'auralis_app_dev_secret' LOGIN;
+        ALTER ROLE calon_app WITH PASSWORD 'calon_app_dev_secret' LOGIN;
       END IF;
     END
     $$
   `);
-  await p.$executeRawUnsafe(`GRANT USAGE ON SCHEMA public TO auralis_app`);
-  await p.$executeRawUnsafe(`GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO auralis_app`);
-  await p.$executeRawUnsafe(`GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO auralis_app`);
-  await p.$executeRawUnsafe(`ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO auralis_app`);
-  await p.$executeRawUnsafe(`ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO auralis_app`);
-  console.log('  ✅ auralis_app rolü ve izinleri');
+  await p.$executeRawUnsafe(`GRANT USAGE ON SCHEMA public TO calon_app`);
+  await p.$executeRawUnsafe(`GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO calon_app`);
+  await p.$executeRawUnsafe(`GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO calon_app`);
+  await p.$executeRawUnsafe(`ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO calon_app`);
+  await p.$executeRawUnsafe(`ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO calon_app`);
+  console.log('  ✅ calon_app rolü ve izinleri');
 
   // 3. GIST EXCLUDE kısıtlamaları (varsa atla)
   try {
@@ -155,7 +155,7 @@ async function run() {
   for (const [policyDef, using] of policies) {
     try {
       await p.$executeRawUnsafe(
-        `CREATE POLICY ${policyDef} FOR ALL TO auralis_app USING (${using})`
+        `CREATE POLICY ${policyDef} FOR ALL TO calon_app USING (${using})`
       );
       created++;
     } catch (e) {
@@ -175,7 +175,7 @@ async function run() {
   console.log('\n📊 Doğrulama:');
   console.log('  GIST constraints:', gist.map(g => g.conname).join(', '));
   console.log('  Enum tipleri:', enumCount[0]?.c, 'adet');
-  console.log('\n✅ auralis_test hazır!\n');
+  console.log('\n✅ calon_test hazır!\n');
 }
 
 run()

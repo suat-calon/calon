@@ -1,0 +1,27 @@
+{
+  "_comment": "Calon geliştirici ortamı ayarları şablonu. Makine-özgü değerleri doldurup settings.local.json olarak kaydedin. Bu dosya kaynak kontrolünde güvenle izlenebilir.",
+  "_brand": "calon",
+  "permissions": {
+    "allow": [
+      "Bash(npx prisma generate --schema=packages/database/prisma/schema.prisma)",
+      "Bash(npx tsc --noEmit)",
+      "Bash(node_modules/.bin/tsc --noEmit)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git status:*)",
+      "Bash(git log:*)",
+      "Bash(git diff:*)",
+      "Bash(docker compose config)",
+      "Bash(docker compose up:*)",
+      "Bash(docker compose down:*)"
+    ],
+    "deny": []
+  },
+  "_placeholders": {
+    "DATABASE_URL": "postgresql://calon_app:<PASSWORD>@localhost:5432/calon_dev",
+    "SHADOW_DATABASE_URL": "postgresql://postgres:<PASSWORD>@localhost:5432/calon_shadow",
+    "REDIS_URL": "redis://localhost:6379",
+    "JWT_SECRET": "<GENERATE_WITH: openssl rand -hex 32>",
+    "NEXTAUTH_SECRET": "<GENERATE_WITH: openssl rand -hex 32>"
+  }
+}
