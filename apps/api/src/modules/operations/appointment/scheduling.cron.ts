@@ -3,7 +3,7 @@
  * ─────────────────────────────────────────────────────────────────────────────
  * Hold sona erme tarayıcısı.
  *
- * Her 5 dakikada bir:
+ * Her 1 dakikada bir:
  *   ACTIVE + expiresAt < now → EXPIRED + Redis hold key temizle + availability cache invalidate
  *
  * Neden ayrı Cron sınıfı?
@@ -26,14 +26,17 @@ export class SchedulingCron {
   constructor(private readonly holds: AppointmentHoldService) {}
 
   /**
-   * Her 5 dakikada bir çalışır.
+   * Her 1 dakikada bir çalışır.
    * Süresi dolmuş ACTIVE hold'ları EXPIRED olarak işaretler,
    * Redis key'lerini temizler ve availability cache'i invalidate eder.
+   *
+   * Neden 1 dakika? Hold TTL = 10 dk; 5 dk cron'da slot 5 dk geç serbest kalır.
+   * 1 dk cron ile bekleme < 1 dk olur.
    *
    * Concurrency: NestJS Schedule tek thread'de çalışır; çakışma riski yok.
    * Hata toleransı: expireStaleHolds() kendi hata yönetimini yapar (best-effort).
    */
-  @Cron('*/5 * * * *')
+  @Cron('*/1 * * * *')
   async expireStaleHolds(): Promise<void> {
     this.logger.debug('[SchedulingCron] Stale hold sona erme taraması başladı.');
     try {
