@@ -20,8 +20,8 @@ datasource db {
 // =============================================================================
 
 enum TenantPlan {
-  SOLO       // Tek kişilik
-  BOUTIQUE   // 3–10 personel
+  SOLO // Tek kişilik
+  BOUTIQUE // 3–10 personel
   ENTERPRISE // Klinik / Zincir şube
 }
 
@@ -42,15 +42,15 @@ enum BillingCycle {
 
 /// Tenant'ın abonelik/ödeme durumu (Tenant.status'tan ayrı, billing odaklı)
 enum BillingStatus {
-  TRIAL      // 7 günlük deneme — Pro feature set
-  ACTIVE     // Ödeme alındı, aktif
-  PAST_DUE   // Ödeme gecikti, grace period (3 gün) — kritik write'lar kapalı
-  SUSPENDED  // Grace bitti — sadece billing + auth erişimi
-  CANCELED   // Abonelik iptal edildi
+  TRIAL // 7 günlük deneme — Pro feature set
+  ACTIVE // Ödeme alındı, aktif
+  PAST_DUE // Ödeme gecikti, grace period (3 gün) — kritik write'lar kapalı
+  SUSPENDED // Grace bitti — sadece billing + auth erişimi
+  CANCELED // Abonelik iptal edildi
 }
 
 enum BillingProvider {
-  NONE    // Ödeme altyapısı yok (test/manual)
+  NONE // Ödeme altyapısı yok (test/manual)
   IYZICO
   PAYTR
   STRIPE
@@ -62,58 +62,62 @@ enum UsageEventType {
 }
 
 model Tenant {
-  id        String       @id @default(uuid()) @db.Uuid
-  name      String
-  slug      String       @unique               // subdomain: slug.calon.com.tr
-  plan      TenantPlan   @default(SOLO)
-  status    TenantStatus @default(ACTIVE)
-  brandColor String?                            // UI özelleştirme
-  logoUrl   String?
-  timezone  String       @default("Europe/Istanbul")
-  locale    String       @default("tr-TR")
-  currency  String       @default("TRY")             // Para birimi (Faz 15)
+  id         String       @id @default(uuid()) @db.Uuid
+  name       String
+  slug       String       @unique // subdomain: slug.calon.com.tr
+  plan       TenantPlan   @default(SOLO)
+  status     TenantStatus @default(ACTIVE)
+  brandColor String? // UI özelleştirme
+  logoUrl    String?
+  timezone   String       @default("Europe/Istanbul")
+  locale     String       @default("tr-TR")
+  currency   String       @default("TRY") // Para birimi (Faz 15)
 
   // Audit
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
-  deletedAt DateTime?                           // Soft delete
+  deletedAt DateTime? // Soft delete
   isDeleted Boolean   @default(false)
 
   // İlişkiler
-  users        UserTenant[]
-  locations    Location[]
-  customers    Customer[]
-  appointments Appointment[]
-  services     Service[]
-  serviceCategories ServiceCategory[]
-  products     Product[]
-  staff        StaffProfile[]
-  campaigns    CampaignTemplate[]               // v2 placeholder
-  refreshTokens RefreshToken[]
-  idempotencyKeys IdempotencyKey[]
-  auditLogs    AuditLog[]
+  users              UserTenant[]
+  locations          Location[]
+  customers          Customer[]
+  appointments       Appointment[]
+  services           Service[]
+  serviceCategories  ServiceCategory[]
+  products           Product[]
+  staff              StaffProfile[]
+  campaigns          CampaignTemplate[] // v2 placeholder
+  refreshTokens      RefreshToken[]
+  idempotencyKeys    IdempotencyKey[]
+  auditLogs          AuditLog[]
   transactionLedgers TransactionLedger[]
 
   // Faz 12: Plan Engine
-  billing                TenantBilling?
-  usagePeriods           UsagePeriod[]
-  usageEvents            UsageEvent[]
-  entitlementSnapshot    TenantEntitlementSnapshot?
+  billing             TenantBilling?
+  usagePeriods        UsagePeriod[]
+  usageEvents         UsageEvent[]
+  entitlementSnapshot TenantEntitlementSnapshot?
 
   // Faz 15: Onboarding Wizard İdempotency
   onboardingIdempotencies OnboardingIdempotency[]
 
   // Faz 18: Viral Growth — Referrals
-  referrals               Referral[]
+  referrals Referral[]
 
   // Faz 19: İyzico Ödeme Motoru
-  payments                Payment[]
+  payments Payment[]
 
   // Faz 22: Abonelik Billing Katmanı
-  billingAttempts         BillingAttempt[]
+  billingAttempts BillingAttempt[]
 
   // Faz 22.5: Billing Ledger
-  billingPeriods          BillingPeriod[]
+  billingPeriods BillingPeriod[]
+
+  // Faz 23: Scheduling Engine
+  appointmentHolds AppointmentHold[]
+  staffShifts      StaffShift[]
 
   @@index([slug])
   @@index([status])
@@ -121,11 +125,11 @@ model Tenant {
 }
 
 enum UserRole {
-  SUPER_ADMIN    // Platform yöneticisi (Calon)
-  TENANT_OWNER   // İşletme sahibi
-  MANAGER        // Şube müdürü
-  RECEPTIONIST   // Resepsiyonist
-  STAFF          // Personel (kendi takvimini görür)
+  SUPER_ADMIN // Platform yöneticisi (Calon)
+  TENANT_OWNER // İşletme sahibi
+  MANAGER // Şube müdürü
+  RECEPTIONIST // Resepsiyonist
+  STAFF // Personel (kendi takvimini görür)
 }
 
 enum UserStatus {
@@ -145,12 +149,12 @@ model User {
   status       UserStatus @default(INVITED)
 
   // Audit
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
   lastLoginAt     DateTime?
-  emailVerifiedAt DateTime?                          // Faz 15: e-posta doğrulama
+  emailVerifiedAt DateTime? // Faz 15: e-posta doğrulama
   deletedAt       DateTime?
-  isDeleted       Boolean    @default(false)
+  isDeleted       Boolean   @default(false)
 
   // İlişkiler
   tenants       UserTenant[]
@@ -162,20 +166,20 @@ model User {
 }
 
 model UserTenant {
-  id       String   @id @default(uuid()) @db.Uuid
-  userId   String   @db.Uuid
-  tenantId String   @db.Uuid
-  role     UserRole @default(STAFF)
-  locationId String? @db.Uuid               // Hangi şubeye atandı
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @db.Uuid
+  tenantId   String   @db.Uuid
+  role       UserRole @default(STAFF)
+  locationId String?  @db.Uuid // Hangi şubeye atandı
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user     User     @relation(fields: [userId],   references: [id], onDelete: Cascade)
-  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   location Location? @relation(fields: [locationId], references: [id])
 
-  @@unique([userId, tenantId])              // Bir kullanıcı bir tenant'ta tek rol
+  @@unique([userId, tenantId]) // Bir kullanıcı bir tenant'ta tek rol
   @@index([tenantId, role])
   @@map("user_tenants")
 }
@@ -199,11 +203,11 @@ model Location {
   deletedAt DateTime?
   isDeleted Boolean   @default(false)
 
-  tenant        Tenant       @relation(fields: [tenantId], references: [id])
-  rooms         Room[]
-  staff         StaffProfile[]
-  appointments  Appointment[]
-  userTenants   UserTenant[]
+  tenant       Tenant         @relation(fields: [tenantId], references: [id])
+  rooms        Room[]
+  staff        StaffProfile[]
+  appointments Appointment[]
+  userTenants  UserTenant[]
 
   @@index([tenantId])
   @@map("locations")
@@ -213,7 +217,7 @@ model Room {
   id         String  @id @default(uuid()) @db.Uuid
   tenantId   String  @db.Uuid
   locationId String  @db.Uuid
-  name       String                             // "Oda 1", "Lazer Kabini"
+  name       String // "Oda 1", "Lazer Kabini"
   capacity   Int     @default(1)
   isActive   Boolean @default(true)
 
@@ -237,14 +241,14 @@ model StaffProfile {
   id             String  @id @default(uuid()) @db.Uuid
   tenantId       String  @db.Uuid
   locationId     String  @db.Uuid
-  userId         String? @db.Uuid             // Sisteme bağlı ise
+  userId         String? @db.Uuid // Sisteme bağlı ise
   firstName      String
   lastName       String
   phone          String?
   avatarUrl      String?
-  title          String?                       // "Saç Uzmanı", "Estetisyen"
-  colorHex       String  @default("#6366f1")   // Takvim rengi
-  commissionRate Float   @default(0)           // % cinsinden
+  title          String? // "Saç Uzmanı", "Estetisyen"
+  colorHex       String  @default("#6366f1") // Takvim rengi
+  commissionRate Float   @default(0) // % cinsinden
   isActive       Boolean @default(true)
 
   createdAt DateTime  @default(now())
@@ -252,13 +256,14 @@ model StaffProfile {
   deletedAt DateTime?
   isDeleted Boolean   @default(false)
 
-  tenant       Tenant          @relation(fields: [tenantId],  references: [id])
-  location     Location        @relation(fields: [locationId], references: [id])
+  tenant       Tenant             @relation(fields: [tenantId], references: [id])
+  location     Location           @relation(fields: [locationId], references: [id])
   workingHours StaffWorkingHour[]
   shifts       StaffShift[]
   appointments Appointment[]
   services     StaffService[]
   commissions  CommissionLog[]
+  holds        AppointmentHold[] // Faz 23
 
   @@index([tenantId, locationId])
   @@map("staff_profiles")
@@ -274,15 +279,34 @@ enum DayOfWeek {
   SUN
 }
 
+// Faz 23: Scheduling Engine
+enum AppointmentHoldStatus {
+  ACTIVE // Geçerli hold — slotu bloke eder
+  CONSUMED // Randevuya dönüştürüldü (terminal)
+  EXPIRED // Cron tarafından sona erdirildi (terminal)
+  RELEASED // Kullanıcı/sistem tarafından serbest bırakıldı (terminal)
+}
+
+enum StaffShiftType {
+  WORKING // Çalışma override (varsayılan)
+  LEAVE // İzin — availability'den çıkar
+  BLOCK // Genel blok (toplantı, kişisel, vb.)
+}
+
+enum ResourceType {
+  ROOM
+  EQUIPMENT
+}
+
 model StaffWorkingHour {
-  id          String    @id @default(uuid()) @db.Uuid
-  staffId     String    @db.Uuid
-  dayOfWeek   DayOfWeek
-  startTime   String                            // "09:00"
-  endTime     String                            // "18:00"
-  isWorkingDay Boolean  @default(true)
-  breakStart  String?                           // "12:00"
-  breakEnd    String?                           // "13:00"
+  id           String    @id @default(uuid()) @db.Uuid
+  staffId      String    @db.Uuid
+  dayOfWeek    DayOfWeek
+  startTime    String // "09:00"
+  endTime      String // "18:00"
+  isWorkingDay Boolean   @default(true)
+  breakStart   String? // "12:00"
+  breakEnd     String? // "13:00"
 
   staff StaffProfile @relation(fields: [staffId], references: [id], onDelete: Cascade)
 
@@ -291,16 +315,19 @@ model StaffWorkingHour {
 }
 
 model StaffShift {
-  id        String   @id @default(uuid()) @db.Uuid
-  staffId   String   @db.Uuid
-  date      DateTime @db.Date
+  id        String         @id @default(uuid()) @db.Uuid
+  tenantId  String         @db.Uuid // Faz 23: RLS + availability query
+  staffId   String         @db.Uuid
+  shiftType StaffShiftType @default(WORKING) // Faz 23: WORKING | LEAVE | BLOCK
+  date      DateTime       @db.Date
   startTime DateTime
   endTime   DateTime
   notes     String?
 
-  staff StaffProfile @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  tenant Tenant       @relation(fields: [tenantId], references: [id])
+  staff  StaffProfile @relation(fields: [staffId], references: [id], onDelete: Cascade)
 
-  @@index([staffId, date])
+  @@index([tenantId, staffId, date]) // tenantId first for RLS + availability
   @@map("staff_shifts")
 }
 
@@ -317,9 +344,9 @@ model ServiceCategory {
   sortOrder   Int     @default(0)
   isActive    Boolean @default(true)
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  isDeleted Boolean   @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  isDeleted Boolean  @default(false)
 
   tenant   Tenant    @relation(fields: [tenantId], references: [id])
   services Service[]
@@ -329,27 +356,29 @@ model ServiceCategory {
 }
 
 model Service {
-  id          String  @id @default(uuid()) @db.Uuid
-  tenantId    String  @db.Uuid
-  categoryId  String  @db.Uuid
-  name        String
-  description String?
-  durationMin Int                               // Dakika cinsinden süre
-  price       Decimal @db.Decimal(10, 2)
-  currency    String  @default("TRY")
-  depositRate     Float   @default(0)               // Kaparo oranı (0–1)
-  requiresDeposit Boolean @default(false)           // Faz 19: true → randevu PENDING_PAYMENT başlar
+  id              String  @id @default(uuid()) @db.Uuid
+  tenantId        String  @db.Uuid
+  categoryId      String  @db.Uuid
+  name            String
+  description     String?
+  durationMin     Int // Dakika cinsinden süre
+  price           Decimal @db.Decimal(10, 2)
+  currency        String  @default("TRY")
+  depositRate     Float   @default(0) // Kaparo oranı (0–1)
+  requiresDeposit Boolean @default(false) // Faz 19: true → randevu PENDING_PAYMENT başlar
   isActive        Boolean @default(true)
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  isDeleted Boolean   @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  isDeleted Boolean  @default(false)
 
-  tenant       Tenant       @relation(fields: [tenantId],  references: [id])
-  category     ServiceCategory @relation(fields: [categoryId], references: [id])
-  staffServices StaffService[]
-  appointments Appointment[]
-  productUsages ServiceProduct[]
+  tenant               Tenant                       @relation(fields: [tenantId], references: [id])
+  category             ServiceCategory              @relation(fields: [categoryId], references: [id])
+  staffServices        StaffService[]
+  appointments         Appointment[]
+  productUsages        ServiceProduct[]
+  holds                AppointmentHold[] // Faz 23
+  resourceRequirements ServiceResourceRequirement[] // Faz 23
 
   @@index([tenantId, categoryId])
   @@map("services")
@@ -359,11 +388,25 @@ model StaffService {
   staffId   String @db.Uuid
   serviceId String @db.Uuid
 
-  staff   StaffProfile @relation(fields: [staffId],   references: [id], onDelete: Cascade)
+  staff   StaffProfile @relation(fields: [staffId], references: [id], onDelete: Cascade)
   service Service      @relation(fields: [serviceId], references: [id], onDelete: Cascade)
 
   @@id([staffId, serviceId])
   @@map("staff_services")
+}
+
+/// Hizmetin kaynak gereksinimi (oda, ekipman). Minimal — Faz 24'te genişletilir.
+model ServiceResourceRequirement {
+  id           String       @id @default(uuid()) @db.Uuid
+  serviceId    String       @db.Uuid
+  resourceType ResourceType
+  resourceId   String?      @db.Uuid // null = bu türden herhangi biri
+  quantity     Int          @default(1)
+
+  service Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@index([serviceId])
+  @@map("service_resource_requirements")
 }
 
 model Product {
@@ -371,15 +414,15 @@ model Product {
   tenantId    String  @db.Uuid
   name        String
   sku         String?
-  unit        String  @default("ml")            // ml, gr, adet
+  unit        String  @default("ml") // ml, gr, adet
   stockAmount Decimal @default(0) @db.Decimal(10, 3)
   minStock    Decimal @default(0) @db.Decimal(10, 3)
   costPrice   Decimal @default(0) @db.Decimal(10, 2)
   isActive    Boolean @default(true)
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  isDeleted Boolean   @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  isDeleted Boolean  @default(false)
 
   tenant        Tenant           @relation(fields: [tenantId], references: [id])
   serviceUsages ServiceProduct[]
@@ -390,9 +433,9 @@ model Product {
 }
 
 model ServiceProduct {
-  serviceId  String  @db.Uuid
-  productId  String  @db.Uuid
-  usageAmount Decimal @db.Decimal(10, 3)        // Kullanılacak miktar (gram/ml)
+  serviceId   String  @db.Uuid
+  productId   String  @db.Uuid
+  usageAmount Decimal @db.Decimal(10, 3) // Kullanılacak miktar (gram/ml)
 
   service Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
@@ -405,8 +448,8 @@ model StockLog {
   id        String   @id @default(uuid()) @db.Uuid
   productId String   @db.Uuid
   tenantId  String   @db.Uuid
-  delta     Decimal  @db.Decimal(10, 3)         // + giriş, – çıkış
-  reason    String                               // "appointment:uuid" | "manual"
+  delta     Decimal  @db.Decimal(10, 3) // + giriş, – çıkış
+  reason    String // "appointment:uuid" | "manual"
   createdAt DateTime @default(now())
 
   product Product @relation(fields: [productId], references: [id])
@@ -428,13 +471,13 @@ enum LoyaltyTier {
 }
 
 model Customer {
-  id          String      @id @default(uuid()) @db.Uuid
-  tenantId    String      @db.Uuid
+  id          String    @id @default(uuid()) @db.Uuid
+  tenantId    String    @db.Uuid
   firstName   String
   lastName    String
   email       String?
   phone       String?
-  dateOfBirth DateTime?   @db.Date
+  dateOfBirth DateTime? @db.Date
   gender      String?
   avatarUrl   String?
   notes       String?
@@ -444,23 +487,23 @@ model Customer {
   loyaltyPoints Int         @default(0)
 
   // Faz 18: Viral Growth — Referral kodu
-  referralCode  String?     @unique                   // aur-{RANDOM6}
+  referralCode String? @unique // aur-{RANDOM6}
 
   // KVKK/GDPR
-  consentGiven  Boolean   @default(false)
-  consentDate   DateTime?
-  anonymizedAt  DateTime?
+  consentGiven Boolean   @default(false)
+  consentDate  DateTime?
+  anonymizedAt DateTime?
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
   isDeleted Boolean   @default(false)
 
-  tenant            Tenant             @relation(fields: [tenantId], references: [id])
-  appointments      Appointment[]
+  tenant              Tenant               @relation(fields: [tenantId], references: [id])
+  appointments        Appointment[]
   loyaltyTransactions LoyaltyTransaction[]
-  consentForms      ConsentForm[]
-  photos            CustomerPhoto[]
+  consentForms        ConsentForm[]
+  photos              CustomerPhoto[]
 
   // Faz 18: Referral ilişkileri
   referralsMade     Referral[] @relation("ReferralReferrer")
@@ -486,7 +529,7 @@ model LoyaltyTransaction {
   customerId     String        @db.Uuid
   appointmentId  String?       @db.Uuid
   action         LoyaltyAction
-  points         Int                                // + kazanım, – harcama
+  points         Int // + kazanım, – harcama
   balanceAfter   Int
   description    String?
   // İdempotency: aynı işlem iki kez uygulanmaz (UNIQUE kısıtı)
@@ -494,7 +537,7 @@ model LoyaltyTransaction {
 
   createdAt DateTime @default(now())
 
-  customer    Customer     @relation(fields: [customerId],    references: [id])
+  customer    Customer     @relation(fields: [customerId], references: [id])
   appointment Appointment? @relation(fields: [appointmentId], references: [id])
 
   @@index([tenantId, customerId])
@@ -510,66 +553,66 @@ model LoyaltyTransaction {
 
 enum AppointmentStatus {
   PENDING_PAYMENT // Ödeme bekleniyor (iyzico kaparo akışı)
-  PAID            // Ödeme tamamlandı, onay bekliyor
-  PENDING         // Taslak / ön kayıt (ödeme gerektirmeyen randevular)
-  CONFIRMED       // Onaylandı
-  CHECKED_IN      // Müşteri geldi
-  IN_SERVICE      // Hizmet devam ediyor
-  COMPLETED       // Tamamlandı
-  CANCELLED       // İptal edildi
-  NO_SHOW         // Gelmedi
+  PAID // Ödeme tamamlandı, onay bekliyor
+  PENDING // Taslak / ön kayıt (ödeme gerektirmeyen randevular)
+  CONFIRMED // Onaylandı
+  CHECKED_IN // Müşteri geldi
+  IN_SERVICE // Hizmet devam ediyor
+  COMPLETED // Tamamlandı
+  CANCELLED // İptal edildi
+  NO_SHOW // Gelmedi
 }
 
 enum AppointmentSource {
-  WALK_IN       // Kapıdan gelen
-  PHONE         // Telefon
-  WHATSAPP      // WhatsApp (v2)
-  ONLINE        // Online self-booking
-  AI_ASSISTANT  // Yapay Zeka (v2)
-  RECEPTIONIST  // Resepsiyonist
+  WALK_IN // Kapıdan gelen
+  PHONE // Telefon
+  WHATSAPP // WhatsApp (v2)
+  ONLINE // Online self-booking
+  AI_ASSISTANT // Yapay Zeka (v2)
+  RECEPTIONIST // Resepsiyonist
 }
 
 model Appointment {
-  id              String            @id @default(uuid()) @db.Uuid
-  tenantId        String            @db.Uuid
-  customerId      String            @db.Uuid
-  staffId         String            @db.Uuid
-  serviceId       String            @db.Uuid
-  locationId      String            @db.Uuid
-  roomId          String?           @db.Uuid
+  id         String  @id @default(uuid()) @db.Uuid
+  tenantId   String  @db.Uuid
+  customerId String  @db.Uuid
+  staffId    String  @db.Uuid
+  serviceId  String  @db.Uuid
+  locationId String  @db.Uuid
+  roomId     String? @db.Uuid
 
-  status          AppointmentStatus @default(PENDING)
-  source          AppointmentSource @default(RECEPTIONIST)
+  status AppointmentStatus @default(PENDING)
+  source AppointmentSource @default(RECEPTIONIST)
 
-  startTime       DateTime                           // GIST kısıtlaması bu alana bakacak
-  endTime         DateTime
+  startTime DateTime // GIST kısıtlaması bu alana bakacak
+  endTime   DateTime
 
-  notes           String?
-  internalNotes   String?                            // Personel notu
-  depositPaid     Decimal?          @db.Decimal(10, 2)
-  totalPrice      Decimal?          @db.Decimal(10, 2)
+  notes         String?
+  internalNotes String? // Personel notu
+  depositPaid   Decimal? @db.Decimal(10, 2)
+  totalPrice    Decimal? @db.Decimal(10, 2)
 
   // Mükerrer işlem koruması
-  idempotencyKey  String?           @unique
+  idempotencyKey String? @unique
 
   // Audit hash (manipülasyon tespiti)
-  integrityHash   String?
+  integrityHash String?
 
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-  cancelledAt     DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  cancelledAt        DateTime?
   cancellationReason String?
   // Soft delete: Randevular asla fiziksel silinmez
-  isDeleted       Boolean           @default(false)
+  isDeleted          Boolean   @default(false)
   // Faz 21: Self-Onboarding Wizard test randevusu işareti
-  isTestBooking   Boolean           @default(false)
+  isTestBooking      Boolean   @default(false)
 
-  tenant      Tenant       @relation(fields: [tenantId],   references: [id])
-  customer    Customer     @relation(fields: [customerId], references: [id])
-  staff       StaffProfile @relation(fields: [staffId],    references: [id])
-  service     Service      @relation(fields: [serviceId],  references: [id])
-  location    Location     @relation(fields: [locationId], references: [id])
-  room        Room?        @relation(fields: [roomId],     references: [id])
+  tenant   Tenant       @relation(fields: [tenantId], references: [id])
+  customer Customer     @relation(fields: [customerId], references: [id])
+  staff    StaffProfile @relation(fields: [staffId], references: [id])
+  service  Service      @relation(fields: [serviceId], references: [id])
+  location Location     @relation(fields: [locationId], references: [id])
+  room     Room?        @relation(fields: [roomId], references: [id])
 
   loyaltyTransactions LoyaltyTransaction[]
   transactions        TransactionLedger[]
@@ -578,16 +621,41 @@ model Appointment {
   photos              CustomerPhoto[]
 
   // Faz 18: Referral ilişkisi
-  referral            Referral?
+  referral Referral?
 
   // Faz 19: İyzico ödeme ilişkisi
-  payment             Payment?
+  payment Payment?
 
-  @@index([tenantId, staffId, startTime, endTime])   // Müsaitlik sorguları
+  @@index([tenantId, staffId, startTime, endTime]) // Müsaitlik sorguları
   @@index([tenantId, customerId])
   @@index([tenantId, status])
   @@index([startTime])
   @@map("appointments")
+}
+
+/// DB-backed slot kilidi. Redis NX + DB GIST çift katman güvencesi.
+/// Durum: ACTIVE → CONSUMED (booking) | EXPIRED (cron) | RELEASED (user/system)
+model AppointmentHold {
+  id        String                @id @default(uuid()) @db.Uuid
+  tenantId  String                @db.Uuid
+  staffId   String                @db.Uuid
+  serviceId String                @db.Uuid
+  startTime DateTime
+  endTime   DateTime
+  expiresAt DateTime
+  status    AppointmentHoldStatus @default(ACTIVE)
+  holdToken String? // Opaque client token (UUID)
+
+  createdAt DateTime @default(now())
+
+  tenant  Tenant       @relation(fields: [tenantId], references: [id])
+  staff   StaffProfile @relation(fields: [staffId], references: [id])
+  service Service      @relation(fields: [serviceId], references: [id])
+
+  @@index([tenantId, staffId, startTime])
+  @@index([tenantId, status])
+  @@index([expiresAt])
+  @@map("appointment_holds")
 }
 
 // =============================================================================
@@ -612,13 +680,13 @@ model TransactionLedger {
   amount        Decimal         @db.Decimal(10, 2)
   currency      String          @default("TRY")
   description   String?
-  reference     String?                             // Harici ödeme referansı
+  reference     String? // Harici ödeme referansı
   processedAt   DateTime        @default(now())
 
   // KVKK: Finansal veriler 10 yıl saklanır, kişisel veriler anonimleştirilir
-  isDeleted     Boolean         @default(false)
+  isDeleted Boolean @default(false)
 
-  tenant      Tenant       @relation(fields: [tenantId],     references: [id])
+  tenant      Tenant       @relation(fields: [tenantId], references: [id])
   appointment Appointment? @relation(fields: [appointmentId], references: [id])
 
   @@index([tenantId, processedAt])
@@ -627,18 +695,18 @@ model TransactionLedger {
 }
 
 model CommissionLog {
-  id            String   @id @default(uuid()) @db.Uuid
-  tenantId      String   @db.Uuid
-  staffId       String   @db.Uuid
-  appointmentId String   @db.Uuid
-  amount        Decimal  @db.Decimal(10, 2)
+  id            String    @id @default(uuid()) @db.Uuid
+  tenantId      String    @db.Uuid
+  staffId       String    @db.Uuid
+  appointmentId String    @db.Uuid
+  amount        Decimal   @db.Decimal(10, 2)
   rate          Float
-  periodStart   DateTime @db.Date
-  periodEnd     DateTime @db.Date
-  isPaid        Boolean  @default(false)
+  periodStart   DateTime  @db.Date
+  periodEnd     DateTime  @db.Date
+  isPaid        Boolean   @default(false)
   paidAt        DateTime?
 
-  staff       StaffProfile @relation(fields: [staffId],       references: [id])
+  staff       StaffProfile @relation(fields: [staffId], references: [id])
   appointment Appointment  @relation(fields: [appointmentId], references: [id])
 
   @@index([tenantId, staffId, isPaid])
@@ -654,13 +722,13 @@ model ConsentForm {
   tenantId      String   @db.Uuid
   customerId    String   @db.Uuid
   appointmentId String?  @db.Uuid
-  formType      String                                // "KVKK", "GDPR", "TREATMENT"
-  content       String   @db.Text                    // Form içeriği anlık snapshot
+  formType      String // "KVKK", "GDPR", "TREATMENT"
+  content       String   @db.Text // Form içeriği anlık snapshot
   signedAt      DateTime
   ipAddress     String?
   userAgent     String?
 
-  customer    Customer    @relation(fields: [customerId],    references: [id])
+  customer    Customer     @relation(fields: [customerId], references: [id])
   appointment Appointment? @relation(fields: [appointmentId], references: [id])
 
   @@index([tenantId, customerId])
@@ -675,26 +743,26 @@ model ConsentForm {
 // =============================================================================
 
 enum PhotoType {
-  BEFORE    // İşlem öncesi
-  AFTER     // İşlem sonrası
-  PROGRESS  // Süreç (çok seanslı tedaviler)
+  BEFORE // İşlem öncesi
+  AFTER // İşlem sonrası
+  PROGRESS // Süreç (çok seanslı tedaviler)
 }
 
 model CustomerPhoto {
   id            String    @id @default(uuid()) @db.Uuid
-  tenantId      String    @db.Uuid              // Tenant izolasyonu (FK yok — middleware yönetir)
+  tenantId      String    @db.Uuid // Tenant izolasyonu (FK yok — middleware yönetir)
   customerId    String    @db.Uuid
   appointmentId String?   @db.Uuid
   photoType     PhotoType
-  url           String                           // Tam boyut S3 URL
-  thumbnailUrl  String?                          // Küçük boy önizleme URL
-  bodyArea      String?                          // "Yüz", "Saç", "Vücut" vb.
+  url           String // Tam boyut S3 URL
+  thumbnailUrl  String? // Küçük boy önizleme URL
+  bodyArea      String? // "Yüz", "Saç", "Vücut" vb.
   notes         String?
-  takenAt       DateTime  @default(now())        // Fotoğrafın çekildiği an
-  uploadedAt    DateTime  @default(now())        // Sisteme yüklenme anı
-  isDeleted     Boolean   @default(false)        // GDPR: soft-delete (fiziksel silme yapılmaz)
+  takenAt       DateTime  @default(now()) // Fotoğrafın çekildiği an
+  uploadedAt    DateTime  @default(now()) // Sisteme yüklenme anı
+  isDeleted     Boolean   @default(false) // GDPR: soft-delete (fiziksel silme yapılmaz)
 
-  customer    Customer     @relation(fields: [customerId],    references: [id])
+  customer    Customer     @relation(fields: [customerId], references: [id])
   appointment Appointment? @relation(fields: [appointmentId], references: [id])
 
   @@index([tenantId, customerId])
@@ -718,25 +786,25 @@ model RefreshToken {
   userAgent String?
   ipAddress String?
 
-  user   User   @relation(fields: [userId],   references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@index([userId])
-  @@index([expiresAt])                                // TTL temizliği
+  @@index([expiresAt]) // TTL temizliği
   @@map("refresh_tokens")
 }
 
 model IdempotencyKey {
   id        String   @id @default(uuid()) @db.Uuid
-  key       String   @unique                          // "appointment:{uuid}" | "payment:{uuid}"
+  key       String   @unique // "appointment:{uuid}" | "payment:{uuid}"
   tenantId  String   @db.Uuid
-  response  Json?                                     // Başarılı yanıtı sakla
+  response  Json? // Başarılı yanıtı sakla
   createdAt DateTime @default(now())
-  expiresAt DateTime                                  // 24 saat sonra temizlenir
+  expiresAt DateTime // 24 saat sonra temizlenir
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  @@index([expiresAt])                                // TTL index
+  @@index([expiresAt]) // TTL index
   @@map("idempotency_keys")
 }
 
@@ -747,18 +815,18 @@ model IdempotencyKey {
 model AuditLog {
   id         String   @id @default(uuid()) @db.Uuid
   tenantId   String   @db.Uuid
-  entityType String                                   // "Appointment", "Customer", vb.
+  entityType String // "Appointment", "Customer", vb.
   entityId   String   @db.Uuid
-  action     String                                   // "CONFIRM", "CANCEL", "GDPR_DELETION"
-  actorId    String?  @db.Uuid                       // Kim yaptı
+  action     String // "CONFIRM", "CANCEL", "GDPR_DELETION"
+  actorId    String?  @db.Uuid // Kim yaptı
   actorRole  String?
-  before     Json?                                    // Önceki durum
-  after      Json?                                    // Sonraki durum
+  before     Json? // Önceki durum
+  after      Json? // Sonraki durum
   ipAddress  String?
   createdAt  DateTime @default(now())
 
   tenant Tenant @relation(fields: [tenantId], references: [id])
-  actor  User?  @relation(fields: [actorId],  references: [id])
+  actor  User?  @relation(fields: [actorId], references: [id])
 
   @@index([tenantId, entityType, entityId])
   @@index([tenantId, createdAt])
@@ -789,7 +857,7 @@ model Message {
   channel    MessageChannel
   direction  MessageDirection
   content    String           @db.Text
-  intent     String?                                // Tespit edilen niyet
+  intent     String? // Tespit edilen niyet
   sessionId  String?
   createdAt  DateTime         @default(now())
 
@@ -882,15 +950,15 @@ model TenantEntitlementSnapshot {
 
 /// v2: Kampanya şablonları. v1'de tablo oluşturulur ama kullanılmaz.
 model CampaignTemplate {
-  id        String   @id @default(uuid()) @db.Uuid
-  tenantId  String   @db.Uuid
+  id        String         @id @default(uuid()) @db.Uuid
+  tenantId  String         @db.Uuid
   name      String
   channel   MessageChannel
   subject   String?
-  body      String   @db.Text
-  isActive  Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  body      String         @db.Text
+  isActive  Boolean        @default(false)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
 
   tenant Tenant @relation(fields: [tenantId], references: [id])
 
@@ -907,13 +975,13 @@ model CampaignTemplate {
 /// @OnQueueFailed → FailedJobService.save() çağırır.
 model FailedJob {
   id        String   @id @default(uuid()) @db.Uuid
-  tenantId  String?  @db.Uuid            // job.data.tenantId varsa doldurulur
-  queueName String                        // Örn: "loyalty-earn", "stock-deduct"
-  jobName   String                        // Örn: "earn-points", "deduct-stock"
-  jobId     String                        // Bull job.id
-  jobData   Json                          // Orijinal job payload
-  errorMsg  String   @db.Text            // son hata mesajı
-  attempts  Int                           // kaç kez denendi
+  tenantId  String?  @db.Uuid // job.data.tenantId varsa doldurulur
+  queueName String // Örn: "loyalty-earn", "stock-deduct"
+  jobName   String // Örn: "earn-points", "deduct-stock"
+  jobId     String // Bull job.id
+  jobData   Json // Orijinal job payload
+  errorMsg  String   @db.Text // son hata mesajı
+  attempts  Int // kaç kez denendi
   failedAt  DateTime @default(now())
 
   @@index([queueName, failedAt])
@@ -929,8 +997,8 @@ model FailedJob {
 model OnboardingIdempotency {
   id        String   @id @default(uuid()) @db.Uuid
   tenantId  String   @db.Uuid
-  key       String                                   // Idempotency-Key header değeri
-  response  Json                                     // Başarılı wizard yanıtı
+  key       String // Idempotency-Key header değeri
+  response  Json // Başarılı wizard yanıtı
   createdAt DateTime @default(now())
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -948,21 +1016,21 @@ model OnboardingIdempotency {
 /// @@unique([referrerCustomerId, referredCustomerId]): aynı çift bir kez ödüllendirilir (P2002 idempotency).
 /// @@index([tenantId, referrerCustomerId]): referrer performans sorguları için.
 model Referral {
-  id                  String   @id @default(uuid()) @db.Uuid
-  tenantId            String   @db.Uuid
-  referrerCustomerId  String   @db.Uuid
-  referredCustomerId  String   @db.Uuid
-  appointmentId       String   @unique @db.Uuid             // Tetikleyen randevu (1-to-1)
-  awardedPoints       Int      @default(0)                // Verilen puan
-  createdAt           DateTime @default(now())
+  id                 String   @id @default(uuid()) @db.Uuid
+  tenantId           String   @db.Uuid
+  referrerCustomerId String   @db.Uuid
+  referredCustomerId String   @db.Uuid
+  appointmentId      String   @unique @db.Uuid // Tetikleyen randevu (1-to-1)
+  awardedPoints      Int      @default(0) // Verilen puan
+  createdAt          DateTime @default(now())
 
-  tenant           Tenant      @relation(fields: [tenantId],            references: [id])
-  referrer         Customer    @relation("ReferralReferrer", fields: [referrerCustomerId], references: [id])
-  referred         Customer    @relation("ReferralReferred", fields: [referredCustomerId], references: [id])
-  appointment      Appointment @relation(fields: [appointmentId],       references: [id])
+  tenant      Tenant      @relation(fields: [tenantId], references: [id])
+  referrer    Customer    @relation("ReferralReferrer", fields: [referrerCustomerId], references: [id])
+  referred    Customer    @relation("ReferralReferred", fields: [referredCustomerId], references: [id])
+  appointment Appointment @relation(fields: [appointmentId], references: [id])
 
-  @@unique([referrerCustomerId, referredCustomerId])       // P2002 idempotency
-  @@index([tenantId, referrerCustomerId])                  // Acceptance criteria
+  @@unique([referrerCustomerId, referredCustomerId]) // P2002 idempotency
+  @@index([tenantId, referrerCustomerId]) // Acceptance criteria
   @@map("referrals")
 }
 
@@ -971,10 +1039,10 @@ model Referral {
 // =============================================================================
 
 enum PaymentStatus {
-  PENDING   // Ödeme URL'i üretildi, kullanıcı ödeme yapmadı
-  PAID      // İyzico webhook → başarılı ödeme
-  FAILED    // İyzico webhook → başarısız / iptal
-  REFUNDED  // İade edildi
+  PENDING // Ödeme URL'i üretildi, kullanıcı ödeme yapmadı
+  PAID // İyzico webhook → başarılı ödeme
+  FAILED // İyzico webhook → başarısız / iptal
+  REFUNDED // İade edildi
 }
 
 /// İyzico kaparo ödemeleri.
@@ -984,17 +1052,17 @@ model Payment {
   id            String        @id @default(uuid()) @db.Uuid
   tenantId      String        @db.Uuid
   appointmentId String        @unique @db.Uuid
-  providerId    String?       @unique             // İyzico paymentId (webhook'ta gelir)
+  providerId    String?       @unique // İyzico paymentId (webhook'ta gelir)
   amount        Decimal       @db.Decimal(10, 2)
   currency      String        @default("TRY")
   status        PaymentStatus @default(PENDING)
-  paymentUrl    String?                           // İyzico checkout sayfası URL'i
-  providerMeta  Json?                             // Ham İyzico yanıtı (audit trail)
+  paymentUrl    String? // İyzico checkout sayfası URL'i
+  providerMeta  Json? // Ham İyzico yanıtı (audit trail)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  tenant      Tenant      @relation(fields: [tenantId],      references: [id])
+  tenant      Tenant      @relation(fields: [tenantId], references: [id])
   appointment Appointment @relation(fields: [appointmentId], references: [id])
 
   @@index([tenantId])
@@ -1006,9 +1074,9 @@ model Payment {
 // =============================================================================
 
 enum BillingAttemptStatus {
-  PENDING    // Ödeme formu başlatıldı, webhook bekleniyor
-  SUCCEEDED  // İyzico webhook → başarılı ödeme, tenant aktif
-  FAILED     // İyzico webhook → başarısız ya da cron TTL doldu
+  PENDING // Ödeme formu başlatıldı, webhook bekleniyor
+  SUCCEEDED // İyzico webhook → başarılı ödeme, tenant aktif
+  FAILED // İyzico webhook → başarısız ya da cron TTL doldu
 }
 
 /// Abonelik ödeme girişimi. conversationId = attemptId (İyzico'ya gönderilir).
@@ -1019,13 +1087,13 @@ model BillingAttempt {
   tenantId          String               @db.Uuid
   plan              TenantPlan
   cycle             BillingCycle
-  amountCents       Int                              // Fiyat snapshot — PLAN_PRICES değişse bile korunur
+  amountCents       Int // Fiyat snapshot — PLAN_PRICES değişse bile korunur
   currency          String               @default("TRY")
   status            BillingAttemptStatus @default(PENDING)
-  providerPaymentId String?                          // İyzico paymentId (webhook'ta gelir)
+  providerPaymentId String? // İyzico paymentId (webhook'ta gelir)
   providerMeta      Json?
 
-  expiresAt DateTime                                // TTL: oluşturulma + 30 dakika
+  expiresAt DateTime // TTL: oluşturulma + 30 dakika
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1047,9 +1115,9 @@ model BillingAttempt {
 /// Kural: kayıtlar sadece status alanı üzerinden değiştirilebilir (ACTIVE → CLOSED/REFUNDED).
 /// UPDATE yapılmayacak; her ödeme yeni bir satır oluşturur.
 enum BillingPeriodStatus {
-  ACTIVE    // Dönem devam ediyor
-  CLOSED    // Dönem kapandı (yenileme tamamlandı veya iptal)
-  REFUNDED  // İade edildi
+  ACTIVE // Dönem devam ediyor
+  CLOSED // Dönem kapandı (yenileme tamamlandı veya iptal)
+  REFUNDED // İade edildi
 }
 
 model BillingPeriod {
@@ -1058,12 +1126,12 @@ model BillingPeriod {
   plan              TenantPlan
   cycle             BillingCycle
   status            BillingPeriodStatus @default(ACTIVE)
-  amountCents       Int                              // Ödenen tutar snapshot (değişmez)
+  amountCents       Int // Ödenen tutar snapshot (değişmez)
   currency          String              @default("TRY")
   periodStart       DateTime
   periodEnd         DateTime
-  attemptId         String?             @db.Uuid     // Kaynak BillingAttempt.id
-  providerPaymentId String?                          // İyzico paymentId
+  attemptId         String?             @db.Uuid // Kaynak BillingAttempt.id
+  providerPaymentId String? // İyzico paymentId
   createdAt         DateTime            @default(now())
   // updatedAt kasıtlı yok — immutable ledger kuralı
 
@@ -1079,11 +1147,11 @@ model BillingPeriod {
 /// providerEventId @unique: aynı iyzico olayı iki kez işlenmez (P2002 → 200 dön).
 model WebhookEvent {
   id              String    @id @default(uuid()) @db.Uuid
-  source          String                             // 'iyzico_billing' | 'iyzico_payment'
-  providerEventId String    @unique                 // paymentId ?? iyziReferenceCode
-  eventType       String                             // 'checkout_payment' veya status değeri
+  source          String // 'iyzico_billing' | 'iyzico_payment'
+  providerEventId String    @unique // paymentId ?? iyziReferenceCode
+  eventType       String // 'checkout_payment' veya status değeri
   payload         Json
-  tenantId        String?   @db.Uuid                // null ise attempt bulunamadı
+  tenantId        String?   @db.Uuid // null ise attempt bulunamadı
   processedAt     DateTime?
 
   createdAt DateTime @default(now())

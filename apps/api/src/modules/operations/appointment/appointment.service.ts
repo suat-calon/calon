@@ -154,59 +154,73 @@ export class AppointmentService {
   /**
    * Yeni randevu oluşturur.
    *
-   * Adımlar:
+   * Adımlar (tx yoksa — standart yol):
    *   1. Redis concurrency lock al (10s TTL, NX)
    *   2. $transaction: raw SQL overlap kontrolü → appointment INSERT
    *   3. finally: Concurrency lock release
-   *   4. Redis hold kilidini sil
+   *   4. Redis hold kilidini sil (eski SETNX format)
    *   5. Availability cache invalidate
+   *
+   * tx verilmişse (Faz 23 hold-based commit):
+   *   - Caller'ın transaction'ı kullanılır — yeni $transaction açılmaz
+   *   - Concurrency lock caller'da yönetilir — burada alınmaz/bırakılmaz
+   *   - Redis hold silme caller'da yapılır (DB hold'u için epoch-ms key)
+   *   - Availability cache invalidation hâlâ burada yapılır (idempotent)
+   *
+   * @param tx  Caller transaction client (Faz 23 hold commit — opsiyonel)
    */
   async create(
     tenantId: string,
     dto:      CreateAppointmentDto,
     actorId?: string,
+    tx?:      Prisma.TransactionClient,
   ): Promise<Appointment> {
     const startTime = new Date(dto.startTime);
     const endTime   = new Date(dto.endTime);
 
     // ── Adım 1: Concurrency lock al ─────────────────────────────────────────
-    // staffId yoksa lock atlanır (GIST NULL güvenli davranır)
-    const lockKey = dto.staffId
+    // tx sağlandıysa caller zaten lock'u yönetiyor → atla
+    const lockKey = (!tx && dto.staffId)
       ? await this.lock.acquireConcurrencyLock(tenantId, dto.staffId, startTime)
       : null;
 
     let appointment: Appointment;
 
+    // ── DB işlem mantığını ayrı fonksiyona çıkar (tx reuse için) ─────────────
+    const executeInTx = async (db: Prisma.TransactionClient): Promise<Appointment> => {
+      // Yazılımsal overlap kontrolü (GIST constraint yedekçisi)
+      if (dto.staffId) {
+        await checkOverlapRaw(db, tenantId, dto.staffId, startTime, endTime);
+      }
+
+      return db.appointment.create({
+        data: {
+          tenantId,
+          customerId:    dto.customerId,
+          staffId:       dto.staffId,
+          serviceId:     dto.serviceId,
+          locationId:    dto.locationId,
+          roomId:        dto.roomId,
+          startTime,
+          endTime,
+          source:        dto.source,
+          notes:         dto.notes,
+          internalNotes: dto.internalNotes,
+          totalPrice:    dto.totalPrice,
+          depositPaid:   dto.depositPaid,
+          // Faz 19: Opsiyonel başlangıç durumu (PENDING_PAYMENT for deposit flow)
+          ...(dto.status !== undefined && { status: dto.status }),
+          // Faz 21.9: Test rezervasyonu — public.service.ts tarafından set edilir
+          ...(dto.isTestBooking === true && { isTestBooking: true }),
+        },
+      });
+    };
+
     try {
       // ── Adım 2: Transaction: overlap check → INSERT ────────────────────────
-      appointment = await this.prisma.$transaction(async (tx) => {
-        // Yazılımsal overlap kontrolü (GIST constraint yedekçisi)
-        if (dto.staffId) {
-          await checkOverlapRaw(tx, tenantId, dto.staffId, startTime, endTime);
-        }
-
-        return tx.appointment.create({
-          data: {
-            tenantId,
-            customerId:    dto.customerId,
-            staffId:       dto.staffId,
-            serviceId:     dto.serviceId,
-            locationId:    dto.locationId,
-            roomId:        dto.roomId,
-            startTime,
-            endTime,
-            source:        dto.source,
-            notes:         dto.notes,
-            internalNotes: dto.internalNotes,
-            totalPrice:    dto.totalPrice,
-            depositPaid:   dto.depositPaid,
-            // Faz 19: Opsiyonel başlangıç durumu (PENDING_PAYMENT for deposit flow)
-            ...(dto.status !== undefined && { status: dto.status }),
-            // Faz 21.9: Test rezervasyonu — public.service.ts tarafından set edilir
-            ...(dto.isTestBooking === true && { isTestBooking: true }),
-          },
-        });
-      });
+      appointment = tx
+        ? await executeInTx(tx)                        // caller'ın tx'ini kullan
+        : await this.prisma.$transaction(executeInTx); // kendi tx'ini aç
     } catch (err: unknown) {
       if (isGistExclusionViolation(err)) {
         throw new ConflictException(
@@ -226,8 +240,9 @@ export class AppointmentService {
       }
     }
 
-    // ── Adım 4: Redis hold kilidini kaldır (DEL idempotent) ─────────────────
-    if (dto.staffId) {
+    // ── Adım 4: Redis hold kilidini kaldır (eski SETNX format — DEL idempotent)
+    // tx verilmişse caller zaten Redis temizliğini yönetiyor → atla
+    if (!tx && dto.staffId) {
       await this.lock.releaseSlot(tenantId, dto.staffId, dto.startTime);
     }
 

@@ -178,6 +178,7 @@ export class StaffService {
 
     return this.prisma.staffShift.create({
       data: {
+        tenantId,  // Faz 23: StaffShift.tenantId zorunlu alan (RLS + availability query)
         staffId,
         date:      new Date(dto.date),
         startTime: new Date(dto.startTime),

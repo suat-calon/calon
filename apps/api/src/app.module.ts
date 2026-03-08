@@ -2,6 +2,7 @@ import { Module, NestModule, MiddlewareConsumer }  from '@nestjs/common';
 import { ConfigModule }        from '@nestjs/config';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { JwtModule }           from '@nestjs/jwt';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { DatabaseModule }      from './common/database.module';
 import { RedisModule }         from './common/redis.module';
 import { LoggingModule }       from './common/logging/logging.module';
@@ -39,6 +40,11 @@ import { PublicModule }      from './modules/public/public.module';
     // ── Observability: Pino logger + CorrelationMiddleware + Metrics ─────────
     // (Faz 13 — console.log YASAK, Pino kullan)
     LoggingModule,
+
+    // ── Rate limiting (global) — ThrottlerGuard APP_GUARD ile uygulanır ─────
+    // Default: 100 istek / 60 saniye per IP (generous — internal API).
+    // @Throttle() dekoratörü endpoint bazlı override sağlar (örn: POST /public/holds: 10/60s).
+    ThrottlerModule.forRoot([{ name: 'default', ttl: 60_000, limit: 100 }]),
 
     // ── Veritabanı (global — PrismaService tüm modüllere açık) ──────────────
     DatabaseModule,
@@ -80,6 +86,12 @@ import { PublicModule }      from './modules/public/public.module';
     PublicModule,
   ],
   providers: [
+    // ── ThrottlerGuard global: rate limiting (Faz 23) ────────────────────────
+    // @Throttle() dekoratörü endpoint bazlı override; @SkipThrottle() devre dışı bırakır.
+    {
+      provide:  APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
     // ── TenantGuard global: JWT doğrulama + tenantId enjeksiyonu ─────────────
     {
       provide:  APP_GUARD,

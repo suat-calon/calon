@@ -1,5 +1,5 @@
 /**
- * PUBLIC SERVICE — Faz 16
+ * PUBLIC SERVICE — Faz 16 + Faz 23
  * ──────────────────────────────────────────────────────────────────────────────
  * Tüm metodlar tenantContext.run() içinde çalışır:
  *   • Prisma middleware otomatik tenant filtresi devreye girer
@@ -7,6 +7,11 @@
  *
  * Kritik kural: tenantId asla body/query'den güvensiz alınmaz.
  *   getSalon(slug) → tenantId çözümlenir → diğer metodlara geçilir.
+ *
+ * Faz 23:
+ *   • acquireHold() — POST /public/holds
+ *   • releaseHold() — DELETE /public/holds/:holdId
+ *   • getAvailability() → SchedulingAvailabilityService (shift-aware, hold-aware, tz-aware)
  * ──────────────────────────────────────────────────────────────────────────────
  */
 
@@ -31,13 +36,16 @@ function slugify(text: string): string {
     .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
 
-import { PrismaService }                  from '../../common/prisma.service';
-import { tenantContext }                  from '../../common/tenant.context';
-import { QUEUE_NAMES }                    from '../../common/queue/queue-names';
-import { AppointmentService }             from '../operations/appointment/appointment.service';
-import { AppointmentAvailabilityService } from '../operations/appointment/appointment-availability.service';
-import { AppointmentLockService }         from '../operations/appointment/appointment-lock.service';
-import { BookPublicDto }                  from './dto/book-public.dto';
+import { PrismaService }                       from '../../common/prisma.service';
+import { tenantContext }                       from '../../common/tenant.context';
+import { QUEUE_NAMES }                         from '../../common/queue/queue-names';
+import { AppointmentService }                  from '../operations/appointment/appointment.service';
+import { AppointmentAvailabilityService }      from '../operations/appointment/appointment-availability.service';
+import { AppointmentHoldService }              from '../operations/appointment/appointment-hold.service';
+import { AppointmentLockService }              from '../operations/appointment/appointment-lock.service';
+import { SchedulingAvailabilityService }       from '../operations/appointment/scheduling-availability.service';
+import { AcquireHoldDto }                      from './dto/acquire-hold.dto';
+import { BookPublicDto }                       from './dto/book-public.dto';
 
 // ── Referral job payload ───────────────────────────────────────────────────
 export interface ReferralJobPayload {
@@ -123,10 +131,12 @@ export class PublicService {
   private readonly logger = new Logger(PublicService.name);
 
   constructor(
-    private readonly prisma:        PrismaService,
-    private readonly appointments:  AppointmentService,
-    private readonly availability:  AppointmentAvailabilityService,
-    private readonly lockService:   AppointmentLockService,
+    private readonly prisma:          PrismaService,
+    private readonly appointments:    AppointmentService,
+    private readonly availability:    AppointmentAvailabilityService,
+    private readonly holdService:     AppointmentHoldService,
+    private readonly lockService:     AppointmentLockService,
+    private readonly schedulingAvail: SchedulingAvailabilityService,
     @InjectQueue(QUEUE_NAMES.REFERRAL_PROCESS)
     private readonly referralQueue: Queue<ReferralJobPayload>,
   ) {}
@@ -236,54 +246,85 @@ export class PublicService {
   async getAvailability(
     tenantId:          string,
     staffId:           string,
-    date:              string,   // YYYY-MM-DD
+    date:              string,   // YYYY-MM-DD (tenant yerel tarihi)
     serviceDurationMin: number,
   ): Promise<SlotDto[]> {
     return this.runInContext(tenantId, async () => {
-      // Günün haftaiçi/sonu indeksini bul
-      const [year, month, day] = date.split('-').map(Number);
-      // UTC midnight kullan — timezone bağımsız gün hesabı
-      const dateObj = new Date(Date.UTC(year!, month! - 1, day!));
-      const jsDay   = dateObj.getUTCDay();
-      const dayEnum = JS_DAY_TO_ENUM[jsDay]!;
-
-      // Personel çalışma saatini getir
-      const wh = await this.prisma.staffWorkingHour.findUnique({
-        where: { staffId_dayOfWeek: { staffId, dayOfWeek: dayEnum } },
+      // Faz 23: SchedulingAvailabilityService'e delege et.
+      // Timezone-aware, shift-aware ve hold-aware slot hesabı yapar.
+      // Tenant timezone'u çekilerek doğru yerel gün sınırı kullanılır.
+      const tenant = await this.prisma.tenant.findUnique({
+        where:  { id: tenantId },
+        select: { timezone: true },
       });
+      const timezone = tenant?.timezone ?? 'UTC';
 
-      if (!wh || !wh.isWorkingDay) {
-        return []; // Çalışmıyor
-      }
-
-      // Mevcut dolu slotları al (Redis cache + DB fallback)
-      const occupied = await this.availability.getOccupiedSlots(tenantId, staffId, date);
-
-      // Slot adaylarını üret (30 dk arayla — serviceDuration kadar uzayan)
-      const candidates = this.generateSlotCandidates(
+      return this.schedulingAvail.getAvailableSlots(
+        tenantId,
+        staffId,
         date,
-        wh.startTime,
-        wh.endTime,
+        timezone,
         serviceDurationMin,
-        wh.breakStart ?? null,
-        wh.breakEnd ?? null,
+      );
+    });
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // POST /public/holds — Faz 23
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * DB-backed slot kilidi al.
+   * endTime, service.durationMin'den hesaplanır (client güvenilmez).
+   * Tenant timezone'u tenant kaydından alınır — doğru cache key için.
+   */
+  async acquireHold(dto: AcquireHoldDto): Promise<{ holdId: string; expiresAt: string }> {
+    return this.runInContext(dto.tenantId, async () => {
+      const service = await this.prisma.service.findFirst({
+        where:  { id: dto.serviceId, tenantId: dto.tenantId },
+        select: { durationMin: true },
+      });
+      if (!service) throw new NotFoundException('Hizmet bulunamadı.');
+
+      const tenant = await this.prisma.tenant.findUnique({
+        where:  { id: dto.tenantId },
+        select: { timezone: true },
+      });
+      const timezone = tenant?.timezone ?? 'UTC';
+
+      const startTime = new Date(dto.startTime);
+      const endTime   = new Date(startTime.getTime() + service.durationMin * 60_000);
+
+      const result = await this.holdService.acquireHold(
+        dto.tenantId,
+        dto.staffId,
+        dto.serviceId,
+        startTime,
+        endTime,
+        timezone,
       );
 
-      // Dolu slotlarla çakışanları çıkar
-      const afterOccupied = candidates.filter((slot) =>
-        !this.overlapsAny(slot, occupied),
-      );
+      return { holdId: result.holdId, expiresAt: result.expiresAt.toISOString() };
+    });
+  }
 
-      // Faz 20: Redis hold kilitleri de müsait değil — double-booking önlemi
-      // Hold süresi 600s; availability yanıtında kilitli slotları gizle.
-      const heldStartTimes = new Set(
-        await this.lockService.getHeldSlots(tenantId, staffId, date),
-      );
-      const freeSlots = heldStartTimes.size === 0
-        ? afterOccupied
-        : afterOccupied.filter((slot) => !heldStartTimes.has(slot.startTime));
+  // ═══════════════════════════════════════════════════════════════════════════
+  // DELETE /public/holds/:holdId — Faz 23
+  // ═══════════════════════════════════════════════════════════════════════════
 
-      return freeSlots;
+  /**
+   * Aktif hold'u RELEASED olarak işaretler.
+   * Kullanıcı booking akışından çıktığında veya geri döndüğünde çağrılır.
+   * Idempotent: terminal durumda hold'a dokunmaz.
+   */
+  async releaseHold(holdId: string, tenantId: string): Promise<void> {
+    return this.runInContext(tenantId, async () => {
+      const tenant = await this.prisma.tenant.findUnique({
+        where:  { id: tenantId },
+        select: { timezone: true },
+      });
+      const timezone = tenant?.timezone ?? 'UTC';
+      await this.holdService.releaseHold(holdId, tenantId, timezone);
     });
   }
 
@@ -366,7 +407,7 @@ export class PublicService {
       });
       if (!location) throw new NotFoundException('Lokasyon bulunamadı.');
 
-      // ── 5. Randevu oluştur (GIST + Redis lock korumalı) ──────────────────
+      // ── 5a. Başlangıç durumunu belirle ───────────────────────────────────
       // Faz 19: requiresDeposit=true ise randevu PENDING_PAYMENT ile başlar
       const initialStatus: AppointmentStatus = service.requiresDeposit
         ? AppointmentStatus.PENDING_PAYMENT
@@ -386,28 +427,71 @@ export class PublicService {
         this.logger.log(`[isTestBooking] İlk test randevusu tespit edildi: tenant=${dto.tenantId}`);
       }
 
+      // ── 5. Randevu oluştur ─────────────────────────────────────────────────
+      // Faz 23 Phase 1: holdId varsa hold-based commit; yoksa legacy direct commit.
+      // Phase 3'te legacy yol kaldırılacak, holdId zorunlu hale gelecek.
+
       let appointment;
-      try {
-        appointment = await this.appointments.create(
-          dto.tenantId,
-          {
-            customerId:   customer.id,
-            staffId:      dto.staffId,
-            serviceId:    dto.serviceId,
-            locationId:   dto.locationId,
-            startTime:    startTime.toISOString(),
-            endTime:      endTime.toISOString(),
-            source:       'ONLINE' as const,
-            notes:        dto.notes,
-            totalPrice:   Number(service.price),
-            status:       initialStatus,
-            isTestBooking,
-          },
-          'public-booking',
-        );
-      } catch (err) {
-        if (err instanceof ConflictException) throw err;
-        throw err;
+      let holdRedisKey: string | undefined;
+
+      const appointmentData = {
+        customerId:   customer.id,
+        staffId:      dto.staffId,
+        serviceId:    dto.serviceId,
+        locationId:   dto.locationId,
+        startTime:    startTime.toISOString(),
+        endTime:      endTime.toISOString(),
+        source:       'ONLINE' as const,
+        notes:        dto.notes,
+        totalPrice:   Number(service.price),
+        status:       initialStatus,
+        isTestBooking,
+      };
+
+      if (dto.holdId) {
+        // ── Hold-based commit (Faz 23) ─────────────────────────────────────
+        // consumeHold + randevu insert aynı DB transaction → atomik geçiş.
+        // holdId: ACTIVE → CONSUMED, ardından randevu INSERT (GIST son güvence).
+        // Redis hold key commit SONRASI silinir (tx dışında — atomik değil ama best-effort).
+        try {
+          appointment = await this.prisma.$transaction(async (tx) => {
+            const consumed = await this.holdService.consumeHold(
+              dto.holdId!,
+              dto.tenantId,
+              tx,
+            );
+            holdRedisKey = consumed.redisKey;
+
+            return this.appointments.create(
+              dto.tenantId,
+              appointmentData,
+              'public-booking',
+              tx,
+            );
+          });
+        } catch (err) {
+          if (err instanceof ConflictException) throw err;
+          throw err;
+        }
+
+        // Post-commit: Redis hold key'i hemen sil (TTL'yi bekleme).
+        // Slot artık randevuyla dolu; Redis key stale kalsa bile availability
+        // appointment overlap filtresiyle doğru sonuç verir.
+        if (holdRedisKey) {
+          await this.holdService.deleteHoldRedisKey(holdRedisKey);
+        }
+      } else {
+        // ── Legacy direct commit (Faz 16 — Phase 3'te kaldırılacak) ────────
+        try {
+          appointment = await this.appointments.create(
+            dto.tenantId,
+            appointmentData,
+            'public-booking',
+          );
+        } catch (err) {
+          if (err instanceof ConflictException) throw err;
+          throw err;
+        }
       }
 
       // ── 5a. Canonical URL bileşenleri ────────────────────────────────────

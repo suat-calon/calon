@@ -95,7 +95,10 @@ export class AppointmentAvailabilityService {
 
     // ── Cache miss → DB sorgusu ───────────────────────────────────────────
     const dayStart = new Date(`${date}T00:00:00.000Z`);
-    const dayEnd   = new Date(`${date}T23:59:59.999Z`);
+    // dayEnd = bir sonraki günün UTC gece yarısı (exclusive üst sınır)
+    // Range overlap: start < dayEnd AND end > dayStart
+    // Bu sayede gece yarısını geçen çok saatlik randevular da yakalanır.
+    const dayEnd   = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
 
     const appointments = await this.prisma.appointment.findMany({
       where: {
@@ -105,8 +108,8 @@ export class AppointmentAvailabilityService {
         status: {
           notIn: ['CANCELLED', 'NO_SHOW', 'COMPLETED'] as Appointment['status'][],
         },
-        startTime: { gte: dayStart },
-        endTime:   { lte: dayEnd },
+        startTime: { lt: dayEnd },   // randevu gün bitmeden başlamışsa dahil et
+        endTime:   { gt: dayStart }, // randevu gün başladıktan sonra bitiyorsa dahil et
       },
       select: {
         id:        true,

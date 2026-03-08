@@ -1,9 +1,14 @@
 /**
- * PUBLIC BOOKING DTO — Faz 16
+ * PUBLIC BOOKING DTO — Faz 16 + Faz 23
  * ──────────────────────────────────────────────────────────────────────────────
  * POST /public/book için giriş DTO'su.
  * tenantId body'den alınır (JWT yok — public endpoint).
  * IDOR riski yok: tenantId slug üzerinden zaten doğrulanmış olmalı.
+ *
+ * Faz 23: holdId opsiyonel (Phase 1 geriye uyumluluk).
+ *   Var → hold-based commit (consumeHold + create aynı DB transaction içinde).
+ *   Yok → legacy direct commit (Faz 16 davranışı).
+ * Phase 3'te holdId zorunlu hale gelecek; @IsOptional() kaldırılacak.
  */
 
 import {
@@ -71,4 +76,14 @@ export class BookPublicDto {
   @IsString()
   @MaxLength(20)
   referralCode?: string;
+
+  /**
+   * Faz 23: DB-backed hold UUID (Phase 1 — opsiyonel).
+   * POST /public/holds'tan alınan holdId buraya gönderilir.
+   * Var: hold-based commit (consumeHold + randevu tek transaction).
+   * Yok: legacy direct commit (Faz 16 davranışı — Phase 3'te kaldırılacak).
+   */
+  @IsOptional()
+  @IsUUID('4')
+  holdId?: string;
 }
