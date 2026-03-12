@@ -33,6 +33,8 @@ import { ProviderModule }     from './modules/provider/provider.module';
 import { NotificationModule } from './modules/notification/notification.module';
 import { WorkerModule }       from './modules/worker/worker.module';
 import { HealthModule }       from './modules/health/health.module';
+// ── Faz 5: Super Admin Platform ───────────────────────────────────────────────
+import { AdminModule }       from './modules/admin/admin.module';
 
 @Module({
   imports: [
@@ -114,6 +116,9 @@ import { HealthModule }       from './modules/health/health.module';
 
     // ── Health: Docker healthcheck + uptime probe ─────────────────────────────
     HealthModule,       // GET /api/v1/health → { status: 'ok' } — @Public(), auth bypass
+
+    // ── Faz 5: Super Admin Platform ──────────────────────────────────────────
+    AdminModule,        // GET/POST /api/v1/admin/tenants/** — x-admin-api-key guard
   ],
   providers: [
     // ── ThrottlerGuard global: rate limiting (Faz 23) ────────────────────────

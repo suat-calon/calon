@@ -12,15 +12,21 @@ export const envValidationSchema = Joi.object({
     .uri()
     .required(),
 
-  REDIS_URL: Joi.string()
-    .uri()
-    .required(),
+  REDIS_HOST: Joi.string()
+    .default('localhost'),
+
+  REDIS_PORT: Joi.number()
+    .default(6379),
+
+  REDIS_PASSWORD: Joi.string()
+    .optional()
+    .allow(''),
 
   JWT_SECRET: Joi.string()
     .min(32)
     .required(),
 
-  IYZICO_WEBHOOK_SECRET: Joi.string()
+  IYZICO_SECRET_KEY: Joi.string()
     .min(10)
     .required(),
 
@@ -30,4 +36,10 @@ export const envValidationSchema = Joi.object({
 
   SENTRY_DSN: Joi.string()
     .optional(),
-});
+
+  // ── Faz 5: Super Admin Platform ──────────────────────────────────────────
+  // Opsiyonel — yoksa AdminGuard fail-closed (401) döner.
+  ADMIN_API_KEY: Joi.string()
+    .min(32)
+    .optional(),
+}).unknown(true); // allow other env vars not listed here
