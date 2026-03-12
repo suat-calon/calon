@@ -19,6 +19,7 @@ import { DiscoveryService }      from './discovery.service';
 import { ReferralProcessor }     from './referral.processor';
 import { PaymentService }        from './payment.service';
 import { WebhookController }     from './webhook.controller';
+import { WebhookAuditService }   from './webhook-audit.service';
 import { OperationsModule }       from '../operations/operations.module';
 import { LoyaltyModule }          from '../loyalty/loyalty.module';
 import { AvailabilityAbuseGuard } from './guards/availability-abuse.guard';
@@ -31,6 +32,7 @@ import { AvailabilityAbuseGuard } from './guards/availability-abuse.guard';
     DiscoveryService,
     ReferralProcessor,
     PaymentService,
+    WebhookAuditService,
     AvailabilityAbuseGuard,   // §8: per-IP/staff distinct-date probe abuse protection
   ],
 })

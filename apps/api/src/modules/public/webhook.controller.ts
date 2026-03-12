@@ -23,12 +23,16 @@ import {
 import { Public }       from '../iam/guards/tenant.guard';
 import { AllowPastDue } from '../billing/decorators/allow-past-due.decorator';
 import { PaymentService, IyzicoWebhookPayload } from './payment.service';
+import { WebhookAuditService }                  from './webhook-audit.service';
 
 @Public()
 @AllowPastDue()
 @Controller('webhooks')
 export class WebhookController {
-  constructor(private readonly payments: PaymentService) {}
+  constructor(
+    private readonly payments:       PaymentService,
+    private readonly webhookAudit:   WebhookAuditService,
+  ) {}
 
   /**
    * İyzico webhook — ödeme sonucu callback'i.
@@ -41,6 +45,7 @@ export class WebhookController {
   @Post('iyzico')
   @HttpCode(HttpStatus.OK)
   handleIyzico(@Body() payload: IyzicoWebhookPayload) {
+    this.webhookAudit.log('iyzico-webhook', payload);
     return this.payments.handleIyzicoWebhook(payload);
   }
 }
