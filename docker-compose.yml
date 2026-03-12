@@ -61,6 +61,7 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV:    production
+      PORT:        "4000"
       DATABASE_URL: ${DATABASE_URL}
       REDIS_HOST:  ${REDIS_HOST:-redis}
       REDIS_PORT:  ${REDIS_PORT:-6379}
@@ -106,6 +107,14 @@ services:
         condition: service_healthy
     networks:
       - calon_network
+    # Worker HTTP sunucusu çalıştırmaz — wget tabanlı Dockerfile HEALTHCHECK override edildi.
+    # Proses hayatta ise "healthy" sayılır; restart policy crash loop'u yakalar.
+    healthcheck:
+      test:         ["CMD-SHELL", "pgrep -f 'node dist/worker' || exit 1"]
+      interval:     30s
+      timeout:      5s
+      retries:      3
+      start_period: 30s
 
 volumes:
   # Faz 21.5: Calon brand — volume'lar compose-managed named volume olarak tanımlandı.
