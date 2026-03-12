@@ -1,0 +1,37 @@
+# Dependencies — rebuilt inside container
+node_modules
+**/node_modules
+
+# Compiled output — rebuilt inside container
+dist
+**/.next
+coverage
+
+# Version control
+.git
+.gitignore
+
+# Docker files — not needed in build context
+Dockerfile
+**/Dockerfile
+docker-compose.yml
+
+# Logs
+*.log
+**/*.log
+
+# Environment files — secrets must never be in image
+.env
+.env.*
+.env.local
+.env.*.local
+
+# Editor config
+.vscode
+.idea
+
+# The following are explicitly NOT ignored:
+# apps/
+# packages/
+# prisma/
+# tsconfig*
