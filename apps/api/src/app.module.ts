@@ -9,7 +9,8 @@ import { DatabaseModule }      from './common/database.module';
 import { RedisModule, REDIS_CLIENT } from './common/redis.module';
 import { RedisThrottlerStorage } from './common/throttler/redis-throttler.storage';
 import { LoggingModule }            from './common/logging/logging.module';
-import { CorrelationMiddleware }     from './common/logging/correlation.middleware';
+import { CorrelationMiddleware }         from './common/logging/correlation.middleware';
+import { RequestLoggerMiddleware }       from './common/middleware/request-logger.middleware';
 import { LoggingInterceptor }       from './common/logging/logging.interceptor';
 import { ThrottlerExceptionFilter } from './common/logging/throttler-exception.filter';
 import { TenantGuard }         from './modules/iam/guards/tenant.guard';
@@ -149,6 +150,8 @@ export class AppModule implements NestModule {
    * Guard'lardan önce çalışır → correlationId her log satırında mevcut olur.
    */
   configure(consumer: MiddlewareConsumer): void {
-    consumer.apply(CorrelationMiddleware).forRoutes('*');
+    consumer
+      .apply(CorrelationMiddleware, RequestLoggerMiddleware)
+      .forRoutes('*');
   }
 }

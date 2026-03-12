@@ -13,6 +13,7 @@ import { Logger as PinoLogger }   from 'nestjs-pino';
 import { AppModule }              from './app.module';
 import { MetricsService }         from './common/logging/metrics.service';
 import { DevExceptionFilter }     from './common/filters/dev-exception.filter';
+import { GlobalErrorFilter }      from './common/filters/global-error.filter';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
@@ -47,7 +48,11 @@ async function bootstrap(): Promise<void> {
     }),
   );
 
-  // Dev exception filter — exposes real error in non-production
+  // Global error filter — catch-all fallback: logs + returns { statusCode, message }
+  app.useGlobalFilters(new GlobalErrorFilter());
+
+  // Dev exception filter — overrides GlobalErrorFilter for HttpException (preserves
+  // original response shape) and adds _dev_error stack in non-production
   app.useGlobalFilters(new DevExceptionFilter());
 
   // Cookie parser — HttpOnly cookie auth için
