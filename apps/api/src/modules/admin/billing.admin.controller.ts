@@ -167,7 +167,7 @@ export class BillingAdminController {
   }
 
   // ── GET /admin/metrics ────────────────────────────────────────────────────
-  /** In-memory request metrics (p50, p95, error rate) + kuyruk derinliği */
+  /** In-memory request metrics (p50, p95, error rate) + kuyruk derinliği + worker sayaçları */
   @Get('metrics')
   async getMetrics(@Req() req: { userRole?: string }) {
     this.assertSuperAdmin(req);
@@ -175,6 +175,6 @@ export class BillingAdminController {
       this.metrics.snapshot(),
       this.backpressure.getQueueStats(),
     ]);
-    return { requestMetrics, queueStats };
+    return { requestMetrics, queueStats, workerMetrics: this.metrics.workerSnapshot() };
   }
 }

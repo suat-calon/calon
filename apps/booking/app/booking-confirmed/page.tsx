@@ -1,10 +1,10 @@
 /**
- * BOOKING CONFIRMED PAGE — Faz 18: Viral Growth
+ * BOOKING CONFIRMED PAGE — Faz 18: Viral Growth | Faz 19: Ödeme Entegrasyonu
  * ──────────────────────────────────────────────────────────────────────────────
- * Route: /booking-confirmed?slug=&ref=&service=&staff=&date=
- * Server Component wrapper + Client ShareSection.
+ * Route A (ödeme yok):  /booking-confirmed?slug=&ref=&service=&staff=&date=&city=&svcSlug=
+ * Route B (İyzico geri): /booking-confirmed?appointmentId=&slug=&ref=&...
  *
- * Canonical: /booking-confirmed (ref parametresi hariç)
+ * Canonical: /booking-confirmed (ref hariç)
  * ──────────────────────────────────────────────────────────────────────────────
  */
 
@@ -33,11 +33,19 @@ export default async function BookingConfirmedPage({
 }) {
   const sp = await searchParams;
 
-  const slug    = typeof sp['slug']    === 'string' ? sp['slug']    : '';
-  const ref     = typeof sp['ref']     === 'string' ? sp['ref']     : '';
-  const service = typeof sp['service'] === 'string' ? sp['service'] : '';
-  const staff   = typeof sp['staff']   === 'string' ? sp['staff']   : '';
-  const date    = typeof sp['date']    === 'string' ? sp['date']    : '';
+  const slug          = typeof sp['slug']          === 'string' ? sp['slug']          : '';
+  const ref           = typeof sp['ref']           === 'string' ? sp['ref']           : '';
+  const service       = typeof sp['service']       === 'string' ? sp['service']       : '';
+  const staff         = typeof sp['staff']         === 'string' ? sp['staff']         : '';
+  const date          = typeof sp['date']          === 'string' ? sp['date']          : '';
+  // Faz 19: canonical slugs (yönlendirme sırasında eklenir)
+  const citySlug      = typeof sp['city']          === 'string' ? sp['city']          : null;
+  const serviceSlug   = typeof sp['svcSlug']       === 'string' ? sp['svcSlug']       : null;
+  // Faz 19: İyzico callback'ten gelen appointmentId
+  const appointmentId = typeof sp['appointmentId'] === 'string' ? sp['appointmentId'] : null;
+
+  // İyzico'dan geri dönüş — ödeme tamamlandı, webhook onayını bekliyor
+  const isPaymentCallback = !!appointmentId && !service;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-brand-50 flex flex-col items-center justify-center px-4 py-16">
@@ -46,18 +54,22 @@ export default async function BookingConfirmedPage({
       <div className="w-full max-w-md bg-white rounded-3xl shadow-sm border border-gray-100 p-8 text-center">
 
         {/* Başarı ikonu */}
-        <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-5">
-          <CheckCircle className="w-10 h-10 text-green-600" />
+        <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-5 ${
+          isPaymentCallback ? 'bg-blue-100' : 'bg-green-100'
+        }`}>
+          <CheckCircle className={`w-10 h-10 ${isPaymentCallback ? 'text-blue-600' : 'text-green-600'}`} />
         </div>
 
         <h1 className="text-2xl font-bold text-gray-900 mb-2">
-          Randevunuz Oluşturuldu!
+          {isPaymentCallback ? 'Ödemeniz Alındı!' : 'Randevunuz Oluşturuldu!'}
         </h1>
         <p className="text-gray-500 text-sm mb-6">
-          Bilgileriniz kaydedildi. Randevu günü görüşmek üzere!
+          {isPaymentCallback
+            ? 'Ödemeniz işleniyor, randevunuz en kısa sürede onaylanacak.'
+            : 'Bilgileriniz kaydedildi. Randevu günü görüşmek üzere!'}
         </p>
 
-        {/* Randevu özeti */}
+        {/* Randevu özeti — ödeme callback'inde URL param yoksa gösterme */}
         {(service || staff || date) && (
           <div className="bg-gray-50 rounded-2xl p-4 text-left text-sm space-y-2 mb-6">
             {service && (
@@ -87,6 +99,8 @@ export default async function BookingConfirmedPage({
             referralCode={ref}
             salonSlug={slug}
             siteUrl={SITE_URL}
+            citySlug={citySlug}
+            serviceSlug={serviceSlug}
           />
         )}
 

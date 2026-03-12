@@ -21,11 +21,14 @@ import {
   NotFoundException,
   ConflictException,
   ForbiddenException,
+  Inject,
 } from '@nestjs/common';
 import { InjectQueue }    from '@nestjs/bull';
 import { Queue }          from 'bull';
 import { randomBytes }    from 'crypto';
 import { DayOfWeek, TenantStatus, AppointmentStatus } from '@prisma/client';
+import Redis              from 'ioredis';
+import { REDIS_CLIENT }   from '../../common/redis.module';
 
 // ── Türkçe destekli slugify ───────────────────────────────────────────────────
 function slugify(text: string): string {
@@ -139,6 +142,8 @@ export class PublicService {
     private readonly schedulingAvail: SchedulingAvailabilityService,
     @InjectQueue(QUEUE_NAMES.REFERRAL_PROCESS)
     private readonly referralQueue: Queue<ReferralJobPayload>,
+    @Inject(REDIS_CLIENT)
+    private readonly redis: Redis,
   ) {}
 
   // ── Faz 18: Referral kodu üretici ─────────────────────────────────────────
@@ -249,6 +254,13 @@ export class PublicService {
     date:              string,   // YYYY-MM-DD (tenant yerel tarihi)
     serviceDurationMin: number,
   ): Promise<SlotDto[]> {
+    // §8 MVP-EXIT-FINAL+: 5s Redis cache — slot hesabı pahalı, sık tekrar sorgularda DB'yi korur
+    const cacheKey = `avail_cache:${tenantId}:${staffId}:${date}:${serviceDurationMin}`;
+    const cached   = await this.redis.get(cacheKey).catch(() => null);
+    if (cached) {
+      return JSON.parse(cached) as SlotDto[];
+    }
+
     return this.runInContext(tenantId, async () => {
       // Faz 23: SchedulingAvailabilityService'e delege et.
       // Timezone-aware, shift-aware ve hold-aware slot hesabı yapar.
@@ -259,13 +271,18 @@ export class PublicService {
       });
       const timezone = tenant?.timezone ?? 'UTC';
 
-      return this.schedulingAvail.getAvailableSlots(
+      const slots = await this.schedulingAvail.getAvailableSlots(
         tenantId,
         staffId,
         date,
         timezone,
         serviceDurationMin,
       );
+
+      // Sonucu 5s için cache'le (hold/booking değişiklikleri max 5s gecikme ile yansır)
+      await this.redis.setex(cacheKey, 5, JSON.stringify(slots)).catch(() => undefined);
+
+      return slots;
     });
   }
 
@@ -432,7 +449,8 @@ export class PublicService {
       // Phase 3'te legacy yol kaldırılacak, holdId zorunlu hale gelecek.
 
       let appointment;
-      let holdRedisKey: string | undefined;
+      let holdRedisKey:  string | undefined;
+      let holdRedisToken: string | undefined;
 
       const appointmentData = {
         customerId:   customer.id,
@@ -460,7 +478,8 @@ export class PublicService {
               dto.tenantId,
               tx,
             );
-            holdRedisKey = consumed.redisKey;
+            holdRedisKey   = consumed.redisKey;
+            holdRedisToken = consumed.holdToken;
 
             return this.appointments.create(
               dto.tenantId,
@@ -477,8 +496,8 @@ export class PublicService {
         // Post-commit: Redis hold key'i hemen sil (TTL'yi bekleme).
         // Slot artık randevuyla dolu; Redis key stale kalsa bile availability
         // appointment overlap filtresiyle doğru sonuç verir.
-        if (holdRedisKey) {
-          await this.holdService.deleteHoldRedisKey(holdRedisKey);
+        if (holdRedisKey && holdRedisToken) {
+          await this.holdService.deleteHoldRedisKey(holdRedisKey, holdRedisToken);
         }
       } else {
         // ── Legacy direct commit (Faz 16 — Phase 3'te kaldırılacak) ────────

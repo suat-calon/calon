@@ -1,13 +1,16 @@
 import { Module, NestModule, MiddlewareConsumer }  from '@nestjs/common';
 import { ConfigModule }        from '@nestjs/config';
-import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { JwtModule }           from '@nestjs/jwt';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import type Redis              from 'ioredis';
 import { DatabaseModule }      from './common/database.module';
-import { RedisModule }         from './common/redis.module';
-import { LoggingModule }       from './common/logging/logging.module';
-import { CorrelationMiddleware } from './common/logging/correlation.middleware';
-import { LoggingInterceptor }  from './common/logging/logging.interceptor';
+import { RedisModule, REDIS_CLIENT } from './common/redis.module';
+import { RedisThrottlerStorage } from './common/throttler/redis-throttler.storage';
+import { LoggingModule }            from './common/logging/logging.module';
+import { CorrelationMiddleware }     from './common/logging/correlation.middleware';
+import { LoggingInterceptor }       from './common/logging/logging.interceptor';
+import { ThrottlerExceptionFilter } from './common/logging/throttler-exception.filter';
 import { TenantGuard }         from './modules/iam/guards/tenant.guard';
 import { BillingGuard }        from './modules/billing/guards/billing.guard';
 import { IamModule }           from './modules/iam/iam.module';
@@ -21,6 +24,12 @@ import { StaffModule }        from './modules/staff/staff.module';
 import { LoyaltyModule }      from './modules/loyalty/loyalty.module';
 import { OnboardingModule }  from './modules/onboarding/onboarding.module';
 import { PublicModule }      from './modules/public/public.module';
+// ── Faz 24: Event & Notification Backbone ──────────────────────────────────
+import { EventModule }        from './modules/event/event.module';
+import { DeliveryModule }     from './modules/delivery/delivery.module';
+import { ProviderModule }     from './modules/provider/provider.module';
+import { NotificationModule } from './modules/notification/notification.module';
+import { WorkerModule }       from './modules/worker/worker.module';
 
 @Module({
   imports: [
@@ -41,10 +50,17 @@ import { PublicModule }      from './modules/public/public.module';
     // (Faz 13 — console.log YASAK, Pino kullan)
     LoggingModule,
 
-    // ── Rate limiting (global) — ThrottlerGuard APP_GUARD ile uygulanır ─────
+    // ── Rate limiting (global, Redis-backed) — ThrottlerGuard APP_GUARD ile ──
     // Default: 100 istek / 60 saniye per IP (generous — internal API).
     // @Throttle() dekoratörü endpoint bazlı override sağlar (örn: POST /public/holds: 10/60s).
-    ThrottlerModule.forRoot([{ name: 'default', ttl: 60_000, limit: 100 }]),
+    // Redis storage: yatay ölçekleme ve pod yeniden başlatma sonrası sayaç korunur.
+    ThrottlerModule.forRootAsync({
+      inject:      [REDIS_CLIENT],
+      useFactory: (redis: Redis) => ({
+        throttlers: [{ name: 'default', ttl: 60_000, limit: 100 }],
+        storage:    new RedisThrottlerStorage(redis),
+      }),
+    }),
 
     // ── Veritabanı (global — PrismaService tüm modüllere açık) ──────────────
     DatabaseModule,
@@ -84,6 +100,13 @@ import { PublicModule }      from './modules/public/public.module';
 
     // ── Public Booking: SEO salon sayfası + booking engine (Faz 16) ──────────
     PublicModule,
+
+    // ── Faz 24: Event & Notification Backbone ────────────────────────────────
+    EventModule,        // @Global — OutboxRepository, EventProducerService
+    DeliveryModule,     // @Global — DeliveryRepository
+    ProviderModule,     // @Global — ProviderRegistryService + stub adapter'lar
+    NotificationModule, // @Global — TemplateResolver, PreferenceResolver, CostPolicyEngine
+    WorkerModule,       // Dispatcher + Delivery + Recovery processor'lar + cron
   ],
   providers: [
     // ── ThrottlerGuard global: rate limiting (Faz 23) ────────────────────────
@@ -106,6 +129,11 @@ import { PublicModule }      from './modules/public/public.module';
     {
       provide:  APP_INTERCEPTOR,
       useClass: LoggingInterceptor,
+    },
+    // ── ThrottlerExceptionFilter global: 429 → Prometheus rate_limit_rejections_total ──
+    {
+      provide:  APP_FILTER,
+      useClass: ThrottlerExceptionFilter,
     },
   ],
 })

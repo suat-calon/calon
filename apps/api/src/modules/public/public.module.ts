@@ -19,12 +19,19 @@ import { DiscoveryService }      from './discovery.service';
 import { ReferralProcessor }     from './referral.processor';
 import { PaymentService }        from './payment.service';
 import { WebhookController }     from './webhook.controller';
-import { OperationsModule }      from '../operations/operations.module';
-import { LoyaltyModule }         from '../loyalty/loyalty.module';
+import { OperationsModule }       from '../operations/operations.module';
+import { LoyaltyModule }          from '../loyalty/loyalty.module';
+import { AvailabilityAbuseGuard } from './guards/availability-abuse.guard';
 
 @Module({
   imports:     [OperationsModule, LoyaltyModule],
   controllers: [PublicController, DiscoveryController, WebhookController],
-  providers:   [PublicService, DiscoveryService, ReferralProcessor, PaymentService],
+  providers:   [
+    PublicService,
+    DiscoveryService,
+    ReferralProcessor,
+    PaymentService,
+    AvailabilityAbuseGuard,   // §8: per-IP/staff distinct-date probe abuse protection
+  ],
 })
 export class PublicModule {}

@@ -14,14 +14,29 @@ interface ShareSectionProps {
   referralCode: string;
   salonSlug:    string;
   siteUrl:      string;
+  // Faz 19: Canonical URL parçaları
+  citySlug?:    string | null;
+  serviceSlug?: string | null;
 }
 
-export function ShareSection({ referralCode, salonSlug, siteUrl }: ShareSectionProps) {
+export function ShareSection({
+  referralCode,
+  salonSlug,
+  siteUrl,
+  citySlug,
+  serviceSlug,
+}: ShareSectionProps) {
   const [copied, setCopied] = useState(false);
 
-  const shareUrl = `${siteUrl}/${salonSlug}?ref=${referralCode}`;
+  // Canonical format: /{city}/{service}/{salon}?ref=... — her ikisi de varsa
+  const canonicalPath = citySlug && serviceSlug
+    ? `/${citySlug}/${serviceSlug}/${salonSlug}`
+    : `/${salonSlug}`;
+  const shareUrl = `${siteUrl}${canonicalPath}?ref=${referralCode}`;
+
+  // B3 — Viral WhatsApp mesajı
   const waMsg    = encodeURIComponent(
-    `Merhaba! Seninle harika bir güzellik salonu keşfettim. Online randevu almak için: ${shareUrl}`,
+    `Randevumu Calon üzerinden aldım ✨ Sen de randevunu buradan alabilirsin: ${shareUrl}`,
   );
 
   const handleCopy = async () => {

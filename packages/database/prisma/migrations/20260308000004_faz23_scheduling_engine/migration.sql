@@ -183,6 +183,7 @@ END $$;
 
 -- Yeni status-filtered GIST kısıtı (staff çift rezervasyon)
 -- CANCELLED / NO_SHOW / COMPLETED ve silinmiş randevular slotu serbest bırakır
+-- NOT: appointments.startTime/endTime = TIMESTAMPTZ → tstzrange() kullanılır.
 ALTER TABLE "appointments"
   ADD CONSTRAINT appt_staff_overlap_excl
   EXCLUDE USING gist (

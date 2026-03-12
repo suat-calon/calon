@@ -1,0 +1,104 @@
+-- ──────────────────────────────────────────────────────────────────────────────
+-- Migration: 20260310000002_mvp_exit_core_constraints
+-- Kategori:  DOCUMENTATION / VERIFICATION — Yeni DDL yok
+-- Aşama:     MVP-EXIT-CORE §1 (Slot Overlap) + §2 (Payment Idempotency)
+-- Tarih:     2026-03-10
+-- ──────────────────────────────────────────────────────────────────────────────
+--
+-- Amaç: Bu migration, MVP çıkış öncesi güvenlik denetiminin (MVP-EXIT-CORE)
+--       DB katmanında zaten mevcut olan constraint'lerin katalog doğrulamasını
+--       kayıt altına alır. Yeni DDL değişikliği içermez.
+--
+-- ── §1: Slot Overlap GIST Constraint ─────────────────────────────────────────
+--
+-- appt_staff_overlap_excl (faz23 — 20260308000004):
+--   EXCLUDE USING gist (
+--     "tenantId" WITH =,
+--     "staffId"  WITH =,
+--     tsrange("startTime", "endTime") WITH &&
+--   )
+--   WHERE (
+--     status NOT IN ('CANCELLED', 'NO_SHOW', 'COMPLETED')
+--     AND "isDeleted" = false
+--   )
+--
+-- Doğrulanmış kararlar:
+--   1. tsrange (timezone-naive) DOĞRU: startTime/endTime timestamp without time zone türündedir.
+--      tstzrange kullanmak, IMMUTABLE olmayan timezone-GUC cast'i nedeniyle index oluşturmayı engeller.
+--   2. Half-open interval [start, end): Bitişik randevular ÇAKIŞMAZ.
+--      tsrange('10:00','11:00') && tsrange('11:00','12:00') = false → arka arkaya rezervasyon izinli.
+--   3. COMPLETED kasıtlı olarak hariç tutulur: Tamamlanan randevular slotu serbest bırakır.
+--      Bu, kapasiteden tam faydalanmayı sağlar.
+--   4. btree_gist eklentisi: UUID (=) ile range (&&) GIST index için zorunlu.
+--
+-- appt_room_overlap_excl (faz23 — 20260308000004):
+--   EXCLUDE USING gist (
+--     "tenantId" WITH =,
+--     "roomId"   WITH =,
+--     tsrange("startTime", "endTime") WITH &&
+--   )
+--   WHERE (
+--     status NOT IN ('CANCELLED', 'NO_SHOW', 'COMPLETED')
+--     AND "isDeleted" = false
+--     AND "roomId" IS NOT NULL
+--   )
+--
+-- Uygulama katmanı uyumu (MVP-EXIT-CORE düzeltmesi):
+--   checkOverlapRaw (appointment.service.ts) ÖNCEDEN yalnızca CANCELLED/NO_SHOW dışlıyordu.
+--   Bu migration ile eş zamanlı olarak COMPLETED de dışlandı → DB constraint ile birebir hizalandı.
+--
+-- ── §2: Payment Idempotency Unique Constraints ────────────────────────────────
+--
+-- faz19 (20260305000001) tarafından oluşturuldu ve bu doğrulamada mevcut:
+--
+--   payments_appointmentId_key:
+--     UNIQUE ("appointmentId") → bir randevunun en fazla bir Payment kaydı olabilir.
+--     Race-condition koruması: payment stub INSERT önce yapılır (paymentUrl=null),
+--     ikinci eş-zamanlı istek P2002 → idempotent path → mevcut URL döndürülür.
+--
+--   payments_providerId_key:
+--     UNIQUE ("providerId") → aynı İyzico paymentId iki kez işlenemez.
+--
+--   webhook_events_providerEventId_key:
+--     UNIQUE ("providerEventId") → WebhookEvent atomic idempotency gate.
+--     İki eş-zamanlı webhook → yalnızca biri INSERT yapabilir; diğeri P2002 → 200 döner.
+--
+-- ── §3: createPayment() Yeni Akış (Uygulama Katmanı) ─────────────────────────
+--
+-- ESKİ (Faz 19):  findAppointment → Iyzico → payment INSERT
+--   Risk: Paralel 2 istek her ikisi de Iyzico'yu çağırır; ikinci P2002 → 500 hata
+--
+-- YENİ (MVP-EXIT-CORE):
+--   1. payment stub INSERT (paymentUrl=null) — P2002 gate
+--   2. P2002 → findFirst existing → paymentUrl varsa idempotent return → yoksa 409
+--   3. Iyzico checkout form başlat (yalnızca race kazananı)
+--   4. Iyzico hata → stub FAILED güncelle, exception fırlat
+--   5. stub UPDATE: paymentUrl + providerMeta
+--
+-- ── Katalog doğrulama sorguları (bilgi amaçlı — migration zamanında çalıştırılmaz) ──
+--
+-- SELECT conname, pg_get_constraintdef(oid)
+-- FROM   pg_constraint
+-- WHERE  conname IN (
+--   'appt_staff_overlap_excl',
+--   'appt_room_overlap_excl',
+--   'payments_appointmentId_key',
+--   'payments_providerId_key',
+--   'webhook_events_providerEventId_key'
+-- );
+--
+-- SELECT extname FROM pg_extension WHERE extname = 'btree_gist';
+--
+-- SELECT column_name, data_type
+-- FROM   information_schema.columns
+-- WHERE  table_name = 'appointments'
+--   AND  column_name IN ('startTime', 'endTime');
+-- -- Beklenen: timestamp without time zone (tsrange uyumlu)
+--
+-- ──────────────────────────────────────────────────────────────────────────────
+-- Bu migration yalnızca belgeleme amacıyla oluşturulmuştur.
+-- Prisma migrate resolve --applied ile işaretlenecektir.
+-- ──────────────────────────────────────────────────────────────────────────────
+
+-- Gerçek DDL değişikliği yok; migration boş SQL ile işaretlenir.
+SELECT 1;

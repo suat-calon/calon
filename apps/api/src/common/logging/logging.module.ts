@@ -2,21 +2,23 @@
  * LOGGING MODULE
  * ──────────────────────────────────────────────────────────────────────────────
  * Pino logger (nestjs-pino) + CorrelationMiddleware + MetricsService +
- * LoggingInterceptor'ı bir araya getirir.
+ * PrometheusService + ThrottlerExceptionFilter + LoggingInterceptor'ı
+ * bir araya getirir.
  *
- * Global olarak AppModule'e import edilir.
- * CorrelationMiddleware, AppModule.configure() içinde tüm route'lara uygulanır.
- * LoggingInterceptor, AppModule'de APP_INTERCEPTOR olarak kaydedilir.
+ * @Global() — AppModule'e bir kez import edilir; tüm modüller PrometheusService
+ * ve MetricsService'i inject edebilir.
  * ──────────────────────────────────────────────────────────────────────────────
  */
 
 import { Global, Module } from '@nestjs/common';
-import { LoggerModule } from 'nestjs-pino';
+import { LoggerModule }   from 'nestjs-pino';
 
-import { CorrelationMiddleware } from './correlation.middleware';
-import { LoggingInterceptor }   from './logging.interceptor';
-import { MetricsService }       from './metrics.service';
-import { getCorrelationId }     from './correlation.store';
+import { CorrelationMiddleware }    from './correlation.middleware';
+import { LoggingInterceptor }       from './logging.interceptor';
+import { MetricsService }           from './metrics.service';
+import { PrometheusService }        from './prometheus.service';
+import { ThrottlerExceptionFilter } from './throttler-exception.filter';
+import { getCorrelationId }         from './correlation.store';
 
 const isDev = process.env['NODE_ENV'] !== 'production';
 
@@ -31,16 +33,16 @@ const isDev = process.env['NODE_ENV'] !== 'production';
               transport: {
                 target:  'pino-pretty',
                 options: {
-                  colorize:        true,
-                  singleLine:      true,
-                  translateTime:   'SYS:HH:MM:ss.l',
-                  ignore:          'pid,hostname',
+                  colorize:      true,
+                  singleLine:    true,
+                  translateTime: 'SYS:HH:MM:ss.l',
+                  ignore:        'pid,hostname',
                 },
               },
             }
           : {}),
 
-        // Her log satırına correlationId ekle
+        // Her log satırına correlationId (= requestId) ekle
         mixin: () => ({
           correlationId: getCorrelationId(),
         }),
@@ -62,11 +64,15 @@ const isDev = process.env['NODE_ENV'] !== 'production';
     CorrelationMiddleware,
     LoggingInterceptor,
     MetricsService,
+    PrometheusService,
+    ThrottlerExceptionFilter,
   ],
   exports: [
     CorrelationMiddleware,
     LoggingInterceptor,
     MetricsService,
+    PrometheusService,        // @Global() — tüm modüller inject edebilir
+    ThrottlerExceptionFilter, // APP_FILTER olarak AppModule'e de kayıtlı
   ],
 })
 export class LoggingModule {}

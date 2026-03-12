@@ -16,22 +16,30 @@
  *    • Eş zamanlı isteklerin aynı slotu yarışarak oluşturmasını engeller.
  *    • Transaction bitince release edilir.
  *
- * Güvenlik:
- *   • TenantGuard tüm isteklerde tenantId doğrular
- *   • Cross-tenant çakışması imkânsız (tenantId anahtar parçası)
+ * Güvenlik — MVP-EXIT-FINAL:
+ *   • Tüm DEL işlemleri RedisLockService.releaseLock() (Lua CAS) ile yapılır.
+ *   • acquireConcurrencyLock() rastgele UUID token üretir, "key||token" olarak döner.
+ *   • releaseConcurrencyLock() handle'ı parse eder, Lua ile atomik unlock.
+ *   • holdSlot() UUID token döndürür; releaseSlot() token ile Lua unlock.
+ *   • TenantGuard tüm isteklerde tenantId doğrular.
+ *   • Cross-tenant çakışması imkânsız (tenantId anahtar parçası).
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
 import { ConflictException, Inject, Injectable, Logger } from '@nestjs/common';
 import Redis                                              from 'ioredis';
 import { REDIS_CLIENT }                                  from '../../../common/redis.module';
+import { RedisLockService }                              from '../../../common/redis-lock.service';
 import { redisKey }                                      from '../../../common/redis.util';
 
 /** Hold lock TTL: 10 dakika (kullanıcı ödeme/onay ekranında bekleme süresi) */
-const HOLD_TTL_SECONDS = 10 * 60;
+const HOLD_TTL_MS = 10 * 60 * 1_000;
 
 /** Concurrency lock TTL: 10 saniye (DB transaction süresinden uzun olmalı) */
-const CONCURRENCY_TTL_SECONDS = 10;
+const CONCURRENCY_TTL_MS = 10 * 1_000;
+
+/** Handle ayırıcı: "lockKey||token" */
+const HANDLE_SEP = '||';
 
 @Injectable()
 export class AppointmentLockService {
@@ -39,13 +47,14 @@ export class AppointmentLockService {
 
   constructor(
     @Inject(REDIS_CLIENT) private readonly redis: Redis,
+    private readonly lockService: RedisLockService,
   ) {}
 
   // ── Anahtar oluşturucular ──────────────────────────────────────────────────
 
   /**
    * calon:hold:{tenantId}:{staffId}:{startTime}
-   * 5 dakikalık kullanıcı hold kilidi
+   * 10 dakikalık kullanıcı hold kilidi
    */
   private buildHoldKey(
     tenantId:  string,
@@ -74,41 +83,51 @@ export class AppointmentLockService {
   /**
    * Bir slot'u kullanıcı hold kilidiyle kilitler.
    *
-   * Redis komutu: SET key value NX EX 300
+   * Redis: SET key <uuid> NX PX 600000
+   *
+   * @returns  holdToken — releaseSlot() için gerekli (Lua safe unlock)
    * @throws ConflictException  eğer slot zaten kilitliyse (409)
    */
   async holdSlot(
     tenantId:  string,
     staffId:   string,
     startTime: string | Date,
-    holdBy?:   string,
-  ): Promise<void> {
-    const key    = this.buildHoldKey(tenantId, staffId, startTime);
-    const value  = holdBy ?? 'anonymous';
-    const result = await this.redis.set(key, value, 'EX', HOLD_TTL_SECONDS, 'NX');
+    holdBy?:   string,   // logging amaçlı; artık Redis value olarak kullanılmaz
+  ): Promise<string> {
+    const key   = this.buildHoldKey(tenantId, staffId, startTime);
+    const token = await this.lockService.acquireLock(key, HOLD_TTL_MS);
 
-    if (result === null) {
-      this.logger.warn(`Hold kilidi aktif: ${key}`);
+    if (token === null) {
+      this.logger.warn(`Hold kilidi aktif: ${key} (holdBy=${holdBy ?? 'anonymous'})`);
       throw new ConflictException(
         'Bu saat dilimi geçici olarak kilitli. Lütfen birkaç dakika sonra tekrar deneyin.',
       );
     }
 
-    this.logger.debug(`Hold kilidi alındı (${HOLD_TTL_SECONDS}s): ${key} → ${value}`);
+    this.logger.debug(`Hold kilidi alındı (${HOLD_TTL_MS}ms): ${key} holdBy=${holdBy ?? 'anon'}`);
+    return token;
   }
 
   /**
-   * Hold kilidini serbest bırakır.
-   * Randevu Prisma'ya kaydedilince veya kullanıcı vazgeçince çağrılır.
+   * Hold kilidini Lua CAS ile güvenli şekilde serbest bırakır.
+   * token sağlanmışsa Lua ownership check; yoksa best-effort DEL (legacy fallback).
    */
   async releaseSlot(
     tenantId:  string,
     staffId:   string,
     startTime: string | Date,
+    token?:    string,
   ): Promise<void> {
-    const key     = this.buildHoldKey(tenantId, staffId, startTime);
-    const deleted = await this.redis.del(key);
-    this.logger.debug(`Hold kilidi serbest (deleted=${deleted}): ${key}`);
+    const key = this.buildHoldKey(tenantId, staffId, startTime);
+
+    if (token) {
+      const released = await this.lockService.releaseLock(key, token);
+      this.logger.debug(`Hold kilidi serbest (Lua released=${released}): ${key}`);
+    } else {
+      // token bilinmiyorsa (eski çağrı noktaları — Phase 3'te kaldırılacak):
+      // TTL'ye bırak, DEL yapmama — daha güvenli.
+      this.logger.debug(`Hold kilidi token bilinmiyor, TTL'ye bırakıldı: ${key}`);
+    }
   }
 
   /**
@@ -169,8 +188,9 @@ export class AppointmentLockService {
    * AppointmentService.create() ve reschedule() içinde DB transaction
    * başlamadan önce çağrılır. Aynı slot için eş zamanlı yarışı önler.
    *
-   * Redis komutu: SET key 1 NX EX 10
-   * @returns lockKey — releaseConcurrencyLock() için kullanılır
+   * Redis: SET key <uuid> NX PX 10000
+   *
+   * @returns  lockHandle: "lockKey||token" — releaseConcurrencyLock() için opaque string
    * @throws ConflictException  eğer slot zaten işlemdeyse (409)
    */
   async acquireConcurrencyLock(
@@ -178,26 +198,38 @@ export class AppointmentLockService {
     staffId:   string,
     startTime: string | Date,
   ): Promise<string> {
-    const key    = this.buildConcurrencyKey(tenantId, staffId, startTime);
-    const result = await this.redis.set(key, '1', 'EX', CONCURRENCY_TTL_SECONDS, 'NX');
+    const key   = this.buildConcurrencyKey(tenantId, staffId, startTime);
+    const token = await this.lockService.acquireLock(key, CONCURRENCY_TTL_MS);
 
-    if (result === null) {
+    if (token === null) {
       this.logger.warn(`Concurrency kilidi aktif: ${key}`);
       throw new ConflictException(
         'Appointment slot currently locked — eş zamanlı istek çakışması',
       );
     }
 
-    this.logger.debug(`Concurrency kilidi alındı (${CONCURRENCY_TTL_SECONDS}s): ${key}`);
-    return key;
+    this.logger.debug(`Concurrency kilidi alındı (${CONCURRENCY_TTL_MS}ms): ${key}`);
+    // "key||token" — caller sadece handle'ı saklar, parse etmez
+    return `${key}${HANDLE_SEP}${token}`;
   }
 
   /**
-   * Concurrency kilidini serbest bırakır.
+   * Concurrency kilidini Lua CAS ile güvenli şekilde serbest bırakır.
+   * handle: "lockKey||token" — acquireConcurrencyLock'tan dönen string.
    * Transaction başarılı veya başarısız olsun, finally bloğunda çağrılır.
    */
-  async releaseConcurrencyLock(lockKey: string): Promise<void> {
-    const deleted = await this.redis.del(lockKey);
-    this.logger.debug(`Concurrency kilidi serbest (deleted=${deleted}): ${lockKey}`);
+  async releaseConcurrencyLock(handle: string): Promise<void> {
+    const sepIdx = handle.indexOf(HANDLE_SEP);
+    if (sepIdx === -1) {
+      // Eski format (plain key) — güvenli DEL yapmıyoruz, TTL'ye bırak
+      this.logger.warn(`releaseConcurrencyLock: eski handle formatı, TTL'ye bırakıldı: ${handle}`);
+      return;
+    }
+
+    const key   = handle.slice(0, sepIdx);
+    const token = handle.slice(sepIdx + HANDLE_SEP.length);
+
+    const released = await this.lockService.releaseLock(key, token);
+    this.logger.debug(`Concurrency kilidi serbest (Lua released=${released}): ${key}`);
   }
 }

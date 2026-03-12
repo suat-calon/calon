@@ -28,6 +28,7 @@ import { PrismaService }        from '../../common/prisma.service';
 import { EntitlementsService }  from './entitlements.service';
 import { getPlanEntry, getPlanPrice } from './plan.catalog';
 import { addCycle }                   from './billing.utils';
+import { EventProducerService }       from '../event/event-producer.service';
 
 // ── Sabitler ──────────────────────────────────────────────────────────────────
 
@@ -43,6 +44,7 @@ export class BillingService {
   constructor(
     private readonly prisma:          PrismaService,
     private readonly entitlements:    EntitlementsService,
+    private readonly eventProducer:   EventProducerService,
   ) {}
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -405,36 +407,68 @@ export class BillingService {
         where: { id: attemptId },
         data:  { status: 'SUCCEEDED', providerPaymentId },
       });
-      // Plan güncelle + BillingStatus → ACTIVE
+      // Plan güncelle + BillingStatus → ACTIVE (her biri kendi tx'ini açar)
       await this.setPlan(attempt.tenantId, attempt.plan);
       await this.activate(attempt.tenantId, providerPaymentId, attempt.cycle);
 
-      // Faz 22.5: İmmutable billing ledger kaydı oluştur
+      // Faz 22.5 + 24: BillingPeriod + outbox event atomik (outbox invariant)
       const periodStart = new Date();
       const periodEnd   = addCycle(periodStart, attempt.cycle);
-      await this.prisma.billingPeriod.create({
-        data: {
-          tenantId:          attempt.tenantId,
-          plan:              attempt.plan,
-          cycle:             attempt.cycle,
-          status:            'ACTIVE',
-          amountCents:       attempt.amountCents,
-          currency:          attempt.currency,
-          periodStart,
-          periodEnd,
-          attemptId:         attempt.id,
-          providerPaymentId,
-        },
+      await this.prisma.$transaction(async (tx) => {
+        await tx.billingPeriod.create({
+          data: {
+            tenantId:          attempt.tenantId,
+            plan:              attempt.plan,
+            cycle:             attempt.cycle,
+            status:            'ACTIVE',
+            amountCents:       attempt.amountCents,
+            currency:          attempt.currency,
+            periodStart,
+            periodEnd,
+            attemptId:         attempt.id,
+            providerPaymentId,
+          },
+        });
+        await this.eventProducer.subscriptionRenewalSucceeded(
+          {
+            attemptId:       attempt.id,
+            tenantId:        attempt.tenantId,
+            plan:            attempt.plan,
+            cycle:           attempt.cycle,
+            amountCents:     attempt.amountCents,
+            currency:        attempt.currency,
+            nextPeriodStart: periodStart.toISOString(),
+            nextPeriodEnd:   periodEnd.toISOString(),
+          },
+          attempt.tenantId,
+          tx,
+        );
       });
       this.logger.log(
-        `[Billing] BillingPeriod oluşturuldu: tenant=${attempt.tenantId} ` +
+        `[Billing] BillingPeriod + outbox event oluşturuldu: tenant=${attempt.tenantId} ` +
         `plan=${attempt.plan} cycle=${attempt.cycle} ` +
         `periodStart=${periodStart.toISOString()} periodEnd=${periodEnd.toISOString()}`,
       );
     } else {
-      await this.prisma.billingAttempt.update({
-        where: { id: attemptId },
-        data:  { status: 'FAILED', providerPaymentId },
+      // Faz 24: attempt FAILED + outbox event atomik
+      await this.prisma.$transaction(async (tx) => {
+        await tx.billingAttempt.update({
+          where: { id: attemptId },
+          data:  { status: 'FAILED', providerPaymentId },
+        });
+        await this.eventProducer.subscriptionRenewalFailed(
+          {
+            attemptId:   attempt.id,
+            tenantId:    attempt.tenantId,
+            plan:        attempt.plan,
+            cycle:       attempt.cycle,
+            amountCents: attempt.amountCents,
+            currency:    attempt.currency,
+            failReason:  'iyzico webhook FAILURE',
+          },
+          attempt.tenantId,
+          tx,
+        );
       });
       this.logger.warn(
         `[Billing] Webhook FAILURE: attemptId=${attemptId} tenantId=${attempt.tenantId}`,

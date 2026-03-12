@@ -69,3 +69,12 @@ apps/web/tsconfig.tsbuildinfo
 # Test fixtures & results (generated — not committed)
 test/fixtures/tenants.json
 test/results/*.json
+
+# Local debug / hotfix scripts (contain DB credentials — never commit)
+db*.js
+dbfix*.js
+dbtest*.js
+devload_seed.sql
+
+# npm lockfile (project uses yarn — package-lock.json is noise)
+package-lock.json

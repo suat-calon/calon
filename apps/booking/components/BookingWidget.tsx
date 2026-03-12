@@ -26,7 +26,7 @@ import {
 } from 'lucide-react';
 
 import type { SalonDto, ServiceDto, StaffDto, SlotDto, BookingResult } from '@lib/api';
-import { fetchAvailability, createBooking }                            from '@lib/api';
+import { fetchAvailability, createBooking, createPayment }            from '@lib/api';
 import {
   cn,
   formatPrice,
@@ -169,6 +169,19 @@ export function BookingWidget({ salon, services, staff, initialReferralCode }: B
         // Faz 18: Referral kodu varsa API'ye ilet
         referralCode: initialReferralCode || undefined,
       });
+
+      // Faz 19: Ödeme gerekiyorsa İyzico Checkout Form'a yönlendir
+      if (res.requiresPayment) {
+        const payRes = await createPayment({
+          appointmentId: res.appointmentId,
+          buyerName:     `${state.firstName.trim()} ${state.lastName.trim()}`,
+          buyerEmail:    state.email.trim() || 'musteri@calon.local',
+        });
+        // Tarayıcıyı İyzico ödeme sayfasına yönlendir — state güncellemeye gerek yok
+        window.location.href = payRes.paymentUrl;
+        return;
+      }
+
       setResult(res);
       setStep('confirm');
     } catch (err: unknown) {
@@ -573,12 +586,14 @@ export function BookingWidget({ salon, services, staff, initialReferralCode }: B
               Randevu referansı: <span className="font-mono text-gray-600">{result.appointmentId.slice(0, 8)}</span>
             </p>
 
-            {/* ── Faz 18: Referral Share Widget ─────────────────────── */}
+            {/* ── Faz 18 + Faz 19: Referral Share Widget ────────────── */}
             {result.referralCode && (
               <ReferralShareWidget
                 referralCode={result.referralCode}
                 salonSlug={result.salonSlug}
                 salonName={salon.name}
+                citySlug={result.citySlug}
+                serviceSlug={result.serviceSlug}
               />
             )}
 
@@ -607,23 +622,33 @@ export function BookingWidget({ salon, services, staff, initialReferralCode }: B
 // ── Alt bileşenler ────────────────────────────────────────────────────────────
 
 /**
- * Faz 18: Referral Share Widget
- * Yeni müşteriye paylaşabileceği referral linki + WhatsApp butonu gösterir.
+ * Faz 18 + Faz 19: Referral Share Widget
+ * Yeni müşteriye canonical paylaşım linki + WhatsApp butonu gösterir.
+ * Canonical format: /{citySlug}/{serviceSlug}/{salonSlug}?ref={code}
  */
 function ReferralShareWidget({
   referralCode,
   salonSlug,
-  salonName,
+  citySlug,
+  serviceSlug,
 }: {
   referralCode: string;
   salonSlug:    string;
-  salonName:    string;
+  salonName:    string;  // kept for API compat
+  citySlug?:    string | null;
+  serviceSlug?: string | null;
 }) {
   const [copied, setCopied] = useState(false);
 
-  const shareUrl = `${SITE_URL}/${salonSlug}?ref=${referralCode}`;
+  // Canonical URL: /{city}/{service}/{salon}?ref=... — her ikisi de varsa
+  const canonicalPath = citySlug && serviceSlug
+    ? `/${citySlug}/${serviceSlug}/${salonSlug}`
+    : `/${salonSlug}`;
+  const shareUrl = `${SITE_URL}${canonicalPath}?ref=${referralCode}`;
+
+  // B3 — Viral WhatsApp mesajı
   const waMsg    = encodeURIComponent(
-    `Merhaba! ${salonName}'da harika bir deneyim yaşadım. Sen de online randevu almak istersen: ${shareUrl}`,
+    `Randevumu Calon üzerinden aldım ✨ Sen de randevunu buradan alabilirsin: ${shareUrl}`,
   );
 
   const handleCopy = async () => {

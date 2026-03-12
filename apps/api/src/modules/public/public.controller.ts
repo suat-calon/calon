@@ -1,5 +1,5 @@
 /**
- * PUBLIC CONTROLLER — Faz 16 + Faz 19 + Faz 23
+ * PUBLIC CONTROLLER — Faz 16 + Faz 19 + Faz 23 + MVP-GATE-1
  * ──────────────────────────────────────────────────────────────────────────────
  * Base: /api/v1/public
  *
@@ -9,6 +9,11 @@
  * Faz 23 eklemeleri:
  *   POST   /public/holds          — DB-backed slot kilidi al (ThrottleGuard korumalı)
  *   DELETE /public/holds/:holdId  — Hold'u serbest bırak (kullanıcı akıştan çıktı)
+ *
+ * MVP-GATE-1 rate limit düzenlemeleri:
+ *   /public/holds → PUBLIC_HOLDS_LIMIT / PUBLIC_RATE_TTL_MS   (varsayılan: 10/60s)
+ *   /public/book  → PUBLIC_BOOK_LIMIT  / PUBLIC_RATE_TTL_MS   (varsayılan:  5/60s)
+ *   Limitler .env üzerinden yapılandırılabilir — hardcode yasak.
  * ──────────────────────────────────────────────────────────────────────────────
  */
 
@@ -24,8 +29,18 @@ import {
   HttpStatus,
   ParseIntPipe,
   DefaultValuePipe,
+  Req,
+  UseGuards,
 } from '@nestjs/common';
+import { Request } from 'express';
 import { Throttle } from '@nestjs/throttler';
+
+// ── Rate limit sabitleri — env-var driven, başlangıçta okunur ─────────────────
+const RATE_TTL_MS        = Number(process.env['PUBLIC_RATE_TTL_MS']         ?? 60_000);
+const HOLDS_LIMIT        = Number(process.env['PUBLIC_HOLDS_LIMIT']         ?? 10);
+const BOOK_LIMIT         = Number(process.env['PUBLIC_BOOK_LIMIT']          ?? 10);
+const AVAILABILITY_LIMIT = Number(process.env['PUBLIC_AVAILABILITY_LIMIT']  ?? 30);
+const PAYMENTS_LIMIT     = Number(process.env['PUBLIC_PAYMENTS_LIMIT']      ?? 10);
 
 import { Public }           from '../iam/guards/tenant.guard';
 import { AllowPastDue }     from '../billing/decorators/allow-past-due.decorator';
@@ -33,7 +48,9 @@ import { PublicService }    from './public.service';
 import { PaymentService }   from './payment.service';
 import { AcquireHoldDto }   from './dto/acquire-hold.dto';
 import { BookPublicDto }    from './dto/book-public.dto';
-import { CreatePaymentDto } from './dto/create-payment.dto';
+import { CreatePaymentDto }  from './dto/create-payment.dto';
+import { resolveClientIp }        from '../../common/ip-resolver.util';
+import { AvailabilityAbuseGuard } from './guards/availability-abuse.guard';
 
 @Public()
 @AllowPastDue()
@@ -73,6 +90,8 @@ export class PublicController {
    * serviceDurationMin: varsayılan 30
    */
   @Get('availability')
+  @Throttle({ default: { limit: AVAILABILITY_LIMIT, ttl: RATE_TTL_MS } })
+  @UseGuards(AvailabilityAbuseGuard)
   getAvailability(
     @Query('tenantId')          tenantId: string,
     @Query('staffId')           staffId:  string,
@@ -94,7 +113,7 @@ export class PublicController {
    */
   @Post('holds')
   @HttpCode(HttpStatus.CREATED)
-  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @Throttle({ default: { limit: HOLDS_LIMIT, ttl: RATE_TTL_MS } })
   acquireHold(@Body() dto: AcquireHoldDto) {
     return this.svc.acquireHold(dto);
   }
@@ -123,6 +142,7 @@ export class PublicController {
    */
   @Post('book')
   @HttpCode(HttpStatus.CREATED)
+  @Throttle({ default: { limit: BOOK_LIMIT, ttl: RATE_TTL_MS } })
   book(@Body() dto: BookPublicDto) {
     return this.svc.book(dto);
   }
@@ -135,8 +155,9 @@ export class PublicController {
    */
   @Post('payments/create')
   @HttpCode(HttpStatus.CREATED)
-  createPayment(@Body() dto: CreatePaymentDto) {
-    return this.payments.createPayment(dto);
+  @Throttle({ default: { limit: PAYMENTS_LIMIT, ttl: RATE_TTL_MS } })
+  createPayment(@Body() dto: CreatePaymentDto, @Req() req: Request) {
+    return this.payments.createPayment(dto, resolveClientIp(req));
   }
 
   // ── GET /public/sitemap-slugs ─────────────────────────────────────────────

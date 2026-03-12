@@ -4,6 +4,7 @@
 
 -- ── Enum'lar ──────────────────────────────────────────────────────────────────
 
+CREATE TYPE "TenantPlan"      AS ENUM ('SOLO', 'BOUTIQUE', 'ENTERPRISE');
 CREATE TYPE "BillingCycle"    AS ENUM ('MONTHLY', 'YEARLY');
 CREATE TYPE "BillingStatus"   AS ENUM ('TRIAL', 'ACTIVE', 'PAST_DUE', 'SUSPENDED', 'CANCELED');
 CREATE TYPE "BillingProvider" AS ENUM ('NONE', 'IYZICO', 'PAYTR', 'STRIPE');

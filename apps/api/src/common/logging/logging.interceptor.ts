@@ -1,11 +1,12 @@
 /**
- * LOGGING INTERCEPTOR — Per-Request Structured Log
+ * LOGGING INTERCEPTOR — Per-Request Structured Log + Prometheus Metrics
  * ──────────────────────────────────────────────────────────────────────────────
  * Her HTTP isteği için tamamlanma log'u yazar:
  *   { correlationId, tenantId, userId, path, method, statusCode, durationMs }
  *
  * Pino logger (PinoLogger from nestjs-pino) kullanır.
- * MetricsService'e de kayıt düşer (p50/p95 için).
+ * MetricsService: p50/p95 sliding window.
+ * PrometheusService: histogram + counter (scrape'de kullanılır).
  * ──────────────────────────────────────────────────────────────────────────────
  */
 
@@ -21,30 +22,27 @@ import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { Request, Response }            from 'express';
 import { getCorrelationId }             from './correlation.store';
 import { MetricsService }               from './metrics.service';
+import { PrometheusService }            from './prometheus.service';
 
 @Injectable()
 export class LoggingInterceptor implements NestInterceptor {
   constructor(
     @InjectPinoLogger(LoggingInterceptor.name)
-    private readonly logger: PinoLogger,
-    private readonly metrics: MetricsService,
+    private readonly logger:     PinoLogger,
+    private readonly metrics:    MetricsService,
+    private readonly prometheus: PrometheusService,
   ) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
-    const http     = context.switchToHttp();
-    const req      = http.getRequest<Request & { tenantId?: string; userId?: string }>();
-    const res      = http.getResponse<Response>();
-    const start    = Date.now();
+    const http  = context.switchToHttp();
+    const req   = http.getRequest<Request & { tenantId?: string; userId?: string }>();
+    const res   = http.getResponse<Response>();
+    const start = Date.now();
 
     return next.handle().pipe(
       tap({
-        next: () => {
-          this.log(req, res, start);
-        },
-        error: () => {
-          // Hata durumunda da log yaz; statusCode exception filter'dan önce gelir
-          this.log(req, res, start);
-        },
+        next:  () => { this.log(req, res, start); },
+        error: () => { this.log(req, res, start); },
       }),
     );
   }
@@ -54,13 +52,17 @@ export class LoggingInterceptor implements NestInterceptor {
     res: Response,
     start: number,
   ): void {
-    const durationMs   = Date.now() - start;
-    const statusCode   = res.statusCode;
+    const durationMs    = Date.now() - start;
+    const statusCode    = res.statusCode;
     const correlationId = getCorrelationId();
 
+    // In-memory sliding window (p50/p95)
     this.metrics.record(durationMs, statusCode);
 
-    const logPayload = {
+    // Prometheus histogram + counter
+    this.prometheus.observeRequest(req.method, req.path, statusCode, durationMs);
+
+    const payload = {
       correlationId,
       tenantId:   req.tenantId,
       userId:     req.userId,
@@ -70,12 +72,8 @@ export class LoggingInterceptor implements NestInterceptor {
       durationMs,
     };
 
-    if (statusCode >= 500) {
-      this.logger.error(logPayload, 'request completed');
-    } else if (statusCode >= 400) {
-      this.logger.warn(logPayload, 'request completed');
-    } else {
-      this.logger.info(logPayload, 'request completed');
-    }
+    if (statusCode >= 500)      this.logger.error(payload, 'request completed');
+    else if (statusCode >= 400) this.logger.warn(payload, 'request completed');
+    else                        this.logger.info(payload, 'request completed');
   }
 }

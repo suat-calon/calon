@@ -12,6 +12,7 @@ import { BillingController }         from './billing.controller';
 import { BillingWebhookController }  from './billing-webhook.controller';
 import { BillingAdminController }       from '../admin/billing.admin.controller';
 import { GrowthMetricsAdminController } from '../admin/growth-metrics.admin.controller';
+import { PrometheusController }         from '../admin/prometheus.controller';
 
 /**
  * BillingModule — Global modül.
@@ -37,6 +38,7 @@ import { GrowthMetricsAdminController } from '../admin/growth-metrics.admin.cont
     BillingWebhookController,
     BillingAdminController,
     GrowthMetricsAdminController,
+    PrometheusController,         // GET /metrics — Prometheus scrape
   ],
   exports: [
     BillingService,

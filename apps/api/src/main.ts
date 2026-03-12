@@ -4,6 +4,7 @@
 // tsconfig-paths/register MUST be first: redirects @prisma/client → packages/database/generated/client at runtime
 import 'tsconfig-paths/register';
 import { NestFactory }            from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import cookieParser                from 'cookie-parser';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
@@ -11,9 +12,10 @@ import { ConfigService }          from '@nestjs/config';
 import { Logger as PinoLogger }   from 'nestjs-pino';
 import { AppModule }              from './app.module';
 import { MetricsService }         from './common/logging/metrics.service';
+import { DevExceptionFilter }     from './common/filters/dev-exception.filter';
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create(AppModule, {
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     // Pino devralana kadar NestJS built-in logger kapalı
     bufferLogs: true,
     // rawBody: BillingWebhookController'da x-iyz-signature doğrulaması için gerekli
@@ -25,8 +27,13 @@ async function bootstrap(): Promise<void> {
 
   const config = app.get(ConfigService);
 
-  // Global prefix
-  app.setGlobalPrefix('api/v1');
+  // ── Trust proxy: Cloudflare / nginx arkasında gerçek istemci IP'si ───────────
+  // req.ip = X-Forwarded-For ilk hop (tek trusted proxy varsayılır)
+  // ThrottlerGuard bu değeri kullanır → rate limiting doğru IP'ye uygulanır
+  app.set('trust proxy', 1);
+
+  // Global prefix — /metrics hariç (Prometheus scrape standart path: /metrics)
+  app.setGlobalPrefix('api/v1', { exclude: ['metrics'] });
 
   // Validation pipe — DTO doğrulama
   app.useGlobalPipes(
@@ -39,6 +46,9 @@ async function bootstrap(): Promise<void> {
       },
     }),
   );
+
+  // Dev exception filter — exposes real error in non-production
+  app.useGlobalFilters(new DevExceptionFilter());
 
   // Cookie parser — HttpOnly cookie auth için
   app.use(cookieParser());

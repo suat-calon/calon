@@ -119,6 +119,12 @@ model Tenant {
   appointmentHolds AppointmentHold[]
   staffShifts      StaffShift[]
 
+  // Faz 24: Event & Notification Backbone
+  eventOutboxes          EventOutbox[]
+  eventDeliveries        EventDelivery[]
+  notificationPreferences NotificationPreference[]
+  notificationUsages     NotificationUsage[]
+
   @@index([slug])
   @@index([status])
   @@map("tenants")
@@ -1143,6 +1149,190 @@ model BillingPeriod {
   @@map("billing_periods")
 }
 
+// =============================================================================
+// BÖLÜM 24: EVENT & NOTIFICATION BACKBONE (Faz 24)
+// =============================================================================
+
+/// Event Outbox durumları — state machine kısıtlı geçişler
+enum OutboxEventStatus {
+  PENDING           // Dispatcher tarafından alınmayı bekliyor
+  DISPATCHED        // Queue'ya gönderildi, delivery record'lar oluşturuldu
+  PROCESSING        // Dispatcher aktif işliyor
+  PARTIALLY_DELIVERED // Bazı kanallar başarılı, bazıları hâlâ devam ediyor
+  DELIVERED         // Tüm delivery'ler başarılı
+  FAILED            // Tüm retry'lar tükendi
+  DEAD_LETTERED     // DLQ'ya taşındı
+  CANCELLED         // İptal edildi (örn: booking.cancelled sonrası reminder)
+}
+
+/// Delivery durumları — kanal bazlı state machine
+enum DeliveryStatus {
+  PENDING           // Oluşturuldu, henüz kuyruğa atılmadı
+  QUEUED            // BullMQ'ya gönderildi
+  PROCESSING        // Worker işliyor
+  SENT              // Provider'a gönderildi
+  DELIVERED         // Provider delivery confirmation aldı
+  FAILED            // Geçici hata, retry denenecek
+  PERMANENT_FAILURE // Permanent failure — retry yok
+  CANCELLED         // İptal edildi
+}
+
+/// Bildirim kanalları
+enum NotificationChannel {
+  SMS
+  EMAIL
+  PUSH
+}
+
+/// Tenant / müşteri / personel bazlı scope
+enum PreferenceScope {
+  TENANT    // Tenant seviyesi default
+  CUSTOMER  // Müşteri bazlı override
+  STAFF     // Personel bazlı override
+}
+
+/// Transactional Outbox — domain event'lerin immutable kaydı
+/// KURAL: Domain işlemiyle AYNI transaction'da INSERT edilir.
+model EventOutbox {
+  id               String             @id @default(uuid()) @db.Uuid
+  tenantId         String             @db.Uuid
+  aggregateType    String             // "booking" | "payment" | "subscription"
+  aggregateId      String             @db.Uuid
+  eventName        String             // "booking.created" | "booking.cancelled" | ...
+  eventVersion     Int                @default(1)
+  occurredAt       DateTime           // UTC — domain olayının gerçekleştiği an
+  scheduledFor     DateTime           // UTC — dispatcher'ın işleyeceği an (reminder için future)
+  status           OutboxEventStatus  @default(PENDING)
+  partitionKey     String             // "booking:{id}" | "subscription:{id}" — ordering için
+  correlationId    String?            @db.Uuid
+  causationId      String?            @db.Uuid
+  idempotencyKey   String             // UNIQUE(tenantId, idempotencyKey) — çifte event önleme
+  payload          Json               // Snapshot: render için gereken minimum veri
+  metadata         Json               @default("{}") // İzleme, kaynak bilgisi
+  dispatchedAt     DateTime?          // Dispatcher'ın queue'ya attığı an
+  processingStartedAt DateTime?
+  completedAt      DateTime?
+  retryCount       Int                @default(0)
+  nextRetryAt      DateTime?
+  lastError        String?            @db.Text
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  tenant    Tenant          @relation(fields: [tenantId], references: [id])
+  deliveries EventDelivery[]
+
+  @@unique([tenantId, idempotencyKey])
+  @@index([status, scheduledFor, nextRetryAt])
+  @@index([partitionKey, occurredAt])
+  @@index([tenantId, eventName, occurredAt(sort: Desc)])
+  @@map("event_outbox")
+}
+
+/// Kanal bazlı delivery denemesi kaydı
+/// Her event × kanal × alıcı kombinasyonu için ayrı satır
+model EventDelivery {
+  id                  String              @id @default(uuid()) @db.Uuid
+  tenantId            String              @db.Uuid
+  eventId             String              @db.Uuid
+  channel             NotificationChannel
+  recipient           String              // Telefon, email, push token
+  templateKey         String
+  templateVersion     Int
+  locale              String              @default("tr")
+  provider            String?             // "twilio" | "netgsm" | "sendgrid" | ...
+  providerMessageId   String?             // Provider'dan dönen mesaj ID
+  status              DeliveryStatus      @default(PENDING)
+  idempotencyKey      String              // UNIQUE(tenantId, idempotencyKey) — çifte delivery önleme
+  payload             Json                // Render edilmiş mesaj payload
+  costEstimateMinor   Int?               // Tahmini maliyet (kuruş cinsinden)
+  actualCostMinor     Int?               // Gerçek maliyet (webhook'tan gelirse)
+  attempts            Int                @default(0)
+  lastAttemptAt       DateTime?
+  nextAttemptAt       DateTime?
+  lastErrorCode       String?
+  lastErrorMessage    String?            @db.Text
+  sentAt              DateTime?
+  deliveredAt         DateTime?
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+
+  tenant Tenant      @relation(fields: [tenantId], references: [id])
+  event  EventOutbox @relation(fields: [eventId], references: [id])
+
+  @@unique([tenantId, idempotencyKey])
+  @@unique([eventId, channel])
+  @@index([tenantId, channel, status])
+  @@index([status, nextAttemptAt])
+  @@map("event_deliveries")
+}
+
+/// Versioned, tenant-aware bildirim template'leri
+/// null tenantId = global default; tenant-specific override öncelikli
+model NotificationTemplate {
+  id              String              @id @default(uuid()) @db.Uuid
+  tenantId        String?             @db.Uuid // null = global default
+  channel         NotificationChannel
+  eventName       String
+  templateKey     String              // "booking.created.sms.v1"
+  version         Int                 @default(1)
+  locale          String              @default("tr")
+  providerHint    String?             // Tercih edilen provider
+  isActive        Boolean             @default(true)
+  subjectTemplate String?             @db.Text // Email için
+  bodyTemplate    String              @db.Text // Mustache/Handlebars template
+  variablesSchema Json                @default("{}") // Zorunlu değişkenler şeması
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  @@unique([tenantId, channel, eventName, locale, version])
+  @@index([eventName, channel, locale])
+  @@index([tenantId, eventName])
+  @@map("notification_templates")
+}
+
+/// Tenant / müşteri / personel bazlı bildirim tercihleri
+model NotificationPreference {
+  id                    String           @id @default(uuid()) @db.Uuid
+  tenantId              String           @db.Uuid
+  scopeType             PreferenceScope  @default(TENANT)
+  scopeId               String           @db.Uuid // Tenant/customer/staff ID
+  eventName             String           // "booking.created" | "booking.reminder.due" | ...
+  smsEnabled            Boolean          @default(true)
+  emailEnabled          Boolean          @default(true)
+  pushEnabled           Boolean          @default(false)
+  reminderOffsetMinutes Int              @default(120) // Randevu öncesi kaç dakika
+  quietHours            Json?            // {"start": "22:00", "end": "08:00"}
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, scopeType, scopeId, eventName])
+  @@index([tenantId, eventName])
+  @@map("notification_preferences")
+}
+
+/// Kanal bazlı kullanım ve maliyet ledger'ı
+model NotificationUsage {
+  id                 String              @id @default(uuid()) @db.Uuid
+  tenantId           String              @db.Uuid
+  channel            NotificationChannel
+  periodStart        DateTime            @db.Date
+  periodEnd          DateTime            @db.Date
+  sentCount          Int                 @default(0)
+  failedCount        Int                 @default(0)
+  estimatedCostMinor Int                 @default(0)
+  actualCostMinor    Int                 @default(0)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, channel, periodStart, periodEnd])
+  @@index([tenantId, channel, periodStart])
+  @@map("notification_usage")
+}
+
 /// Gelen webhook olayları — idempotency kalkanı.
 /// providerEventId @unique: aynı iyzico olayı iki kez işlenmez (P2002 → 200 dön).
 model WebhookEvent {
@@ -1159,4 +1349,76 @@ model WebhookEvent {
   @@index([source, eventType])
   @@index([tenantId])
   @@map("webhook_events")
+}
+
+// =============================================================================
+// BÖLÜM: ARŞİV (MVP-GATE-1 — Faz 25)
+// Terminal duruma geçmiş eventler 30 gün sonra arşive taşınır.
+// FK kısıtı yok: arşiv satırları bağımsız — tenant silinse bile kayıt kalır.
+// =============================================================================
+
+/// Arşivlenmiş outbox eventleri — DELIVERED / DEAD_LETTERED / CANCELLED ve >= 30 gün
+model EventOutboxArchive {
+  id               String   @id @db.Uuid
+  tenantId         String   @db.Uuid
+  aggregateType    String
+  aggregateId      String   @db.Uuid
+  eventName        String
+  eventVersion     Int
+  occurredAt       DateTime
+  scheduledFor     DateTime
+  status           String   // OutboxEventStatus string değeri (enum referansı yok)
+  partitionKey     String
+  correlationId    String?  @db.Uuid
+  causationId      String?  @db.Uuid
+  idempotencyKey   String
+  payload          Json
+  metadata         Json
+  dispatchedAt     DateTime?
+  processingStartedAt DateTime?
+  completedAt      DateTime?
+  retryCount       Int
+  nextRetryAt      DateTime?
+  lastError        String?  @db.Text
+  createdAt        DateTime
+  updatedAt        DateTime
+  archivedAt       DateTime @default(now()) // Arşive taşındığı an
+
+  @@index([tenantId, eventName, occurredAt(sort: Desc)])
+  @@index([archivedAt])
+  @@map("event_outbox_archive")
+}
+
+/// Arşivlenmiş delivery kayıtları — DELIVERED / PERMANENT_FAILURE ve >= 30 gün
+model EventDeliveryArchive {
+  id                String   @id @db.Uuid
+  tenantId          String   @db.Uuid
+  eventId           String   @db.Uuid
+  channel           String   // NotificationChannel string değeri
+  recipient         String
+  templateKey       String
+  templateVersion   Int
+  locale            String
+  provider          String?
+  providerMessageId String?
+  status            String   // DeliveryStatus string değeri
+  idempotencyKey    String
+  payload           Json
+  costEstimateMinor Int?
+  actualCostMinor   Int?
+  attempts          Int
+  lastAttemptAt     DateTime?
+  nextAttemptAt     DateTime?
+  lastErrorCode     String?
+  lastErrorMessage  String?  @db.Text
+  sentAt            DateTime?
+  deliveredAt       DateTime?
+  createdAt         DateTime
+  updatedAt         DateTime
+  archivedAt        DateTime @default(now()) // Arşive taşındığı an
+
+  @@index([tenantId, channel, status])
+  @@index([eventId])
+  @@index([archivedAt])
+  @@map("event_delivery_archive")
 }

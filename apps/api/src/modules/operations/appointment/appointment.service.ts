@@ -41,6 +41,15 @@ import { CreateAppointmentDto }           from './dto/create-appointment.dto';
 import { UpdateAppointmentStatusDto }     from './dto/update-appointment-status.dto';
 import { RescheduleAppointmentDto }       from './dto/reschedule-appointment.dto';
 import { EarnFromAppointmentPayload }     from '../../loyalty/loyalty.service';
+// Faz 24: Event & Notification Backbone
+import { EventProducerService, EVENT_NAMES } from '../../event/event-producer.service';
+import { OutboxRepository }                  from '../../event/outbox.repository';
+import { getFullName }                       from '../../../common/string.utils';
+
+/** Default reminder offset dakikası (Faz 24: preference tablosundan alınacak) */
+const DEFAULT_REMINDER_OFFSET_MINUTES = 120;
+/** Default tenant timezone (Faz 24: tenant tablosundan alınacak) */
+const DEFAULT_TENANT_TIMEZONE = 'Europe/Istanbul';
 
 // ── GIST / Deadlock yardımcıları ─────────────────────────────────────────────
 
@@ -86,9 +95,9 @@ async function checkOverlapRaw(
 ): Promise<void> {
   // Not: tenantId ve staffId UUID sütunlarıdır; PostgreSQL text=$1 ile karşılaştıramaz.
   // ::uuid cast ile parametre, sütun tipiyle uyumlu hale getirilir.
-  // FAZ 14.1: Filtre, GIST constraint'i ile birebir hizalı olmalı:
-  // CANCELLED ve NO_SHOW dışla; isDeleted=false zorunlu.
-  // Not: COMPLETED dışlanmaz — tamamlanmış randevular slotu bloke eder (GIST ile aynı semantik).
+  // FAZ 23 (MVP-EXIT-CORE): Filtre, GIST constraint'i ile birebir hizalı olmalı:
+  // CANCELLED, NO_SHOW ve COMPLETED dışla; isDeleted=false zorunlu.
+  // COMPLETED randevular slotu serbest bırakır — appt_staff_overlap_excl (faz23) ile aynı semantik.
   const rows = excludeId
     ? await tx.$queryRaw<{ id: string }[]>`
         SELECT id FROM appointments
@@ -96,8 +105,8 @@ async function checkOverlapRaw(
           "tenantId" = ${tenantId}::uuid
           AND "staffId" = ${staffId}::uuid
           AND "isDeleted" = false
-          AND status NOT IN ('CANCELLED', 'NO_SHOW')
-          AND tsrange("startTime", "endTime") && tsrange(${startTime}::timestamp, ${endTime}::timestamp)
+          AND status NOT IN ('CANCELLED', 'NO_SHOW', 'COMPLETED')
+          AND tstzrange("startTime", "endTime") && tstzrange(${startTime}::timestamptz, ${endTime}::timestamptz)
           AND id <> ${excludeId}::uuid
         LIMIT 1
       `
@@ -107,8 +116,8 @@ async function checkOverlapRaw(
           "tenantId" = ${tenantId}::uuid
           AND "staffId" = ${staffId}::uuid
           AND "isDeleted" = false
-          AND status NOT IN ('CANCELLED', 'NO_SHOW')
-          AND tsrange("startTime", "endTime") && tsrange(${startTime}::timestamp, ${endTime}::timestamp)
+          AND status NOT IN ('CANCELLED', 'NO_SHOW', 'COMPLETED')
+          AND tstzrange("startTime", "endTime") && tstzrange(${startTime}::timestamptz, ${endTime}::timestamptz)
         LIMIT 1
       `;
 
@@ -138,11 +147,13 @@ const CANCELLATION_STATUSES: AppointmentStatus[] = [
 @Injectable()
 export class AppointmentService {
   constructor(
-    private readonly prisma:       PrismaService,
-    private readonly ledger:       LedgerService,
-    private readonly lock:         AppointmentLockService,
-    private readonly availability: AppointmentAvailabilityService,
-    private readonly commission:   CommissionService,
+    private readonly prisma:         PrismaService,
+    private readonly ledger:         LedgerService,
+    private readonly lock:           AppointmentLockService,
+    private readonly availability:   AppointmentAvailabilityService,
+    private readonly commission:     CommissionService,
+    private readonly eventProducer:  EventProducerService,
+    private readonly outbox:         OutboxRepository,
     @InjectQueue(QUEUE_NAMES.STOCK_DEDUCT)
     private readonly inventoryQueue: Queue,
     @InjectQueue(QUEUE_NAMES.LOYALTY_EARN)
@@ -186,6 +197,26 @@ export class AppointmentService {
 
     let appointment: Appointment;
 
+    // ── Faz 24: İlgili entity'leri önceden yükle (tx süresi minimize edilsin) ─
+    const [customer, staff, service, location] = await Promise.all([
+      dto.customerId ? this.prisma.customer.findFirst({
+        where:  { id: dto.customerId, tenantId },
+        select: { id: true, firstName: true, lastName: true, phone: true, email: true },
+      }) : null,
+      dto.staffId ? this.prisma.staffProfile.findFirst({
+        where:  { id: dto.staffId, tenantId },
+        select: { id: true, firstName: true, lastName: true },
+      }) : null,
+      dto.serviceId ? this.prisma.service.findFirst({
+        where:  { id: dto.serviceId, tenantId },
+        select: { id: true, name: true },
+      }) : null,
+      dto.locationId ? this.prisma.location.findFirst({
+        where:  { id: dto.locationId, tenantId },
+        select: { id: true, name: true },
+      }) : null,
+    ]);
+
     // ── DB işlem mantığını ayrı fonksiyona çıkar (tx reuse için) ─────────────
     const executeInTx = async (db: Prisma.TransactionClient): Promise<Appointment> => {
       // Yazılımsal overlap kontrolü (GIST constraint yedekçisi)
@@ -193,7 +224,7 @@ export class AppointmentService {
         await checkOverlapRaw(db, tenantId, dto.staffId, startTime, endTime);
       }
 
-      return db.appointment.create({
+      const appt = await db.appointment.create({
         data: {
           tenantId,
           customerId:    dto.customerId,
@@ -214,6 +245,39 @@ export class AppointmentService {
           ...(dto.isTestBooking === true && { isTestBooking: true }),
         },
       });
+
+      // ── Faz 24: booking.created outbox event — aynı tx'e yaz ───────────────
+      const bookingPayload = {
+        bookingId:      appt.id,
+        customerId:     appt.customerId,
+        customerName:   getFullName(customer?.firstName, customer?.lastName),
+        customerPhone:  customer?.phone ?? undefined,
+        customerEmail:  customer?.email ?? undefined,
+        staffId:        appt.staffId    ?? '',
+        staffName:      getFullName(staff?.firstName, staff?.lastName),
+        serviceId:      appt.serviceId  ?? '',
+        serviceName:    service?.name   ?? '',
+        locationName:   location?.name  ?? '',
+        startAtUtc:     appt.startTime.toISOString(),
+        endAtUtc:       appt.endTime.toISOString(),
+        tenantTimezone: DEFAULT_TENANT_TIMEZONE,
+        bookingCode:    appt.id.slice(0, 8).toUpperCase(),
+      };
+
+      await this.eventProducer.bookingCreated(bookingPayload, tenantId, db);
+
+      // Future reminder: PENDING_PAYMENT hariç tüm randevular için
+      if (appt.status !== 'PENDING_PAYMENT') {
+        await this.eventProducer.bookingReminderScheduled(
+          bookingPayload,
+          tenantId,
+          appt.startTime,
+          DEFAULT_REMINDER_OFFSET_MINUTES,
+          db,
+        );
+      }
+
+      return appt;
     };
 
     try {
@@ -429,6 +493,33 @@ export class AppointmentService {
       );
     }
 
+    // ── Faz 24: CANCELLED için customer/staff/service snapshot'ı önceden yükle ─
+    let cancelSnapshot: {
+      customerName: string; customerPhone?: string; customerEmail?: string;
+      staffName: string; serviceName: string;
+    } | null = null;
+
+    if (dto.status === AppointmentStatus.CANCELLED) {
+      const [cust, stf, svc] = await Promise.all([
+        existing.customerId ? this.prisma.customer.findFirst({
+          where: { id: existing.customerId, tenantId }, select: { firstName: true, lastName: true, phone: true, email: true },
+        }) : null,
+        existing.staffId ? this.prisma.staffProfile.findFirst({
+          where: { id: existing.staffId, tenantId }, select: { firstName: true, lastName: true },
+        }) : null,
+        existing.serviceId ? this.prisma.service.findFirst({
+          where: { id: existing.serviceId, tenantId }, select: { name: true },
+        }) : null,
+      ]);
+      cancelSnapshot = {
+        customerName:  getFullName(cust?.firstName, cust?.lastName),
+        customerPhone: cust?.phone ?? undefined,
+        customerEmail: cust?.email ?? undefined,
+        staffName:     getFullName(stf?.firstName, stf?.lastName),
+        serviceName:   svc?.name   ?? '',
+      };
+    }
+
     // ── 3. Atomik güncelleme + AuditLog + Ledger (COMPLETED hook) ────────────
     const updated = await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const appt = await tx.appointment.update({
@@ -454,6 +545,34 @@ export class AppointmentService {
           after:      { status: dto.status },
         },
       });
+
+      // ── Faz 24: booking.cancelled outbox event + reminder iptal (tx içinde) ─
+      if (dto.status === AppointmentStatus.CANCELLED && cancelSnapshot) {
+        await this.eventProducer.bookingCancelled(
+          {
+            bookingId:           appt.id,
+            customerId:          appt.customerId,
+            customerName:        cancelSnapshot.customerName,
+            customerPhone:       cancelSnapshot.customerPhone,
+            customerEmail:       cancelSnapshot.customerEmail,
+            staffId:             appt.staffId ?? '',
+            staffName:           cancelSnapshot.staffName,
+            serviceId:           appt.serviceId ?? '',
+            serviceName:         cancelSnapshot.serviceName,
+            locationName:        '',
+            startAtUtc:          appt.startTime.toISOString(),
+            endAtUtc:            appt.endTime.toISOString(),
+            tenantTimezone:      DEFAULT_TENANT_TIMEZONE,
+            cancellationReason:  dto.cancellationReason ?? undefined,
+            cancelledAt:         new Date().toISOString(),
+          },
+          tenantId,
+          tx,
+        );
+        // Bekleyen reminder event'lerini aynı tx içinde iptal et.
+        // Tx commit olmadan önce CANCELLED olursa dispatch asla göremez.
+        await this.outbox.cancelByAggregateId(tenantId, appt.id, EVENT_NAMES.BOOKING_REMINDER_DUE, tx);
+      }
 
       // ── COMPLETED → Deftere kayıt + Hakediş + Loyalty Outbox ──────────────
       if (dto.status === AppointmentStatus.COMPLETED) {

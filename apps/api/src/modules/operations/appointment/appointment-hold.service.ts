@@ -1,5 +1,5 @@
 /**
- * APPOINTMENT HOLD SERVICE — Faz 23
+ * APPOINTMENT HOLD SERVICE — Faz 23 + MVP-EXIT-FINAL
  * ─────────────────────────────────────────────────────────────────────────────
  * DB-backed slot kilidi: Redis NX (hızlı yol) + PostgreSQL GIST EXCLUDE (güçlü güvence).
  *
@@ -19,6 +19,10 @@
  *   1. Redis NX  — soft race guard (çakışmayı hızlıca yakalar, ~1ms)
  *   2. Uygulama overlap kontrolü — kullanıcı dostu 409 (DB'den önce)
  *   3. DB GIST EXCLUDE — kesin güvence (eş zamanlı inserter'ları engeller)
+ *
+ * MVP-EXIT-FINAL — Güvenli Redis unlock:
+ *   Tüm Redis DEL işlemleri RedisLockService.releaseLock() (Lua CAS) ile yapılır.
+ *   holdToken DB'de saklanır → release/expire adımlarında ownership kanıtı olarak kullanılır.
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
@@ -33,13 +37,14 @@ import { Prisma }                          from '@prisma/client';
 import { randomUUID }                      from 'crypto';
 import Redis                               from 'ioredis';
 import { PrismaService }                   from '../../../common/prisma.service';
+import { RedisLockService }                from '../../../common/redis-lock.service';
 import { REDIS_CLIENT }                    from '../../../common/redis.module';
 import { redisKey }                        from '../../../common/redis.util';
 import { toLocalDateKey }                  from '../../../common/scheduling.utils';
 import { AppointmentAvailabilityService }  from './appointment-availability.service';
 
 /** Hold TTL: 10 dakika */
-const HOLD_TTL_SECONDS = 10 * 60;
+const HOLD_TTL_MS = 10 * 60 * 1_000;
 
 @Injectable()
 export class AppointmentHoldService {
@@ -48,6 +53,7 @@ export class AppointmentHoldService {
   constructor(
     private readonly prisma:       PrismaService,
     @Inject(REDIS_CLIENT) private readonly redis: Redis,
+    private readonly lockService:  RedisLockService,
     private readonly availability: AppointmentAvailabilityService,
   ) {}
 
@@ -73,18 +79,16 @@ export class AppointmentHoldService {
     endTime:   Date,
     timezone:  string,
   ): Promise<{ holdId: string; expiresAt: Date }> {
-    const expiresAt   = new Date(Date.now() + HOLD_TTL_SECONDS * 1000);
-    const holdToken   = randomUUID();
+    const expiresAt    = new Date(Date.now() + HOLD_TTL_MS);
     const holdRedisKey = this.buildHoldKey(tenantId, staffId, startTime);
-    const redisTtlSec  = Math.ceil((expiresAt.getTime() - Date.now()) / 1000);
 
     // ── 1. Redis NX — soft race guard ─────────────────────────────────────
-    // NX: sadece key yoksa set et. null dönerse slot zaten kilitli.
-    const nx = await this.redis
-      .set(holdRedisKey, holdToken, 'EX', redisTtlSec, 'NX')
-      .catch(() => null); // Redis çökerse null döner → yine de DB deneriz
+    // acquireLock: SET key uuid NX PX ttl → token veya null
+    const holdToken = await this.lockService
+      .acquireLock(holdRedisKey, HOLD_TTL_MS)
+      .catch(() => null); // Redis çökerse null → DB deneriz
 
-    if (nx === null) {
+    if (holdToken === null) {
       throw new ConflictException('Bu slot geçici olarak kilitli. Lütfen başka bir saat seçin.');
     }
 
@@ -134,7 +138,7 @@ export class AppointmentHoldService {
           endTime,
           expiresAt,
           status:    'ACTIVE',
-          holdToken,
+          holdToken, // UUID token: Redis ve DB'de eşit — safe unlock için
         },
       });
 
@@ -149,8 +153,8 @@ export class AppointmentHoldService {
 
       return { holdId: hold.id, expiresAt };
     } catch (err) {
-      // GIST violation veya ConflictException → Redis temizle
-      await this.redis.del(holdRedisKey).catch(() => {});
+      // GIST violation veya ConflictException → Redis temizle (Lua — biz aldık)
+      await this.lockService.releaseLock(holdRedisKey, holdToken).catch(() => {});
 
       if (err instanceof ConflictException) throw err;
 
@@ -175,7 +179,7 @@ export class AppointmentHoldService {
   ): Promise<void> {
     const hold = await this.prisma.appointmentHold.findUnique({
       where:  { id: holdId },
-      select: { tenantId: true, staffId: true, startTime: true, status: true },
+      select: { tenantId: true, staffId: true, startTime: true, status: true, holdToken: true },
     });
 
     if (!hold || hold.tenantId !== tenantId) {
@@ -193,10 +197,9 @@ export class AppointmentHoldService {
       data:  { status: 'RELEASED' },
     });
 
-    // Redis key temizle
-    await this.redis
-      .del(this.buildHoldKey(tenantId, hold.staffId, hold.startTime))
-      .catch(() => {});
+    // Redis key — Lua CAS (biz aldık, token DB'de var)
+    const rKey = this.buildHoldKey(tenantId, hold.staffId, hold.startTime);
+    await this.lockService.releaseLock(rKey, hold.holdToken ?? '').catch(() => {});
 
     // Availability cache temizle — slot serbest kaldı
     const dateKey = toLocalDateKey(hold.startTime, timezone);
@@ -209,7 +212,8 @@ export class AppointmentHoldService {
 
   /**
    * Hold'u CONSUMED olarak işaretler — randevu oluşturma işleminin içinde çağrılır.
-   * Caller, DB transaction tamamlandıktan SONRA dönen redisKey'i siler.
+   * Caller, DB transaction tamamlandıktan SONRA dönen redisKey + holdToken ile
+   * deleteHoldRedisKey() çağırır.
    *
    * Neden redisKey caller'da silinir?
    *   Redis operasyonları DB transaction içine alınmaz.
@@ -217,7 +221,7 @@ export class AppointmentHoldService {
    *   Transaction commit sonrası Redis silme en güvenli sıra.
    *
    * @param tx  Prisma transaction client (caller sağlar)
-   * @returns   { redisKey } — caller commit sonrası siler
+   * @returns   { redisKey, holdToken } — caller commit sonrası Lua unlock için kullanır
    * @throws ConflictException  Hold ACTIVE değilse veya süresi dolmuşsa (409)
    * @throws NotFoundException  Hold bulunamazsa (404)
    */
@@ -225,7 +229,7 @@ export class AppointmentHoldService {
     holdId:   string,
     tenantId: string,
     tx:       Prisma.TransactionClient,
-  ): Promise<{ redisKey: string }> {
+  ): Promise<{ redisKey: string; holdToken: string }> {
     const hold = await tx.appointmentHold.findUnique({
       where:  { id: holdId },
       select: {
@@ -234,6 +238,7 @@ export class AppointmentHoldService {
         startTime: true,
         status:    true,
         expiresAt: true,
+        holdToken: true,
       },
     });
 
@@ -255,7 +260,8 @@ export class AppointmentHoldService {
     });
 
     return {
-      redisKey: this.buildHoldKey(tenantId, hold.staffId, hold.startTime),
+      redisKey:  this.buildHoldKey(tenantId, hold.staffId, hold.startTime),
+      holdToken: hold.holdToken ?? '',
     };
   }
 
@@ -279,6 +285,7 @@ export class AppointmentHoldService {
         tenantId:  true,
         staffId:   true,
         startTime: true,
+        holdToken: true,  // MVP-EXIT-FINAL: Lua CAS için token gerekli
       },
     });
 
@@ -290,10 +297,13 @@ export class AppointmentHoldService {
       data:  { status: 'EXPIRED' },
     });
 
-    // Redis hold key'lerini temizle (best-effort)
+    // Redis hold key'lerini Lua CAS ile temizle (best-effort)
     await Promise.allSettled(
       stale.map((h) =>
-        this.redis.del(this.buildHoldKey(h.tenantId, h.staffId, h.startTime)),
+        this.lockService.releaseLock(
+          this.buildHoldKey(h.tenantId, h.staffId, h.startTime),
+          h.holdToken ?? '',
+        ),
       ),
     );
 
@@ -342,14 +352,19 @@ export class AppointmentHoldService {
   }
 
   /**
-   * DB transaction commit sonrası Redis hold key'ini sil (best-effort).
+   * DB transaction commit sonrası Redis hold key'ini Lua CAS ile sil (best-effort).
    *
-   * consumeHold() → { redisKey } döner → caller transaction commit sonrası bu metodu çağırır.
+   * consumeHold() → { redisKey, holdToken } döner → caller transaction commit
+   * sonrası bu metodu çağırır.
+   *
    * Neden transaction içinde değil?
    *   Redis operasyonları DB transaction'a katılmaz; transaction rollback olursa
    *   Redis'e yazılan del geri alınamaz. Commit sonrası çağrı en güvenli sıra.
+   *
+   * @param redisKey  buildHoldKey() çıktısı
+   * @param holdToken consumeHold() çıktısından gelen UUID
    */
-  async deleteHoldRedisKey(redisKey: string): Promise<void> {
-    await this.redis.del(redisKey).catch(() => {});
+  async deleteHoldRedisKey(redisKey: string, holdToken: string): Promise<void> {
+    await this.lockService.releaseLock(redisKey, holdToken).catch(() => {});
   }
 }

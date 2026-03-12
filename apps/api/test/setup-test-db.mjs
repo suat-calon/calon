@@ -50,7 +50,7 @@ async function run() {
         EXCLUDE USING GIST (
           "tenantId" WITH =,
           "staffId"  WITH =,
-          tsrange("startTime", "endTime", '[)') WITH &&
+          tstzrange("startTime", "endTime", '[)') WITH &&
         )
         WHERE (status NOT IN ('CANCELLED', 'NO_SHOW') AND "isDeleted" = FALSE)
     `);
@@ -70,7 +70,7 @@ async function run() {
         EXCLUDE USING GIST (
           "tenantId" WITH =,
           "roomId"   WITH =,
-          tsrange("startTime", "endTime", '[)') WITH &&
+          tstzrange("startTime", "endTime", '[)') WITH &&
         )
         WHERE (
           "roomId" IS NOT NULL

@@ -64,7 +64,7 @@ END $$;
 --    Availability sorgularında tenant+staff+zaman aralığı filtrelemesini hızlandırır.
 --    availability:{tenantId}:{staffId}:{date} cache key'ini destekler.
 -- -----------------------------------------------------------------------------
-CREATE INDEX CONCURRENTLY IF NOT EXISTS
+CREATE INDEX IF NOT EXISTS
   idx_appointments_availability_gist
   ON "appointments" USING gist (
     "tenantId",

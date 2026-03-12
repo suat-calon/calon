@@ -81,6 +81,38 @@ export interface BookingResult {
   // Faz 18: Referral — yeni müşteriye üretilen kod + salon slug
   referralCode?: string;
   salonSlug:     string;
+  // Faz 19: Ödeme motor entegrasyonu
+  requiresPayment: boolean;
+  citySlug:        string | null;
+  serviceSlug:     string | null;
+}
+
+// ── Faz 19: Ödeme ─────────────────────────────────────────────────────────────
+
+export interface CreatePaymentPayload {
+  appointmentId: string;
+  buyerName:     string;
+  buyerEmail:    string;
+}
+
+export interface CreatePaymentResult {
+  paymentUrl: string;
+  paymentId:  string;
+}
+
+export async function createPayment(
+  payload: CreatePaymentPayload,
+): Promise<CreatePaymentResult> {
+  const res = await fetch(`${API_BASE}/public/payments/create`, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({})) as { message?: string };
+    throw new Error(err.message ?? 'Ödeme başlatılamadı.');
+  }
+  return res.json() as Promise<CreatePaymentResult>;
 }
 
 // ── API Fonksiyonları ─────────────────────────────────────────────────────────

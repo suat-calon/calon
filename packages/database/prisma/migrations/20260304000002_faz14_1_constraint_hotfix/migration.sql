@@ -13,14 +13,14 @@ ALTER TABLE "appointments" DROP CONSTRAINT IF EXISTS "excl_no_staff_double_booki
 ALTER TABLE "appointments" DROP CONSTRAINT IF EXISTS "excl_no_room_double_booking";
 
 -- İptal ve silinmiş kayıtları YOK SAYAN yeni Staff kısıtlaması
--- Not: startTime/endTime kolonları timestamp (TZ yok) → tsrange kullanılır
+-- Not: startTime/endTime kolonları TIMESTAMPTZ → tstzrange kullanılır
 -- btree_gist extension gereklidir (CREATE EXTENSION IF NOT EXISTS btree_gist)
 ALTER TABLE "appointments"
   ADD CONSTRAINT "excl_no_staff_double_booking"
   EXCLUDE USING gist (
     "tenantId" WITH =,
     "staffId"  WITH =,
-    tsrange("startTime", "endTime") WITH &&
+    tstzrange("startTime", "endTime") WITH &&
   ) WHERE (status NOT IN ('CANCELLED', 'NO_SHOW') AND "isDeleted" = false);
 
 -- İptal ve silinmiş kayıtları YOK SAYAN yeni Room kısıtlaması
@@ -29,7 +29,7 @@ ALTER TABLE "appointments"
   EXCLUDE USING gist (
     "tenantId" WITH =,
     "roomId"   WITH =,
-    tsrange("startTime", "endTime") WITH &&
+    tstzrange("startTime", "endTime") WITH &&
   ) WHERE (status NOT IN ('CANCELLED', 'NO_SHOW') AND "isDeleted" = false AND "roomId" IS NOT NULL);
 
 -- Constraint açıklamalarını güncelle
