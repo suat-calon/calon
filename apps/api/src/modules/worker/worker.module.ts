@@ -21,7 +21,8 @@ import { SmsDeliveryProcessor }   from './processors/sms-delivery.processor';
 import { EmailDeliveryProcessor } from './processors/email-delivery.processor';
 import { PushDeliveryProcessor }  from './processors/push-delivery.processor';
 import { RecoveryProcessor }      from './processors/recovery.processor';
-import { ArchiveService }         from './archive.service';
+import { ArchiveService }              from './archive.service';
+import { PlatformMetricsProcessor }   from './processors/platform-metrics.processor';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { ArchiveService }         from './archive.service';
     PushDeliveryProcessor,
     RecoveryProcessor,
     ArchiveService,
+    PlatformMetricsProcessor,   // Faz 5: Super Admin metrik snapshot (5dk)
   ],
 })
 export class WorkerModule {}

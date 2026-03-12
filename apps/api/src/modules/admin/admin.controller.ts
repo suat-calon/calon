@@ -59,6 +59,18 @@ function ok<T>(data: T): { success: true; data: T } {
 export class AdminController {
   constructor(private readonly admin: AdminService) {}
 
+  // ── GET /admin/overview ───────────────────────────────────────────────────
+  /**
+   * Platform geneli en son metrik snapshot'ını döner.
+   * Snapshot her 5 dakikada bir PlatformMetricsProcessor tarafından yazılır.
+   * Analytics sorguları doğrudan transactional tablolara yönelmez.
+   */
+  @Get('/overview')
+  async getOverview() {
+    const result = await this.admin.getOverview();
+    return ok(result);
+  }
+
   // ── GET /admin/tenants ────────────────────────────────────────────────────
   /**
    * Tüm tenant'ları listeler.

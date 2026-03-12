@@ -1389,6 +1389,39 @@ model EventOutboxArchive {
   @@map("event_outbox_archive")
 }
 
+/// Platform geneli metrik snapshot — Super Admin Overview için
+/// Her 5 dakikada PlatformMetricsCronService tarafından yazılır.
+/// Sorgular transactional tablolara değil bu tabloya yapılır.
+model PlatformMetricsSnapshot {
+  id   String   @id @default(uuid()) @db.Uuid
+  capturedAt DateTime @default(now())
+
+  // ── Tenant counts ──────────────────────────────────────────────────────────
+  totalTenants      Int
+  activeTenants     Int
+  trialTenants      Int
+  pastDueTenants    Int
+  suspendedTenants  Int
+  canceledTenants   Int
+  newTenantsThisMonth Int
+
+  // ── Bookings ───────────────────────────────────────────────────────────────
+  bookingsToday Int
+
+  // ── Revenue (TRY, tam birim) ───────────────────────────────────────────────
+  estimatedMRR Int
+
+  // ── Billing health ─────────────────────────────────────────────────────────
+  openAttemptCount    Int  // PENDING billing attempts
+  failedAttemptCount  Int  // FAILED billing attempts (son 24 saat)
+
+  // ── Breakdown (JSON) ───────────────────────────────────────────────────────
+  planBreakdown Json  // { SOLO: n, PRO: n, TEAM: n, ENTERPRISE: n }
+
+  @@index([capturedAt(sort: Desc)])
+  @@map("platform_metrics_snapshots")
+}
+
 /// Arşivlenmiş delivery kayıtları — DELIVERED / PERMANENT_FAILURE ve >= 30 gün
 model EventDeliveryArchive {
   id                String   @id @db.Uuid

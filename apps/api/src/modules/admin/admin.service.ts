@@ -179,6 +179,25 @@ export class AdminService {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // OVERVIEW — En son platform metrik snapshot'ını döner
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  async getOverview() {
+    const snapshot = await this.prisma.platformMetricsSnapshot.findFirst({
+      orderBy: { capturedAt: 'desc' },
+    });
+
+    if (!snapshot) {
+      throw new NotFoundException(
+        'Henüz bir metrik snapshot mevcut değil. ' +
+        'İlk cron çalışması bekleniyor (maks. 5 dakika).',
+      );
+    }
+
+    return snapshot;
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // SUSPEND — Tenant'ı askıya al
   // ═══════════════════════════════════════════════════════════════════════════
 
