@@ -1,4 +1,5 @@
 import { Module, NestModule, MiddlewareConsumer }  from '@nestjs/common';
+import { envValidationSchema } from './config/env.validation';
 import { ConfigModule }        from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { JwtModule }           from '@nestjs/jwt';
@@ -35,8 +36,9 @@ import { WorkerModule }       from './modules/worker/worker.module';
   imports: [
     // ── Ortam değişkenleri (global) ──────────────────────────────────────────
     ConfigModule.forRoot({
-      isGlobal:    true,
-      envFilePath: ['.env.local', '.env'],
+      isGlobal:         true,
+      validationSchema: envValidationSchema,
+      envFilePath:      ['.env.local', '.env'],
     }),
 
     // ── JWT — global, TenantGuard + AuthService tarafından kullanılır ────────
