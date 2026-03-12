@@ -31,6 +31,7 @@ import { DeliveryModule }     from './modules/delivery/delivery.module';
 import { ProviderModule }     from './modules/provider/provider.module';
 import { NotificationModule } from './modules/notification/notification.module';
 import { WorkerModule }       from './modules/worker/worker.module';
+import { HealthModule }       from './modules/health/health.module';
 
 @Module({
   imports: [
@@ -109,6 +110,9 @@ import { WorkerModule }       from './modules/worker/worker.module';
     ProviderModule,     // @Global — ProviderRegistryService + stub adapter'lar
     NotificationModule, // @Global — TemplateResolver, PreferenceResolver, CostPolicyEngine
     WorkerModule,       // Dispatcher + Delivery + Recovery processor'lar + cron
+
+    // ── Health: Docker healthcheck + uptime probe ─────────────────────────────
+    HealthModule,       // GET /api/v1/health → { status: 'ok' } — @Public(), auth bypass
   ],
   providers: [
     // ── ThrottlerGuard global: rate limiting (Faz 23) ────────────────────────
