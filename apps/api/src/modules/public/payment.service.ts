@@ -285,15 +285,15 @@ export class PaymentService {
       where: { appointmentId },
     });
 
-    // ── 3.5 Appointment snapshot yükle (event payload için) ──────────────────
-    const appointmentSnapshot = isSuccess ? await this.prisma.appointment.findFirst({
+    // ── 3.5 Appointment snapshot yükle (event payload için — SUCCESS ve FAILURE) ──
+    const appointmentSnapshot = await this.prisma.appointment.findFirst({
       where: { id: appointmentId },
       include: {
         customer: { select: { id: true, firstName: true, lastName: true, phone: true, email: true } },
         service:  { select: { name: true } },
         tenant:   { select: { timezone: true } },
       },
-    }) : null;
+    });
 
     if (!payment) {
       this.logger.warn(`Webhook: Payment kaydı bulunamadı: appt=${appointmentId}`);
@@ -361,6 +361,30 @@ export class PaymentService {
             where: { id: appointmentId },
             data:  { status: AppointmentStatus.CANCELLED },
           });
+
+          // Faz 25: payment.failed outbox event
+          if (appointmentSnapshot) {
+            await this.eventProducer.paymentFailed(
+              {
+                paymentId:      iyziPaymentId,
+                bookingId:      appointmentId,
+                customerId:     appointmentSnapshot.customerId ?? '',
+                customerName:   appointmentSnapshot.customer
+                  ? `${appointmentSnapshot.customer.firstName} ${appointmentSnapshot.customer.lastName}`.trim()
+                  : '',
+                customerPhone:  appointmentSnapshot.customer?.phone ?? undefined,
+                customerEmail:  appointmentSnapshot.customer?.email ?? undefined,
+                amountCents:    Math.round(Number(payment.amount) * 100),
+                currency:       payment.currency,
+                provider:       'iyzico',
+                serviceName:    appointmentSnapshot.service.name,
+                startAtUtc:     appointmentSnapshot.startTime.toISOString(),
+                tenantTimezone: appointmentSnapshot.tenant.timezone,
+              },
+              payment.tenantId,
+              tx,
+            );
+          }
 
           this.logger.warn(
             `Webhook FAILURE: appt=${appointmentId} → CANCELLED | iyziPaymentId=${iyziPaymentId}`,

@@ -25,18 +25,26 @@ import { OutboxRepository }      from './outbox.repository';
 import {
   BookingEventPayload,
   BookingCancelledPayload,
+  BookingRescheduledPayload,
   PaymentEventPayload,
   SubscriptionRenewalPayload,
+  SubscriptionStatusPayload,
 } from './schemas/event-envelope';
 
 /** Mevcut desteklenen event isimleri */
 export const EVENT_NAMES = {
   BOOKING_CREATED:               'booking.created',
   BOOKING_CANCELLED:             'booking.cancelled',
+  BOOKING_RESCHEDULED:           'booking.rescheduled',
+  BOOKING_COMPLETED:             'booking.completed',
+  BOOKING_NO_SHOW:               'booking.no_show',
   BOOKING_REMINDER_DUE:          'booking.reminder.due',
   PAYMENT_SUCCEEDED:             'payment.succeeded',
+  PAYMENT_FAILED:                'payment.failed',
   SUBSCRIPTION_RENEWAL_SUCCEEDED: 'subscription.renewal.succeeded',
   SUBSCRIPTION_RENEWAL_FAILED:   'subscription.renewal.failed',
+  SUBSCRIPTION_PAST_DUE:         'subscription.past_due',
+  SUBSCRIPTION_SUSPENDED:        'subscription.suspended',
 } as const;
 
 export type EventName = (typeof EVENT_NAMES)[keyof typeof EVENT_NAMES];
@@ -205,6 +213,150 @@ export class EventProducerService {
         scheduledFor:   new Date(),
         partitionKey:   `subscription:${tenantId}`,
         idempotencyKey: `subscription.renewal.failed:${payload.attemptId}`,
+        payload:        payload as unknown as Record<string, unknown>,
+        metadata:       {},
+      },
+      tx,
+    );
+  }
+
+  // ── payment.failed ───────────────────────────────────────────────────────────
+
+  async paymentFailed(
+    payload:  PaymentEventPayload,
+    tenantId: string,
+    tx:       Prisma.TransactionClient,
+  ) {
+    return this.outbox.createInTx(
+      {
+        tenantId,
+        aggregateType:  'payment',
+        aggregateId:    payload.paymentId,
+        eventName:      EVENT_NAMES.PAYMENT_FAILED,
+        occurredAt:     new Date(),
+        scheduledFor:   new Date(),
+        partitionKey:   `payment:${payload.paymentId}`,
+        idempotencyKey: `payment.failed:${payload.paymentId}`,
+        payload:        payload as unknown as Record<string, unknown>,
+        metadata:       {},
+      },
+      tx,
+    );
+  }
+
+  // ── booking.rescheduled ──────────────────────────────────────────────────────
+
+  async bookingRescheduled(
+    payload:  BookingRescheduledPayload,
+    tenantId: string,
+    tx:       Prisma.TransactionClient,
+  ) {
+    return this.outbox.createInTx(
+      {
+        tenantId,
+        aggregateType:  'booking',
+        aggregateId:    payload.bookingId,
+        eventName:      EVENT_NAMES.BOOKING_RESCHEDULED,
+        occurredAt:     new Date(),
+        scheduledFor:   new Date(),
+        partitionKey:   `booking:${payload.bookingId}`,
+        idempotencyKey: `booking.rescheduled:${payload.bookingId}:${payload.startAtUtc}`,
+        payload:        payload as unknown as Record<string, unknown>,
+        metadata:       { tenantTimezone: payload.tenantTimezone },
+      },
+      tx,
+    );
+  }
+
+  // ── booking.completed ────────────────────────────────────────────────────────
+
+  async bookingCompleted(
+    payload:  BookingEventPayload,
+    tenantId: string,
+    tx:       Prisma.TransactionClient,
+  ) {
+    return this.outbox.createInTx(
+      {
+        tenantId,
+        aggregateType:  'booking',
+        aggregateId:    payload.bookingId,
+        eventName:      EVENT_NAMES.BOOKING_COMPLETED,
+        occurredAt:     new Date(),
+        scheduledFor:   new Date(),
+        partitionKey:   `booking:${payload.bookingId}`,
+        idempotencyKey: `booking.completed:${payload.bookingId}`,
+        payload:        payload as unknown as Record<string, unknown>,
+        metadata:       { tenantTimezone: payload.tenantTimezone },
+      },
+      tx,
+    );
+  }
+
+  // ── booking.no_show ──────────────────────────────────────────────────────────
+
+  async bookingNoShow(
+    payload:  BookingEventPayload,
+    tenantId: string,
+    tx:       Prisma.TransactionClient,
+  ) {
+    return this.outbox.createInTx(
+      {
+        tenantId,
+        aggregateType:  'booking',
+        aggregateId:    payload.bookingId,
+        eventName:      EVENT_NAMES.BOOKING_NO_SHOW,
+        occurredAt:     new Date(),
+        scheduledFor:   new Date(),
+        partitionKey:   `booking:${payload.bookingId}`,
+        idempotencyKey: `booking.no_show:${payload.bookingId}`,
+        payload:        payload as unknown as Record<string, unknown>,
+        metadata:       { tenantTimezone: payload.tenantTimezone },
+      },
+      tx,
+    );
+  }
+
+  // ── subscription.past_due ────────────────────────────────────────────────────
+
+  async subscriptionPastDue(
+    payload:  SubscriptionStatusPayload,
+    tenantId: string,
+    tx:       Prisma.TransactionClient,
+  ) {
+    return this.outbox.createInTx(
+      {
+        tenantId,
+        aggregateType:  'subscription',
+        aggregateId:    tenantId,
+        eventName:      EVENT_NAMES.SUBSCRIPTION_PAST_DUE,
+        occurredAt:     new Date(),
+        scheduledFor:   new Date(),
+        partitionKey:   `subscription:${tenantId}`,
+        idempotencyKey: `subscription.past_due:${tenantId}:${new Date().toISOString().slice(0, 10)}`,
+        payload:        payload as unknown as Record<string, unknown>,
+        metadata:       {},
+      },
+      tx,
+    );
+  }
+
+  // ── subscription.suspended ───────────────────────────────────────────────────
+
+  async subscriptionSuspended(
+    payload:  SubscriptionStatusPayload,
+    tenantId: string,
+    tx:       Prisma.TransactionClient,
+  ) {
+    return this.outbox.createInTx(
+      {
+        tenantId,
+        aggregateType:  'subscription',
+        aggregateId:    tenantId,
+        eventName:      EVENT_NAMES.SUBSCRIPTION_SUSPENDED,
+        occurredAt:     new Date(),
+        scheduledFor:   new Date(),
+        partitionKey:   `subscription:${tenantId}`,
+        idempotencyKey: `subscription.suspended:${tenantId}:${new Date().toISOString().slice(0, 10)}`,
         payload:        payload as unknown as Record<string, unknown>,
         metadata:       {},
       },

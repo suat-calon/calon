@@ -358,6 +358,26 @@ export class AppointmentService {
     const newEndTime   = new Date(dto.newEndTime);
     const staffId      = existing.staffId;
 
+    // ── Faz 25: booking.rescheduled event için snapshot (tx öncesi, salt okunur) ─
+    const [reschCust, reschStf, reschSvc, reschTenant] = await Promise.all([
+      existing.customerId ? this.prisma.customer.findFirst({
+        where:  { id: existing.customerId, tenantId },
+        select: { firstName: true, lastName: true, phone: true, email: true },
+      }) : null,
+      existing.staffId ? this.prisma.staffProfile.findFirst({
+        where:  { id: existing.staffId, tenantId },
+        select: { firstName: true, lastName: true },
+      }) : null,
+      existing.serviceId ? this.prisma.service.findFirst({
+        where:  { id: existing.serviceId, tenantId },
+        select: { name: true },
+      }) : null,
+      this.prisma.tenant.findFirst({
+        where:  { id: tenantId },
+        select: { timezone: true },
+      }),
+    ]);
+
     // ── Adım 2: Çift concurrency lock ───────────────────────────────────────
     // staffId null ise kilit atlanır
     const oldLockKey = staffId
@@ -430,6 +450,29 @@ export class AppointmentService {
           },
         });
 
+        // 3e. booking.rescheduled outbox event (Faz 25)
+        await this.eventProducer.bookingRescheduled(
+          {
+            bookingId:      id,
+            customerId:     existing.customerId ?? '',
+            customerName:   getFullName(reschCust?.firstName, reschCust?.lastName),
+            customerPhone:  reschCust?.phone   ?? undefined,
+            customerEmail:  reschCust?.email   ?? undefined,
+            staffId:        staffId             ?? '',
+            staffName:      getFullName(reschStf?.firstName, reschStf?.lastName),
+            serviceId:      existing.serviceId  ?? '',
+            serviceName:    reschSvc?.name      ?? '',
+            locationName:   '',
+            startAtUtc:     newStartTime.toISOString(),
+            endAtUtc:       newEndTime.toISOString(),
+            tenantTimezone: reschTenant?.timezone ?? DEFAULT_TENANT_TIMEZONE,
+            oldStartAtUtc:  existing.startTime.toISOString(),
+            oldEndAtUtc:    existing.endTime.toISOString(),
+          },
+          tenantId,
+          tx as Prisma.TransactionClient,
+        );
+
         return appt;
       });
     } catch (err: unknown) {
@@ -493,13 +536,21 @@ export class AppointmentService {
       );
     }
 
-    // ── Faz 24: CANCELLED için customer/staff/service snapshot'ı önceden yükle ─
-    let cancelSnapshot: {
+    // ── Faz 24/25: Status event'leri için customer/staff/service snapshot ────────
+    // CANCELLED, COMPLETED ve NO_SHOW durum geçişleri için ortak snapshot yükle.
+    const needsSnapshot =
+      dto.status === AppointmentStatus.CANCELLED ||
+      dto.status === AppointmentStatus.COMPLETED  ||
+      dto.status === AppointmentStatus.NO_SHOW;
+
+    type StatusSnapshot = {
       customerName: string; customerPhone?: string; customerEmail?: string;
       staffName: string; serviceName: string;
-    } | null = null;
+    };
+    let cancelSnapshot:     StatusSnapshot | null = null;
+    let completionSnapshot: StatusSnapshot | null = null;
 
-    if (dto.status === AppointmentStatus.CANCELLED) {
+    if (needsSnapshot) {
       const [cust, stf, svc] = await Promise.all([
         existing.customerId ? this.prisma.customer.findFirst({
           where: { id: existing.customerId, tenantId }, select: { firstName: true, lastName: true, phone: true, email: true },
@@ -511,13 +562,18 @@ export class AppointmentService {
           where: { id: existing.serviceId, tenantId }, select: { name: true },
         }) : null,
       ]);
-      cancelSnapshot = {
+      const snap: StatusSnapshot = {
         customerName:  getFullName(cust?.firstName, cust?.lastName),
         customerPhone: cust?.phone ?? undefined,
         customerEmail: cust?.email ?? undefined,
         staffName:     getFullName(stf?.firstName, stf?.lastName),
         serviceName:   svc?.name   ?? '',
       };
+      if (dto.status === AppointmentStatus.CANCELLED) {
+        cancelSnapshot = snap;
+      } else {
+        completionSnapshot = snap;
+      }
     }
 
     // ── 3. Atomik güncelleme + AuditLog + Ledger (COMPLETED hook) ────────────
@@ -619,6 +675,54 @@ export class AppointmentService {
             },
           },
         });
+
+        // Faz 25: booking.completed outbox event
+        if (completionSnapshot) {
+          await this.eventProducer.bookingCompleted(
+            {
+              bookingId:      appt.id,
+              customerId:     appt.customerId ?? '',
+              customerName:   completionSnapshot.customerName,
+              customerPhone:  completionSnapshot.customerPhone,
+              customerEmail:  completionSnapshot.customerEmail,
+              staffId:        appt.staffId    ?? '',
+              staffName:      completionSnapshot.staffName,
+              serviceId:      appt.serviceId  ?? '',
+              serviceName:    completionSnapshot.serviceName,
+              locationName:   '',
+              startAtUtc:     appt.startTime.toISOString(),
+              endAtUtc:       appt.endTime.toISOString(),
+              tenantTimezone: DEFAULT_TENANT_TIMEZONE,
+              status:         appt.status,
+            },
+            tenantId,
+            tx,
+          );
+        }
+      }
+
+      // ── Faz 25: booking.no_show outbox event ────────────────────────────────
+      if (dto.status === AppointmentStatus.NO_SHOW && completionSnapshot) {
+        await this.eventProducer.bookingNoShow(
+          {
+            bookingId:      appt.id,
+            customerId:     appt.customerId ?? '',
+            customerName:   completionSnapshot.customerName,
+            customerPhone:  completionSnapshot.customerPhone,
+            customerEmail:  completionSnapshot.customerEmail,
+            staffId:        appt.staffId    ?? '',
+            staffName:      completionSnapshot.staffName,
+            serviceId:      appt.serviceId  ?? '',
+            serviceName:    completionSnapshot.serviceName,
+            locationName:   '',
+            startAtUtc:     appt.startTime.toISOString(),
+            endAtUtc:       appt.endTime.toISOString(),
+            tenantTimezone: DEFAULT_TENANT_TIMEZONE,
+            status:         appt.status,
+          },
+          tenantId,
+          tx,
+        );
       }
 
       return appt;

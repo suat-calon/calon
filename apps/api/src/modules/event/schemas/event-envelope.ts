@@ -75,6 +75,12 @@ export interface PaymentEventPayload {
   tenantTimezone: string;
 }
 
+/** booking.rescheduled için ek alanlar */
+export interface BookingRescheduledPayload extends BookingEventPayload {
+  oldStartAtUtc: string; // ISO UTC — rankevu önceki başlangıç zamanı
+  oldEndAtUtc:   string; // ISO UTC — randevu önceki bitiş zamanı
+}
+
 // ── Subscription Payloads ─────────────────────────────────────────────────────
 
 export interface SubscriptionRenewalPayload {
@@ -93,14 +99,29 @@ export interface SubscriptionRenewalPayload {
   failReason?:     string;
 }
 
+/** subscription.past_due ve subscription.suspended için durum geçiş event'leri */
+export interface SubscriptionStatusPayload {
+  tenantId:    string;
+  plan:        string;
+  cycle:       string;
+  ownerEmail?: string;
+  ownerName?:  string;
+}
+
 // ── Typed envelope aliases ────────────────────────────────────────────────────
 
-export type BookingCreatedEvent   = EventEnvelope<BookingEventPayload>;
-export type BookingCancelledEvent = EventEnvelope<BookingCancelledPayload>;
-export type BookingReminderEvent  = EventEnvelope<BookingEventPayload>;
-export type PaymentSucceededEvent = EventEnvelope<PaymentEventPayload>;
+export type BookingCreatedEvent      = EventEnvelope<BookingEventPayload>;
+export type BookingCancelledEvent    = EventEnvelope<BookingCancelledPayload>;
+export type BookingRescheduledEvent  = EventEnvelope<BookingRescheduledPayload>;
+export type BookingReminderEvent     = EventEnvelope<BookingEventPayload>;
+export type BookingCompletedEvent    = EventEnvelope<BookingEventPayload>;
+export type BookingNoShowEvent       = EventEnvelope<BookingEventPayload>;
+export type PaymentSucceededEvent    = EventEnvelope<PaymentEventPayload>;
+export type PaymentFailedEvent       = EventEnvelope<PaymentEventPayload>;
 export type SubscriptionRenewalSucceededEvent = EventEnvelope<SubscriptionRenewalPayload>;
 export type SubscriptionRenewalFailedEvent    = EventEnvelope<SubscriptionRenewalPayload>;
+export type SubscriptionPastDueEvent          = EventEnvelope<SubscriptionStatusPayload>;
+export type SubscriptionSuspendedEvent        = EventEnvelope<SubscriptionStatusPayload>;
 
 // ── Dispatcher job payload (sadece ID'ler) ────────────────────────────────────
 

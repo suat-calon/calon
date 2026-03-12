@@ -23,6 +23,7 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { BillingStatus, BillingCycle, TenantPlan, UsageEventType, Prisma } from '@prisma/client';
+import type { SubscriptionStatusPayload } from '../event/schemas/event-envelope';
 
 import { PrismaService }        from '../../common/prisma.service';
 import { EntitlementsService }  from './entitlements.service';
@@ -132,11 +133,25 @@ export class BillingService {
   // MARK PAST DUE — Ödeme gecikmesi (cron veya webhook)
   // ═══════════════════════════════════════════════════════════════════════════
   async markPastDue(tenantId: string): Promise<void> {
-    await this.requireBilling(tenantId);
+    const billing = await this.requireBilling(tenantId);
 
-    await this.prisma.tenantBilling.update({
-      where: { tenantId },
-      data:  { status: 'PAST_DUE' },
+    const eventPayload: SubscriptionStatusPayload = {
+      tenantId,
+      plan:  billing.plan,
+      cycle: billing.cycle,
+    };
+
+    // Faz 25: status update + outbox event atomik (transactional outbox)
+    await this.prisma.$transaction(async (tx) => {
+      await tx.tenantBilling.update({
+        where: { tenantId },
+        data:  { status: 'PAST_DUE' },
+      });
+      await this.eventProducer.subscriptionPastDue(
+        eventPayload,
+        tenantId,
+        tx as Prisma.TransactionClient,
+      );
     });
 
     await this.entitlements.invalidate(tenantId);
@@ -147,11 +162,25 @@ export class BillingService {
   // SUSPEND — Grace süresi doldu
   // ═══════════════════════════════════════════════════════════════════════════
   async suspend(tenantId: string): Promise<void> {
-    await this.requireBilling(tenantId);
+    const billing = await this.requireBilling(tenantId);
 
-    await this.prisma.tenantBilling.update({
-      where: { tenantId },
-      data:  { status: 'SUSPENDED' },
+    const eventPayload: SubscriptionStatusPayload = {
+      tenantId,
+      plan:  billing.plan,
+      cycle: billing.cycle,
+    };
+
+    // Faz 25: status update + outbox event atomik (transactional outbox)
+    await this.prisma.$transaction(async (tx) => {
+      await tx.tenantBilling.update({
+        where: { tenantId },
+        data:  { status: 'SUSPENDED' },
+      });
+      await this.eventProducer.subscriptionSuspended(
+        eventPayload,
+        tenantId,
+        tx as Prisma.TransactionClient,
+      );
     });
 
     await this.entitlements.invalidate(tenantId);
