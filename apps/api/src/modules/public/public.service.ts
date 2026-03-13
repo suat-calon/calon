@@ -115,6 +115,7 @@ export interface SlotDto {
 
 export interface BookingResultDto {
   appointmentId:  string;
+  status:         string;      // Başlangıç appointment durumu (PENDING_PAYMENT | PENDING)
   startTime:      string;
   endTime:        string;
   service:  { name: string; durationMin: number };
@@ -539,6 +540,7 @@ export class PublicService {
 
       return {
         appointmentId: appointment.id,
+        status:        appointment.status,   // PENDING_PAYMENT | PENDING
         startTime:     appointment.startTime.toISOString(),
         endTime:       appointment.endTime.toISOString(),
         service:  { name: service.name, durationMin: service.durationMin },

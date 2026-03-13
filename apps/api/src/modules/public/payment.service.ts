@@ -41,8 +41,9 @@ import { EventProducerService }  from '../event/event-producer.service';
 // ── Response tipleri ──────────────────────────────────────────────────────────
 
 export interface CreatePaymentResult {
-  paymentUrl: string;
-  paymentId:  string;
+  checkoutUrl: string;  // İyzico ödeme sayfası URL'i (canonical ad)
+  paymentUrl:  string;  // Geriye uyumlu alias — checkoutUrl ile aynı değeri taşır
+  paymentId:   string;
 }
 
 export interface IyzicoWebhookPayload {
@@ -138,7 +139,11 @@ export class PaymentService {
           this.logger.log(
             `createPayment idempotent: appt=${appointment.id} mevcut url döndürülüyor`,
           );
-          return { paymentUrl: existing.paymentUrl, paymentId: appointment.id };
+          return {
+            checkoutUrl: existing.paymentUrl,
+            paymentUrl:  existing.paymentUrl,
+            paymentId:   appointment.id,
+          };
         }
         throw new ConflictException(
           'Bu randevu için ödeme zaten başlatılıyor. Lütfen kısa süre sonra tekrar deneyin.',
@@ -223,8 +228,9 @@ export class PaymentService {
     );
 
     return {
-      paymentUrl: iyzRes.paymentPageUrl!,
-      paymentId:  appointment.id,
+      checkoutUrl: iyzRes.paymentPageUrl!,
+      paymentUrl:  iyzRes.paymentPageUrl!,   // geriye uyumlu alias
+      paymentId:   appointment.id,
     };
   }
 
