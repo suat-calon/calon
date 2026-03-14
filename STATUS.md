@@ -196,6 +196,74 @@ Tüm migration klasörlerinde `migration.sql` mevcut.
 | Startup migration check var mı? | **HAYIR** — tamamen manuel |
 | Sıfırdan DB ayağa kalkar mı? | **TEST EDİLMEDİ** — duplicate timestamp riski nedeniyle belirsiz |
 
+#### 8. Duplicate Timestamp İçerik Analizi
+
+**Çift 1: `20260308000001`**
+
+| Migration | İçerik | Bağımlılık |
+|---|---|---|
+| `faz215_db_ownership_and_extensions` | `CREATE EXTENSION btree_gist` + tablo sahipliği postgres → calon_app transfer | Hiçbir tabloya bağımlı değil, altyapı işlemi |
+| `faz22_billing_core` | `CREATE TYPE "BillingAttemptStatus"` + `CREATE TABLE "billing_attempts"` + `CREATE TABLE "webhook_events"` | Yeni tablo oluşturma, mevcut tablolara bağımlı değil |
+
+**Sonuç:** Bu çift tehlikesiz — birbirine bağımlılık yok. Alfabetik sıra (faz215 → faz22) doğru çalışır. Ama faz215'in önce çalışması mantıklı (extension + ownership önce olmalı).
+
+**Çift 2: `20260309000002`** — İçerik analizi ayrıca yapılmalı (bu session'da head -20 yapılmadı).
+
+#### 9. CI Pipeline Durumu
+
+**Dosya:** `.github/workflows/ci.yml`
+
+```yaml
+name: CI
+on:
+  push:
+    branches: [main, dev]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - Checkout (actions/checkout@v4)
+      - Setup Node 20 (actions/setup-node@v4)
+      - yarn install
+      - yarn build
+      - yarn test
+```
+
+**Sorunlar:**
+- **PR trigger yok** — sadece `push` to `main`/`dev`. PR'lar CI'dan geçmiyor.
+- **DB servisi yok** — PostgreSQL/Redis servisi tanımlı değil. `yarn test` DB gerektiren testlerde patlar.
+- **`prisma generate` yok** — build öncesi `db:generate` çağrılmıyor. Prisma client oluşturulmadan build patlar.
+- **Migration check yok** — `prisma migrate deploy` veya `prisma migrate status` yok.
+- **Lint adımı ayrı değil** — `yarn lint` çağrılmıyor.
+- **Cache yok** — `node_modules` cache'lenmemiyor, her run tam install.
+
+#### 10. Script Haritası
+
+**Root `package.json` (Turborepo):**
+
+| Script | Komut | Not |
+|---|---|---|
+| `build` | `turbo run build` | Tüm workspace'leri build eder |
+| `dev` | `turbo run dev --parallel` | Paralel dev server |
+| `lint` | `turbo run lint` | |
+| `test` | `turbo run test` | |
+| `db:generate` | `yarn workspace @calon/database prisma generate` | Prisma client üretimi |
+| `db:migrate` | `yarn workspace @calon/database prisma migrate dev` | **Dev only** — production'da `migrate deploy` kullanılmalı |
+| `db:studio` | `yarn workspace @calon/database prisma studio` | |
+| `db:seed` | `yarn workspace @calon/database prisma db seed` | Seed script tanımlı ama seed.ts dosyası olup olmadığı kontrol edilmeli |
+
+**`apps/api/package.json`:**
+
+| Script | Komut | Not |
+|---|---|---|
+| `build` | `nest build` | |
+| `dev` | `nest start --watch` | |
+| `start` | `node dist/main` | Production start |
+| `test` | `jest` | |
+| `test:e2e` | `jest --config jest-e2e.config.js --runInBand --forceExit` | E2E ayrı config |
+
+**Dikkat:** `apps/api` hem `bull` (^4.16.5) hem `bullmq` (^5.34.9) paketine bağımlı. Dual queue dependency — hangisi kullanılıyor?
+
 ---
 
 ## FAZ-P3 DETAY — Seed / Fixture Disiplini
