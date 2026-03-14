@@ -24,7 +24,7 @@ BAŞLANGIÇ: —
 | P1 | Canonical Domain Model Sabitleme | ⬜ BEKLIYOR | 0/9 |
 | P2 | Migration Anayasası | 🔄 DEVAM | 3/8 |
 | P3 | Seed / Fixture Disiplini | 🔄 DEVAM | 7/9 |
-| P4 | Tenant İzolasyonu ve Auth Gerçeği | ⬜ BEKLIYOR | 0/8 |
+| P4 | Tenant İzolasyonu ve Auth Gerçeği | 🔄 DEVAM | 4/8 |
 | P5 | Booking Core Tamamlama | ⬜ BEKLIYOR | 0/10 |
 | P6 | Production ENV Contract | ⬜ BEKLIYOR | 0/8 |
 | P7 | Docker Productionization | ⬜ BEKLIYOR | 0/9 |
@@ -414,10 +414,10 @@ Seed verileri (eski veri dahil toplam):
 **Hedef çıktı:** tenant-aware service/repo düzenlemeleri + `docs/security/tenant-isolation.md`
 
 ### Görevler
-- [ ] Public booking ile authenticated yönetim akışı ayrıştırıldı
-- [ ] Tüm service/repository/query katmanında tenant scoping gözden geçirildi
-- [ ] Public endpoint'lerde tenant resolution kontrollü (slug/domain/path)
-- [ ] Authenticated endpoint'lerde tenant güveni doğrulanmış bağlamdan geliyor
+- [x] Public booking ile authenticated yönetim akışı ayrıştırıldı
+- [x] Tüm service/repository/query katmanında tenant scoping gözden geçirildi
+- [x] Public endpoint'lerde tenant resolution kontrollü (slug/domain/path)
+- [x] Authenticated endpoint'lerde tenant güveni doğrulanmış bağlamdan geliyor
 - [ ] "Query unutulmuş tenant filter" için guardrail konuldu
 - [ ] Tenant A → Tenant B data denied testi
 - [ ] Cross-tenant staff/service/appointment listesi sızıntı testi
@@ -425,6 +425,102 @@ Seed verileri (eski veri dahil toplam):
 
 ### Başarısızlık Kriterleri
 - **Tek bir cross-tenant data leak varsa → BAŞARISIZ**
+
+### P4 Bulgular (2026-03-14) — Tenant İzolasyonu Analizi
+
+#### 1. Çift Katmanlı İzolasyon Mimarisi
+
+**Dosya:** `apps/api/src/common/prisma.service.ts` (222 satır)
+
+| Katman | Mekanizma | Kapsam |
+|--------|-----------|--------|
+| **1. Uygulama (Prisma $extends)** | `$allModels.$allOperations` interceptor — `tenantContext.getStore()?.tenantId` varsa WHERE enjeksiyonu | Bulk okuma (findMany/findFirst/count/aggregate/groupBy) + yazma (create/update/upsert/delete/…Many) |
+| **2. PostgreSQL RLS** | `$transaction([set_config('app.tenant_id', $1, true), query])` — aynı bağlantıda SET CONFIG + sorgu | Raw SQL dahil tüm DB erişimi |
+
+**Kapsanan modeller (21 adet):** location, room, usertenant, staffprofile, staffworkinghour, staffshift, servicecategory, service, staffservice, product, stocklog, customer, appointment, transactionledger, commissionlog, loyaltytransaction, consentform, refreshtoken, idempotencykey, auditlog, message
+
+**IDOR koruması:** tenantId SADECE JWT'den alınır (body/query'den ASLA) — `tenant.guard.ts` satır 7-11
+
+#### 2. Guard Zinciri
+
+| Guard | Scope | Dosya |
+|-------|-------|-------|
+| **TenantGuard** | GLOBAL — tüm endpoint'leri korur | `modules/iam/guards/tenant.guard.ts` |
+| **BillingGuard** | Plan bazlı erişim kontrolü | `modules/billing/guards/billing.guard.ts` |
+| **AdminGuard** | API key ile admin erişimi | `modules/admin/admin.guard.ts` |
+| **RequireFeatureGuard** | Feature flag kontrolü | `modules/billing/guards/require-feature.guard.ts` |
+| **ProPlanGuard** | Pro+ plan kontrolü | `modules/loyalty/guards/pro-plan.guard.ts` |
+| **AvailabilityAbuseGuard** | Rate limiting (public) | `modules/public/guards/availability-abuse.guard.ts` |
+
+**Akış:** TenantGuard (global) → JWT verify → tenantContext.run() → Prisma interceptor otomatik filtre
+
+#### 3. @Public() Endpoint'ler (TenantGuard'ı atlayan)
+
+| Controller | Endpoint | Tenant Context | Risk |
+|------------|----------|----------------|------|
+| **HealthController** | GET /health | Yok — veri yok | GÜVENLİ |
+| **PrometheusController** | GET /metrics | Yok — metrik | GÜVENLİ |
+| **AuthController** | POST /auth/login, /register, /refresh, /logout | Yok — oturum yönetimi | GÜVENLİ |
+| **OnboardingController** | POST /onboard | Yok — yeni tenant oluşturma | GÜVENLİ |
+| **DiscoveryService** | GET /public/discovery/* | **YOK — KASITLI CROSS-TENANT** | GÜVENLİ (marketplace) |
+| **PublicService** | GET,POST /public/salon, /services, /staff, /availability, /holds, /book | `runInContext(tenantId)` explicit | GÜVENLİ |
+| **PaymentService** | POST /webhooks/iyzico | `runInContext(payment.tenantId)` explicit | GÜVENLİ |
+| **AdminController** | /admin/* | AdminGuard (API key) — doğrudan sorgu | GÜVENLİ (admin) |
+| **BillingWebhookController** | POST /webhooks/billing | Webhook validation | GÜVENLİ |
+
+#### 4. Potansiyel Riskler
+
+**RISK-1: findUnique() otomatik filtre DIŞINDA** (DÜŞÜK)
+- `prisma.service.ts` satır 18: `findUnique` kasıtlı olarak hariç tutuluyor
+- Tasarım kararı: unique alanlar (email, slug) tenant-agnostic
+- Mitigasyon: Servis katmanı findUnique sonrası tenantId doğrulaması yapmalı
+- **Durum:** Auth service'te `findUnique({email})` ve `findUnique({slug})` — global unique alanlar, sorun yok
+- **Durum:** `findUnique({userId_tenantId})` — composite key tenantId içeriyor, sorun yok
+
+**RISK-2: Discovery Service cross-tenant okuma** (DÜŞÜK — KASITLI)
+- `modules/public/discovery.service.ts` satır 6-12: `runInContext()` kullanılmıyor
+- Amaç: marketplace — şehirdeki tüm aktif salonları listeleme
+- Mitigasyon: Sadece `status=ACTIVE` ve `isDeleted=false` olanlar gösteriliyor
+- Yazma işlemi YOK
+
+**RISK-3: SUPER_ADMIN placeholder tenantId** (DÜŞÜK)
+- `tenant.guard.ts` satır 104: `payload.tenantId ?? 'super_admin'`
+- Admin endpoint'leri zaten `@Public() + @UseGuards(AdminGuard)` ile korunuyor
+- Prisma middleware 'super_admin' string'ini tenantId olarak filtrelerse boş sonuç döner — veri sızıntısı yok
+
+**RISK-4: Müşteri telefon bazlı lookup** (ORTA)
+- `modules/public/public.service.ts` satır ~396: `findFirst({ where: { phone } })`
+- `runInContext(dto.tenantId)` içinde — Prisma middleware otomatik filtre UYGULAR
+- **Şu an güvenli** ama context kaybında cross-tenant müşteri eşleşme riski var
+- Öneri: explicit `where: { phone, tenantId }` eklemek defense-in-depth olur
+
+**RISK-5: Raw SQL sorguları** (DÜŞÜK)
+- Billing cron: `$executeRaw` webhook_events pruning — tarihe göre, tenant verisi yok
+- Appointment overlap: `tstzrange()` — staffId + zaten RLS set_config aktif
+
+#### 5. Tenant Middleware/Interceptor
+
+| Kontrol | Sonuç |
+|---------|-------|
+| Dedicated `tenant.middleware.ts` | **YOK** |
+| Dedicated tenant interceptor | **YOK** |
+| Tenant context mekanizması | **AsyncLocalStorage** (`common/tenant.context.ts`) |
+
+**Mimari:** Middleware değil Guard + AsyncLocalStorage + Prisma $extends üçlüsü. TenantGuard → tenantContext.run() → Prisma interceptor zinciri. Bu daha güvenli bir yaklaşım çünkü middleware bypass edilebilir ama global guard + DI interceptor zinciri tam coverage sağlıyor.
+
+#### 6. Genel Değerlendirme
+
+| Kriter | Durum | Not |
+|--------|-------|-----|
+| Otomatik tenant filtresi | **VAR** | Prisma $extends, 21 model |
+| PostgreSQL RLS | **VAR** | set_config, batch $transaction |
+| IDOR koruması | **VAR** | tenantId sadece JWT'den |
+| @Public endpoint kontrol | **GÜVENLİ** | runInContext() veya kasıtlı cross-tenant |
+| findUnique riski | **KABUL EDİLEBİLİR** | Tasarım kararı, servis katmanı sorumlu |
+| Cross-tenant data leak | **TESPİT EDİLMEDİ** | Mevcut mimaride aktif sızıntı yok |
+| Raw SQL güvenliği | **GÜVENLİ** | RLS + explicit filtre |
+
+**SONUÇ:** Defense-in-depth mimarisi sağlam. Kritik güvenlik açığı tespit edilmedi. RISK-4 (telefon lookup) için defensive coding önerisi var ama mevcut haliyle Prisma middleware koruma sağlıyor. Kalan görevler: guardrail ekleme, cross-tenant test yazma, docs.
 
 ---
 
@@ -557,6 +653,7 @@ Aktif blocker: —
 | Kurulum | — | CLAUDE.md + STATUS.md oluşturuldu | P0 başlamadı |
 | 2026-03-14 | P2 | CI düzeltildi, duplicate timestamp çözüldü | P2 kalan: baseline test, docs |
 | 2026-03-14 | P3 | seed.ts oluşturuldu (idempotent, 10 model) | P3 kalan: fixtures, DB test, docs |
+| 2026-03-14 | P4 | Tenant izolasyonu analizi tamamlandı (4/8 görev) | P4 kalan: guardrail, cross-tenant test, docs |
 
 ---
 
