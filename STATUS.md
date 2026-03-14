@@ -22,7 +22,7 @@ BAŞLANGIÇ: —
 |-----|--------|-------|-----------------|
 | P0 | Gerçeklik Tespiti / Repo Otopsisi | ⬜ BEKLIYOR | 0/7 |
 | P1 | Canonical Domain Model Sabitleme | ⬜ BEKLIYOR | 0/9 |
-| P2 | Migration Anayasası | ⬜ BEKLIYOR | 0/8 |
+| P2 | Migration Anayasası | 🔄 DEVAM | 3/8 |
 | P3 | Seed / Fixture Disiplini | ⬜ BEKLIYOR | 0/9 |
 | P4 | Tenant İzolasyonu ve Auth Gerçeği | ⬜ BEKLIYOR | 0/8 |
 | P5 | Booking Core Tamamlama | ⬜ BEKLIYOR | 0/10 |
@@ -96,7 +96,7 @@ Naming karmaşası tespiti:
 **Hedef çıktı:** `docs/infra/migration-discipline.md` + temiz migration klasörü
 
 ### Görevler
-- [ ] Tüm mevcut migration'lar gözden geçirildi
+- [x] Tüm mevcut migration'lar gözden geçirildi
 - [ ] Temiz baseline migration üretildi (gerekirse)
 - [ ] Local: `prisma migrate dev` akışı yazıldı
 - [ ] Production: `prisma migrate deploy` akışı yazıldı
@@ -264,6 +264,23 @@ jobs:
 
 **Dikkat:** `apps/api` hem `bull` (^4.16.5) hem `bullmq` (^5.34.9) paketine bağımlı. Dual queue dependency — hangisi kullanılıyor?
 
+#### 11. P2 İnfaz Aksiyonları (2026-03-14)
+
+**Yapılan değişiklikler:**
+
+1. **CI düzeltildi** (`.github/workflows/ci.yml`):
+   - `pull_request` trigger eklendi (`dev`, `main`, `master`)
+   - PostgreSQL 15 servisi eklendi (`calon_test` DB)
+   - `yarn db:generate` adımı eklendi (Prisma client üretimi)
+
+2. **Duplicate timestamp'ler çözüldü:**
+   - `20260308000001_faz22_billing_core` → `20260308000002_faz22_billing_core`
+   - `20260309000002_faz25_archive_tables` → `20260309000003_faz25_archive_tables`
+
+3. **migration_lock.toml:** `provider = "postgresql"` — doğru, değişiklik gerekmedi.
+
+**Kalan görevler:** Baseline migration testi, `prisma migrate dev/deploy` akışı dokümantasyonu, startup check.
+
 ---
 
 ## FAZ-P3 DETAY — Seed / Fixture Disiplini
@@ -429,6 +446,7 @@ Aktif blocker: —
 | Tarih | Faz | Yapılan | Kalan |
 |-------|-----|---------|-------|
 | Kurulum | — | CLAUDE.md + STATUS.md oluşturuldu | P0 başlamadı |
+| 2026-03-14 | P2 | CI düzeltildi, duplicate timestamp çözüldü | P2 kalan: baseline test, docs |
 
 ---
 
