@@ -9,9 +9,9 @@
 ## AKTİF FAZ
 
 ```
-FAZ: P0 — Gerçeklik Tespiti / Repo Otopsisi
+FAZ: P5 — Booking Core Tamamlama
 DURUM: BAŞLAMADI
-BAŞLANGIÇ: —
+BAŞLANGIÇ: P4 tamamlandı (2026-03-15)
 ```
 
 ---
@@ -24,7 +24,7 @@ BAŞLANGIÇ: —
 | P1 | Canonical Domain Model Sabitleme | ⬜ BEKLIYOR | 0/9 |
 | P2 | Migration Anayasası | 🔄 DEVAM | 3/8 |
 | P3 | Seed / Fixture Disiplini | 🔄 DEVAM | 7/9 |
-| P4 | Tenant İzolasyonu ve Auth Gerçeği | 🔄 DEVAM | 7/8 |
+| P4 | Tenant İzolasyonu ve Auth Gerçeği | ✅ TAMAM | 8/8 |
 | P5 | Booking Core Tamamlama | ⬜ BEKLIYOR | 0/10 |
 | P6 | Production ENV Contract | ⬜ BEKLIYOR | 0/8 |
 | P7 | Docker Productionization | ⬜ BEKLIYOR | 0/9 |
@@ -421,7 +421,7 @@ Seed verileri (eski veri dahil toplam):
 - [x] "Query unutulmuş tenant filter" için guardrail konuldu
 - [x] Tenant A → Tenant B data denied testi
 - [x] Cross-tenant staff/service/appointment listesi sızıntı testi
-- [ ] `docs/security/tenant-isolation.md` yazıldı
+- [x] `docs/security/tenant-isolation.md` yazıldı
 
 ### Başarısızlık Kriterleri
 - **Tek bir cross-tenant data leak varsa → BAŞARISIZ**
@@ -558,6 +558,21 @@ Migration squash (`init_clean_baseline`) sırasında kaybolan RLS politikaları 
 
 **3/3 test PASSED** — Real DB + JWT tokens + Prisma interceptor + RLS validation.
 
+#### 9. P4 Tamamlanma Özeti (2026-03-15)
+
+- Çift katmanlı izolasyon: Prisma interceptor + PostgreSQL RLS
+- 23 tablo FORCE ROW LEVEL SECURITY aktif
+- payments modeli TENANT_SCOPED_MODELS'e eklendi
+- Telefon lookup explicit tenantId filtresi eklendi
+- 3 e2e test (müşteri leak, randevu 404, public scope) geçti
+- Bilinen gap: staff_working_hours / staff_services (`docs/architecture/schema-gap-report.md`)
+- Dokümantasyon: `docs/architecture/canonical-data-model.md`, `docs/architecture/schema-gap-report.md`, `docs/security/tenant-isolation.md`
+
+#### P5 Hedef
+
+- Booking Core: GIST constraint, Redis slot kilitleri, Availability Engine, timezone yönetimi
+- staff_working_hours/staff_services tenantId kararı (Seçenek A öneriliyor)
+
 ---
 
 ## FAZ-P5 DETAY — Booking Core Tamamlama
@@ -692,6 +707,7 @@ Aktif blocker: —
 | 2026-03-14 | P4 | Tenant izolasyonu analizi tamamlandı (4/8 görev) | P4 kalan: guardrail, cross-tenant test, docs |
 | 2026-03-15 | P4 | RLS restore migration uygulandı, 23 tablo, FORCE aktif + payment TENANT_SCOPED | P4 kalan: cross-tenant test, docs |
 | 2026-03-15 | P4 | Cross-tenant e2e testleri yazıldı ve geçti (3/3 PASSED) | P4 kalan: docs |
+| 2026-03-15 | P4.5 | Schema gap report + canonical data model + P4 TAMAM (8/8) | P5 başlayabilir |
 
 ---
 
