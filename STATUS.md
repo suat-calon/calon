@@ -298,6 +298,50 @@ jobs:
 - [ ] Sıfır DB reset + seed success testi
 - [ ] `docs/infra/seed-strategy.md` yazıldı
 
+### P3 Bulgular (2026-03-14)
+
+#### 1. Seed Dosyası Durumu
+
+| Kontrol | Sonuç |
+|---|---|
+| `packages/database/prisma/seed.ts` | **YOK** — dosya fiziksel olarak mevcut değil |
+| `package.json` prisma.seed config | **VAR** — `ts-node --compiler-options '{"module":"CommonJS"}' prisma/seed.ts` |
+| `ts-node` bağımlılığı | **VAR** — `^10.9.2` (devDependencies) |
+
+**Sonuç:** Seed altyapısı (config + ts-node) hazır ama seed dosyasının kendisi yazılmamış. `yarn db:seed` çalıştırılırsa `seed.ts not found` hatası verir.
+
+#### 2. Test Fixture'ları
+
+| Kontrol | Sonuç |
+|---|---|
+| `test/fixtures/` dizini | **VAR** — sadece `.gitkeep` içeriyor |
+| Fixture JSON dosyaları | **YOK** — boş dizin |
+
+#### 3. Schema Model Doğrulama
+
+Seed için gerekli 9 model schema'da mevcut:
+
+| Model | Durum |
+|---|---|
+| Tenant | VAR |
+| User | VAR |
+| StaffProfile | VAR |
+| Service | VAR |
+| Customer | VAR |
+| Appointment | VAR |
+| TenantBilling | VAR |
+| UsagePeriod | VAR |
+| Payment | VAR |
+
+**Not:** Schema `StaffProfile` kullanıyor, `StaffMember` değil. CLAUDE.md'deki canonical model `staff_members` diyor — seed yazarken `StaffProfile` / `staff_profiles` kullanılacak.
+
+#### 4. Seed Yazım Öngereksinimleri
+
+- Prisma client generate edilmiş olmalı (`yarn db:generate`)
+- DB ayakta olmalı (docker-compose up)
+- Migration'lar uygulanmış olmalı (`yarn db:migrate`)
+- Seed idempotent olmalı (tekrar çalıştırılabilir — upsert kullan)
+
 ---
 
 ## FAZ-P4 DETAY — Tenant İzolasyonu ve Auth
