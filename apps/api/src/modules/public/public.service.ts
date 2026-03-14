@@ -394,7 +394,7 @@ export class PublicService {
 
       // ── 3. Müşteri upsert (telefon bazlı, tenant içi) ────────────────────
       let customer = await this.prisma.customer.findFirst({
-        where: { phone: dto.phone },
+        where: { phone: dto.phone, tenantId: dto.tenantId },
       });
 
       let isNewCustomer = false;
