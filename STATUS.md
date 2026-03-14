@@ -24,7 +24,7 @@ BAŞLANGIÇ: —
 | P1 | Canonical Domain Model Sabitleme | ⬜ BEKLIYOR | 0/9 |
 | P2 | Migration Anayasası | 🔄 DEVAM | 3/8 |
 | P3 | Seed / Fixture Disiplini | 🔄 DEVAM | 7/9 |
-| P4 | Tenant İzolasyonu ve Auth Gerçeği | 🔄 DEVAM | 5/8 |
+| P4 | Tenant İzolasyonu ve Auth Gerçeği | 🔄 DEVAM | 7/8 |
 | P5 | Booking Core Tamamlama | ⬜ BEKLIYOR | 0/10 |
 | P6 | Production ENV Contract | ⬜ BEKLIYOR | 0/8 |
 | P7 | Docker Productionization | ⬜ BEKLIYOR | 0/9 |
@@ -419,8 +419,8 @@ Seed verileri (eski veri dahil toplam):
 - [x] Public endpoint'lerde tenant resolution kontrollü (slug/domain/path)
 - [x] Authenticated endpoint'lerde tenant güveni doğrulanmış bağlamdan geliyor
 - [x] "Query unutulmuş tenant filter" için guardrail konuldu
-- [ ] Tenant A → Tenant B data denied testi
-- [ ] Cross-tenant staff/service/appointment listesi sızıntı testi
+- [x] Tenant A → Tenant B data denied testi
+- [x] Cross-tenant staff/service/appointment listesi sızıntı testi
 - [ ] `docs/security/tenant-isolation.md` yazıldı
 
 ### Başarısızlık Kriterleri
@@ -545,6 +545,18 @@ Migration squash (`init_clean_baseline`) sırasında kaybolan RLS politikaları 
 - KONTROL A: 11/11 örneklem tablo → `rls_enabled=t`, `rls_forced=t`
 - KONTROL B: `pg_policies` → 23 `tenant_isolation_*` policy
 - KONTROL C: `grep 'payment'` → TENANT_SCOPED_MODELS'de mevcut
+
+#### 8. Cross-Tenant E2E Testleri (2026-03-15)
+
+**Dosya:** `apps/api/test/tenant-isolation.e2e-spec.ts`
+
+| Test | Senaryo | Sonuç |
+|------|---------|-------|
+| 1 | Tenant A kullanıcısı Tenant B müşterilerini göremez | **PASSED** |
+| 2 | Tenant A müşterisi Tenant B token ile 404 döner | **PASSED** |
+| 3 | Public /services endpoint sadece hedef tenant verisini döner | **PASSED** |
+
+**3/3 test PASSED** — Real DB + JWT tokens + Prisma interceptor + RLS validation.
 
 ---
 
@@ -679,6 +691,7 @@ Aktif blocker: —
 | 2026-03-14 | P3 | seed.ts oluşturuldu (idempotent, 10 model) | P3 kalan: fixtures, DB test, docs |
 | 2026-03-14 | P4 | Tenant izolasyonu analizi tamamlandı (4/8 görev) | P4 kalan: guardrail, cross-tenant test, docs |
 | 2026-03-15 | P4 | RLS restore migration uygulandı, 23 tablo, FORCE aktif + payment TENANT_SCOPED | P4 kalan: cross-tenant test, docs |
+| 2026-03-15 | P4 | Cross-tenant e2e testleri yazıldı ve geçti (3/3 PASSED) | P4 kalan: docs |
 
 ---
 
