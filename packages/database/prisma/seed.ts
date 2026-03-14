@@ -56,9 +56,9 @@ function futureDate(daysFromNow: number, hour: number): Date {
 async function main() {
   console.log('🌱 Seeding demo data...');
 
-  // 1. Tenant
-  await prisma.tenant.upsert({
-    where: { id: TENANT_ID },
+  // 1. Tenant — slug unique olduğundan slug ile upsert
+  const tenant = await prisma.tenant.upsert({
+    where: { slug: 'demo-salon' },
     update: {},
     create: {
       id: TENANT_ID,
@@ -68,6 +68,7 @@ async function main() {
       status: 'ACTIVE',
     },
   });
+  const tenantId = tenant.id;
 
   // 2. Owner User
   await prisma.user.upsert({
@@ -90,7 +91,7 @@ async function main() {
     create: {
       id: OWNER_UT_ID,
       userId: OWNER_USER_ID,
-      tenantId: TENANT_ID,
+      tenantId,
       role: 'TENANT_OWNER',
     },
   });
@@ -101,7 +102,7 @@ async function main() {
     update: {},
     create: {
       id: LOCATION_ID,
-      tenantId: TENANT_ID,
+      tenantId,
       name: 'Merkez Şube',
       address: 'Bağdat Caddesi No:123',
       city: 'İstanbul',
@@ -115,7 +116,7 @@ async function main() {
     update: {},
     create: {
       id: CATEGORY_ID,
-      tenantId: TENANT_ID,
+      tenantId,
       name: 'Saç Bakım',
       sortOrder: 1,
     },
@@ -132,7 +133,7 @@ async function main() {
       update: {},
       create: {
         id: s.id,
-        tenantId: TENANT_ID,
+        tenantId,
         locationId: LOCATION_ID,
         firstName: s.firstName,
         lastName: s.lastName,
@@ -155,7 +156,7 @@ async function main() {
       update: {},
       create: {
         id: svc.id,
-        tenantId: TENANT_ID,
+        tenantId,
         categoryId: CATEGORY_ID,
         name: svc.name,
         durationMin: svc.durationMin,
@@ -179,7 +180,7 @@ async function main() {
       update: {},
       create: {
         id: c.id,
-        tenantId: TENANT_ID,
+        tenantId,
         firstName: c.firstName,
         lastName: c.lastName,
         phone: c.phone,
@@ -205,7 +206,7 @@ async function main() {
       update: {},
       create: {
         id: APPOINTMENT_IDS[i],
-        tenantId: TENANT_ID,
+        tenantId,
         customerId,
         staffId,
         serviceId,
@@ -227,10 +228,10 @@ async function main() {
   trialEnd.setDate(trialEnd.getDate() + 7);
 
   await prisma.tenantBilling.upsert({
-    where: { tenantId: TENANT_ID },
+    where: { tenantId },
     update: {},
     create: {
-      tenantId: TENANT_ID,
+      tenantId,
       plan: 'BOUTIQUE',
       cycle: 'MONTHLY',
       status: 'TRIAL',
@@ -248,7 +249,7 @@ async function main() {
     update: {},
     create: {
       id: USAGE_PERIOD_ID,
-      tenantId: TENANT_ID,
+      tenantId,
       periodStart: now,
       periodEnd: periodEnd,
       smsIncluded: 100,
@@ -262,7 +263,10 @@ async function main() {
 }
 
 main()
-  .catch(console.error)
+  .catch((e) => {
+    console.error(e);
+    process.exit(1);
+  })
   .finally(async () => {
     await prisma.$disconnect();
   });

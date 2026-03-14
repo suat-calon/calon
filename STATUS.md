@@ -23,7 +23,7 @@ BAŞLANGIÇ: —
 | P0 | Gerçeklik Tespiti / Repo Otopsisi | ⬜ BEKLIYOR | 0/7 |
 | P1 | Canonical Domain Model Sabitleme | ⬜ BEKLIYOR | 0/9 |
 | P2 | Migration Anayasası | 🔄 DEVAM | 3/8 |
-| P3 | Seed / Fixture Disiplini | 🔄 DEVAM | 6/9 |
+| P3 | Seed / Fixture Disiplini | 🔄 DEVAM | 7/9 |
 | P4 | Tenant İzolasyonu ve Auth Gerçeği | ⬜ BEKLIYOR | 0/8 |
 | P5 | Booking Core Tamamlama | ⬜ BEKLIYOR | 0/10 |
 | P6 | Production ENV Contract | ⬜ BEKLIYOR | 0/8 |
@@ -295,7 +295,7 @@ jobs:
 - [x] 10 appointment + 1 billing + 1 usage period eklendi
 - [x] Seed idempotent hale getirildi (tüm kayıtlar upsert)
 - [ ] `test/fixtures/*.json` dosyaları oluşturuldu
-- [ ] Sıfır DB reset + seed success testi
+- [x] Sıfır DB reset + seed success testi
 - [ ] `docs/infra/seed-strategy.md` yazıldı
 
 ### P3 Bulgular (2026-03-14)
@@ -365,6 +365,47 @@ Seed için gerekli 9 model schema'da mevcut:
 - Her kayıtta explicit `tenantId`
 - Real Prisma model isimleri (`staffProfile`, `serviceCategory`)
 - TypeScript syntax check: **0 error** (`tsc --noEmit --strict`)
+
+#### 6. P3 Seed DB Testi (2026-03-14)
+
+**ADIM 1 — migrate deploy:**
+- `packages/database/.env` oluşturuldu (DATABASE_URL)
+- `prisma migrate deploy` çalıştırıldı
+- Rename edilen migration'lar (`faz22_billing_core` → `000002`, `faz25_archive_tables` → `000003`) DB'de eski isimle kayıtlıydı → `prisma migrate resolve --applied` ile çözüldü
+- Son migration `20260312000001_faz5_platform_metrics_snapshot` uygulandı
+- **24/24 migration applied**
+
+**ADIM 2 — seed çalıştırma:**
+- İlk deneme: `slug: 'demo-salon'` unique çakışması (mevcut tenant farklı UUID) → `where: { slug }` ile upsert'e geçildi
+- İkinci deneme: `type "public.UserStatus" does not exist` — 7 enum DB'de eksik (text olarak oluşturulmuş, enum migration'ı hiç yapılmamış)
+- Eksik enum'lar oluşturuldu: `UserRole`, `UserStatus`, `LoyaltyAction`, `TransactionType`, `PhotoType`, `MessageChannel`, `MessageDirection`
+- Text kolonlar enum'a dönüştürüldü (`users.status`, `user_tenants.role`, `messages.channel/direction`, vb.)
+- `user_tenants.role` mevcut değer `OWNER` → `TENANT_OWNER` olarak güncellendi (schema ile uyumlu)
+- `customer_photos` tablosu DB'de yok — migration eksik, atlandı
+- `yarn db:seed` başarılı
+
+**ADIM 3 — doğrulama sorgusu:**
+
+```
+ tenants | users | staff | services | customers | appointments
+---------+-------+-------+----------+-----------+--------------
+       2 |     2 |     3 |        4 |        17 |           14
+```
+
+Seed verileri (eski veri dahil toplam):
+| Tablo | Eski | Seed | Toplam |
+|---|---|---|---|
+| tenants | 1 (+demo-salon mevcut) | 0 (upsert, aynı slug) | 2 |
+| users | 1 | 1 | 2 |
+| staff_profiles | 1 | 2 | 3 |
+| services | 1 | 3 | 4 |
+| customers | 12 | 5 | 17 |
+| appointments | 4 | 10 | 14 |
+
+**Ek bulgular — DB/Schema enum uyumsuzluğu:**
+- 7 enum tipi DB'de text olarak yaşıyordu, Prisma schema'da enum olarak tanımlıydı
+- Bu uyumsuzluk migration eksikliğinden kaynaklanıyor — init migration enum yerine text kolon oluşturmuş
+- Manuel düzeltme yapıldı ama bu bir migration olarak kaydedilmeli (P2 kalan görevi)
 
 ---
 
