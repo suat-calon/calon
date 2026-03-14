@@ -24,7 +24,7 @@ BAŞLANGIÇ: —
 | P1 | Canonical Domain Model Sabitleme | ⬜ BEKLIYOR | 0/9 |
 | P2 | Migration Anayasası | 🔄 DEVAM | 3/8 |
 | P3 | Seed / Fixture Disiplini | 🔄 DEVAM | 7/9 |
-| P4 | Tenant İzolasyonu ve Auth Gerçeği | 🔄 DEVAM | 4/8 |
+| P4 | Tenant İzolasyonu ve Auth Gerçeği | 🔄 DEVAM | 5/8 |
 | P5 | Booking Core Tamamlama | ⬜ BEKLIYOR | 0/10 |
 | P6 | Production ENV Contract | ⬜ BEKLIYOR | 0/8 |
 | P7 | Docker Productionization | ⬜ BEKLIYOR | 0/9 |
@@ -418,7 +418,7 @@ Seed verileri (eski veri dahil toplam):
 - [x] Tüm service/repository/query katmanında tenant scoping gözden geçirildi
 - [x] Public endpoint'lerde tenant resolution kontrollü (slug/domain/path)
 - [x] Authenticated endpoint'lerde tenant güveni doğrulanmış bağlamdan geliyor
-- [ ] "Query unutulmuş tenant filter" için guardrail konuldu
+- [x] "Query unutulmuş tenant filter" için guardrail konuldu
 - [ ] Tenant A → Tenant B data denied testi
 - [ ] Cross-tenant staff/service/appointment listesi sızıntı testi
 - [ ] `docs/security/tenant-isolation.md` yazıldı
@@ -521,6 +521,30 @@ Seed verileri (eski veri dahil toplam):
 | Raw SQL güvenliği | **GÜVENLİ** | RLS + explicit filtre |
 
 **SONUÇ:** Defense-in-depth mimarisi sağlam. Kritik güvenlik açığı tespit edilmedi. RISK-4 (telefon lookup) için defensive coding önerisi var ama mevcut haliyle Prisma middleware koruma sağlıyor. Kalan görevler: guardrail ekleme, cross-tenant test yazma, docs.
+
+#### 7. RLS Restorasyon Migration (2026-03-15)
+
+**Migration:** `20260314224455_p4_restore_rls_core`
+
+Migration squash (`init_clean_baseline`) sırasında kaybolan RLS politikaları restore edildi.
+
+| İşlem | Sonuç |
+|-------|-------|
+| ENABLE + FORCE ROW LEVEL SECURITY | **23 tablo** |
+| CREATE POLICY tenant_isolation_* | **23 policy** |
+| Policy target | `calon_app` |
+| Cast yönü | `current_setting('app.tenant_id', true)::uuid` (index-friendly) |
+
+**Hariç tutulan tablolar (tenantId kolonu yok):**
+- `staff_working_hours` — staffId FK üzerinden dolaylı izolasyon
+- `staff_services` — staffId+serviceId FK üzerinden dolaylı izolasyon
+
+**Ek değişiklik:** `prisma.service.ts` TENANT_SCOPED_MODELS'e `'payment'` eklendi.
+
+**Doğrulama:**
+- KONTROL A: 11/11 örneklem tablo → `rls_enabled=t`, `rls_forced=t`
+- KONTROL B: `pg_policies` → 23 `tenant_isolation_*` policy
+- KONTROL C: `grep 'payment'` → TENANT_SCOPED_MODELS'de mevcut
 
 ---
 
@@ -654,6 +678,7 @@ Aktif blocker: —
 | 2026-03-14 | P2 | CI düzeltildi, duplicate timestamp çözüldü | P2 kalan: baseline test, docs |
 | 2026-03-14 | P3 | seed.ts oluşturuldu (idempotent, 10 model) | P3 kalan: fixtures, DB test, docs |
 | 2026-03-14 | P4 | Tenant izolasyonu analizi tamamlandı (4/8 görev) | P4 kalan: guardrail, cross-tenant test, docs |
+| 2026-03-15 | P4 | RLS restore migration uygulandı, 23 tablo, FORCE aktif + payment TENANT_SCOPED | P4 kalan: cross-tenant test, docs |
 
 ---
 
