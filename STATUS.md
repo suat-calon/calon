@@ -708,6 +708,7 @@ Aktif blocker: —
 | 2026-03-15 | P4 | RLS restore migration uygulandı, 23 tablo, FORCE aktif + payment TENANT_SCOPED | P4 kalan: cross-tenant test, docs |
 | 2026-03-15 | P4 | Cross-tenant e2e testleri yazıldı ve geçti (3/3 PASSED) | P4 kalan: docs |
 | 2026-03-15 | P4.5 | Schema gap report + canonical data model + P4 TAMAM (8/8) | P5 başlayabilir |
+| 2026-03-15 | P5-0 | staff_working_hours/staff_services tenantId eklendi, RLS 23→25, build clean | P5 Booking Core başlayabilir |
 
 ---
 

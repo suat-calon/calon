@@ -116,8 +116,10 @@ model Tenant {
   billingPeriods BillingPeriod[]
 
   // Faz 23: Scheduling Engine
-  appointmentHolds AppointmentHold[]
-  staffShifts      StaffShift[]
+  appointmentHolds  AppointmentHold[]
+  staffShifts       StaffShift[]
+  staffWorkingHours StaffWorkingHour[]
+  staffServices     StaffService[]
 
   // Faz 24: Event & Notification Backbone
   eventOutboxes          EventOutbox[]
@@ -306,6 +308,7 @@ enum ResourceType {
 
 model StaffWorkingHour {
   id           String    @id @default(uuid()) @db.Uuid
+  tenantId     String    @db.Uuid
   staffId      String    @db.Uuid
   dayOfWeek    DayOfWeek
   startTime    String // "09:00"
@@ -314,7 +317,8 @@ model StaffWorkingHour {
   breakStart   String? // "12:00"
   breakEnd     String? // "13:00"
 
-  staff StaffProfile @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  tenant Tenant       @relation(fields: [tenantId], references: [id])
+  staff  StaffProfile @relation(fields: [staffId], references: [id], onDelete: Cascade)
 
   @@unique([staffId, dayOfWeek])
   @@map("staff_working_hours")
@@ -391,9 +395,11 @@ model Service {
 }
 
 model StaffService {
+  tenantId  String @db.Uuid
   staffId   String @db.Uuid
   serviceId String @db.Uuid
 
+  tenant  Tenant       @relation(fields: [tenantId], references: [id])
   staff   StaffProfile @relation(fields: [staffId], references: [id], onDelete: Cascade)
   service Service      @relation(fields: [serviceId], references: [id], onDelete: Cascade)
 

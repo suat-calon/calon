@@ -6,7 +6,7 @@
 
 ---
 
-## 1. staff_working_hours / staff_services — tenantId Eksikligi
+## 1. [COZULDU] staff_working_hours / staff_services — tenantId Eksikligi
 
 **Bulgu:**
 `staff_working_hours` ve `staff_services` tablolarinda `tenantId` kolonu fiziksel olarak YOKTUR.
@@ -38,18 +38,20 @@ Bu tablolara sorgu atarken DAIMA `staff_profiles` uzerinden relation ile gidilec
 
 **Tercih edilen:** Secenek A (P5 baslangicinda)
 
+**COZUM (2026-03-15):** Secenek A uygulandiI. Migration `20260314235018_p5_0_schema_gap_fix` ile tenantId eklendi, backfill yapildi, RLS aktif edildi. 23 → 25 policy.
+
 ---
 
 ## 2. RLS Durum Ozeti
 
 | Metrik | Deger |
 |--------|-------|
-| RLS aktif tablo | 23 |
-| FORCE ROW LEVEL SECURITY | 23 (tumu) |
+| RLS aktif tablo | 25 |
+| FORCE ROW LEVEL SECURITY | 25 (tumu) |
 | Policy pattern | `tenant_isolation_*` |
 | Policy target role | `calon_app` |
 | Cast yonu | `current_setting()::uuid` |
-| RLS'siz tenant-scoped tablo | 2 (yukaridaki) |
+| RLS'siz tenant-scoped tablo | 0 |
 | TENANT_SCOPED_MODELS sayisi | 25 (`prisma.service.ts`) |
 
 ---
