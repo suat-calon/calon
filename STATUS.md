@@ -110,6 +110,92 @@ Naming karmaşası tespiti:
 - staff_members migration sonrası hala yoksa → BAŞARISIZ
 - Migration sırası deterministik değilse → BAŞARISIZ
 
+### P2 Bulgular (2026-03-14)
+
+#### 1. Migration Klasörü Tam Liste (24 migration + lock)
+
+| # | Timestamp | Adı | Not |
+|---|---|---|---|
+| 1 | 20260228000000 | `init_steel_core` | Baseline |
+| 2 | 20260301000000 | `audit_log_partitioning` | |
+| 3 | 20260302000000 | `loyalty_idempotency_key` | |
+| 4 | 20260303000000 | `billing_plan_engine` | |
+| 5 | 20260304000001 | `faz14_appointment_consistency` | |
+| 6 | 20260304000002 | `faz14_1_constraint_hotfix` | |
+| 7 | 20260304000003 | `faz15_onboarding` | |
+| 8 | 20260304000004 | `faz17_discovery_rls_policies` | |
+| 9 | 20260304000005 | `faz18_viral_growth_engine` | |
+| 10 | 20260304000006 | `faz18_1_rls_as_code` | |
+| 11 | 20260304000007 | `faz18_5_rls_hotfix` | |
+| 12 | 20260305000001 | `faz19_iyzico_payment_engine` | |
+| 13 | 20260307000001 | `faz21_is_test_booking` | |
+| 14 | 20260308000001 | `faz215_db_ownership_and_extensions` | **DUPLICATE TS** |
+| 15 | 20260308000001 | `faz22_billing_core` | **DUPLICATE TS** |
+| 16 | 20260308000003 | `faz225_billing_ledger` | |
+| 17 | 20260308000004 | `faz23_scheduling_engine` | |
+| 18 | 20260308000006 | `faz24_event_notification_backbone` | |
+| 19 | 20260309000001 | `faz245_outbox_notify_trigger` | |
+| 20 | 20260309000002 | `faz24_hardening_delivery_unique` | **DUPLICATE TS** |
+| 21 | 20260309000002 | `faz25_archive_tables` | **DUPLICATE TS** |
+| 22 | 20260310000001 | `mvp_preflight_hotfixes` | |
+| 23 | 20260310000002 | `mvp_exit_core_constraints` | |
+| 24 | 20260312000001 | `faz5_platform_metrics_snapshot` | |
+
+#### 2. migration_lock.toml
+
+```toml
+provider = "postgresql"
+```
+
+**Durum:** VAR ve doğru. Prisma migration altyapısı bu repo'da aktif.
+
+#### 3. SQL Dosya Kontrolü (son 4 migration)
+
+| Migration | `migration.sql` | Durum |
+|---|---|---|
+| `faz25_archive_tables` | VAR | OK |
+| `mvp_preflight_hotfixes` | VAR | OK |
+| `mvp_exit_core_constraints` | VAR | OK |
+| `faz5_platform_metrics_snapshot` | VAR | OK |
+
+Tüm migration klasörlerinde `migration.sql` mevcut.
+
+#### 4. Startup Migration Check
+
+| Kontrol | Sonuç |
+|---|---|
+| `main.ts` içinde `migrate` referansı | **YOK** |
+| `apps/api/src/` içinde `prisma migrate` referansı | **YOK** |
+| `onModuleInit` / `onApplicationBootstrap` | **YOK** (main.ts ve app.module.ts'de) |
+
+**Sonuç:** Uygulama başlarken migration kontrolü veya otomatik migration çalıştırma mekanizması **YOK**. Migration tamamen manuel süreç.
+
+#### 5. Duplicate Timestamp Sorunu (2 çift)
+
+| Timestamp | Migration A | Migration B | Risk |
+|---|---|---|---|
+| `20260308000001` | `faz215_db_ownership_and_extensions` | `faz22_billing_core` | Sıralama belirsiz (alfabetik: faz215 önce) |
+| `20260309000002` | `faz24_hardening_delivery_unique` | `faz25_archive_tables` | Sıralama belirsiz (alfabetik: faz24 önce) |
+
+**Risk:** Prisma string sıralamasına göre çalıştırır. Aynı timestamp'te bağımlılık varsa hata üretir. Yeni DB'de `prisma migrate deploy` patlarsa bu aday #1.
+
+#### 6. Faz Numaralama Anomalileri
+
+- **Faz 16 yok** — 15 → 17 atlanmış
+- **Faz 20 yok** — 19 → 21 atlanmış
+- **`faz5_platform_metrics_snapshot`** — timestamp `20260312` (en son) ama faz numarası "5". Geriye dönük platform metrik tablosu eklenmiş.
+
+#### 7. Özet Değerlendirme
+
+| Kriter | Durum |
+|---|---|
+| Migration dosyaları tam mı? | **EVET** — 24 migration, hepsi `migration.sql` içeriyor |
+| `migration_lock.toml` var mı? | **EVET** — `provider = "postgresql"` |
+| Timestamp'ler benzersiz mi? | **HAYIR** — 2 duplicate çift var |
+| Sıralama deterministik mi? | **RİSKLİ** — duplicate timestamp'ler nedeniyle |
+| Startup migration check var mı? | **HAYIR** — tamamen manuel |
+| Sıfırdan DB ayağa kalkar mı? | **TEST EDİLMEDİ** — duplicate timestamp riski nedeniyle belirsiz |
+
 ---
 
 ## FAZ-P3 DETAY — Seed / Fixture Disiplini
