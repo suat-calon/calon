@@ -23,7 +23,7 @@ BAŞLANGIÇ: —
 | P0 | Gerçeklik Tespiti / Repo Otopsisi | ⬜ BEKLIYOR | 0/7 |
 | P1 | Canonical Domain Model Sabitleme | ⬜ BEKLIYOR | 0/9 |
 | P2 | Migration Anayasası | 🔄 DEVAM | 3/8 |
-| P3 | Seed / Fixture Disiplini | ⬜ BEKLIYOR | 0/9 |
+| P3 | Seed / Fixture Disiplini | 🔄 DEVAM | 6/9 |
 | P4 | Tenant İzolasyonu ve Auth Gerçeği | ⬜ BEKLIYOR | 0/8 |
 | P5 | Booking Core Tamamlama | ⬜ BEKLIYOR | 0/10 |
 | P6 | Production ENV Contract | ⬜ BEKLIYOR | 0/8 |
@@ -288,12 +288,12 @@ jobs:
 **Hedef çıktı:** `packages/database/prisma/seed.ts` + `test/fixtures/` + `docs/infra/seed-strategy.md`
 
 ### Görevler
-- [ ] Seed sistemi canonical schema ile uyumlu hale getirildi
+- [x] Seed sistemi canonical schema ile uyumlu hale getirildi
 - [ ] Demo / local / test seed ayrımı yapıldı
-- [ ] 1 demo tenant + 1 owner user seed'e eklendi
-- [ ] 2 staff member + 3 service + 5 customer eklendi
-- [ ] 10 appointment + 1 billing + 1 usage period eklendi
-- [ ] Seed idempotent hale getirildi
+- [x] 1 demo tenant + 1 owner user seed'e eklendi
+- [x] 2 staff member + 3 service + 5 customer eklendi
+- [x] 10 appointment + 1 billing + 1 usage period eklendi
+- [x] Seed idempotent hale getirildi (tüm kayıtlar upsert)
 - [ ] `test/fixtures/*.json` dosyaları oluşturuldu
 - [ ] Sıfır DB reset + seed success testi
 - [ ] `docs/infra/seed-strategy.md` yazıldı
@@ -341,6 +341,30 @@ Seed için gerekli 9 model schema'da mevcut:
 - DB ayakta olmalı (docker-compose up)
 - Migration'lar uygulanmış olmalı (`yarn db:migrate`)
 - Seed idempotent olmalı (tekrar çalıştırılabilir — upsert kullan)
+
+#### 5. P3 İnfaz — seed.ts Oluşturuldu (2026-03-14)
+
+**Dosya:** `packages/database/prisma/seed.ts`
+
+| Veri | Adet | Detay |
+|---|---|---|
+| Tenant | 1 | slug: `demo-salon`, plan: BOUTIQUE |
+| User (owner) | 1 | `owner@demo-salon.com`, role: TENANT_OWNER |
+| Location | 1 | Merkez Şube, İstanbul |
+| ServiceCategory | 1 | Saç Bakım |
+| StaffProfile | 2 | Ayşe Kuaför, Mehmet Berber |
+| Service | 3 | Saç Kesimi (150₺), Fön (200₺), Saç Boyama (500₺) |
+| Customer | 5 | Elif, Zeynep, Fatma, Ali, Ahmet |
+| Appointment | 10 | CONFIRMED, ONLINE, gelecek 5 gün, günde 2 |
+| TenantBilling | 1 | TRIAL, MONTHLY, provider: NONE |
+| UsagePeriod | 1 | 100 SMS, 50 AI dahil |
+
+**Özellikler:**
+- Tüm kayıtlar `upsert` ile idempotent
+- Fixed UUID'ler (deterministic, tekrar çalıştırılabilir)
+- Her kayıtta explicit `tenantId`
+- Real Prisma model isimleri (`staffProfile`, `serviceCategory`)
+- TypeScript syntax check: **0 error** (`tsc --noEmit --strict`)
 
 ---
 
@@ -491,6 +515,7 @@ Aktif blocker: —
 |-------|-----|---------|-------|
 | Kurulum | — | CLAUDE.md + STATUS.md oluşturuldu | P0 başlamadı |
 | 2026-03-14 | P2 | CI düzeltildi, duplicate timestamp çözüldü | P2 kalan: baseline test, docs |
+| 2026-03-14 | P3 | seed.ts oluşturuldu (idempotent, 10 model) | P3 kalan: fixtures, DB test, docs |
 
 ---
 
