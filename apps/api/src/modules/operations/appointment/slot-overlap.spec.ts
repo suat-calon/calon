@@ -137,7 +137,8 @@ async function buildModule(opts: BuildOptions = {}) {
   };
 
   const prismaStub = {
-    $transaction:  jest.fn().mockImplementation((fn: (tx: unknown) => Promise<unknown>) => fn(txStub)),
+    $transaction:        jest.fn().mockImplementation((fn: (tx: unknown) => Promise<unknown>) => fn(txStub)),
+    $tenantTransaction:  jest.fn().mockImplementation((fn: (tx: unknown) => Promise<unknown>) => fn(txStub)),
     customer:      { findFirst: jest.fn().mockResolvedValue(null) },
     staffProfile:  { findFirst: jest.fn().mockResolvedValue(null) },
     service:       { findFirst: jest.fn().mockResolvedValue(null) },
@@ -350,7 +351,8 @@ describe('AppointmentService — Test 4: Paralel Yarış (GIST 23P01)', () => {
     const txStub = { $queryRaw: qRaw, appointment: { create: createFn } };
 
     const prismaStub = {
-      $transaction:  jest.fn().mockImplementation((fn: (tx: unknown) => Promise<unknown>) => fn(txStub)),
+      $transaction:        jest.fn().mockImplementation((fn: (tx: unknown) => Promise<unknown>) => fn(txStub)),
+      $tenantTransaction:  jest.fn().mockImplementation((fn: (tx: unknown) => Promise<unknown>) => fn(txStub)),
       customer:      { findFirst: jest.fn().mockResolvedValue(null) },
       staffProfile:  { findFirst: jest.fn().mockResolvedValue(null) },
       service:       { findFirst: jest.fn().mockResolvedValue(null) },
