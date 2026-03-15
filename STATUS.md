@@ -711,6 +711,7 @@ Aktif blocker: —
 | 2026-03-15 | P5-0 | staff_working_hours/staff_services tenantId eklendi, RLS 23→25, build clean | P5 Booking Core başlayabilir |
 | 2026-03-15 | P5-1 | GIST EXCLUDE constraints restore (3 constraint) + appointment_holds RLS, 25→26 policy | P5-2 başlayabilir |
 | 2026-03-15 | P5-2 | Booking flow e2e tests (4/4 PASSED): hold, book, duplicate 409, status update | P5 devam |
+| 2026-03-15 | P5-3 | Double-booking stress test (3/3 PASSED): concurrent holds, duplicate book 409, GIST 23P01 | P5 devam |
 
 ---
 
