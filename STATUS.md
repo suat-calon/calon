@@ -10,8 +10,9 @@
 
 ```
 FAZ: P5 — Booking Core Tamamlama
-DURUM: BAŞLAMADI
+DURUM: ✅ TAMAM
 BAŞLANGIÇ: P4 tamamlandı (2026-03-15)
+BİTİŞ: 2026-03-15 — tüm alt fazlar (P5-0..P5-4) doğrulandı
 ```
 
 ---
@@ -25,7 +26,7 @@ BAŞLANGIÇ: P4 tamamlandı (2026-03-15)
 | P2 | Migration Anayasası | 🔄 DEVAM | 3/8 |
 | P3 | Seed / Fixture Disiplini | 🔄 DEVAM | 7/9 |
 | P4 | Tenant İzolasyonu ve Auth Gerçeği | ✅ TAMAM | 8/8 |
-| P5 | Booking Core Tamamlama | ⬜ BEKLIYOR | 0/10 |
+| P5 | Booking Core Tamamlama | ✅ TAMAM | 10/10 |
 | P6 | Production ENV Contract | ⬜ BEKLIYOR | 0/8 |
 | P7 | Docker Productionization | ⬜ BEKLIYOR | 0/9 |
 | P8 | Routing / DNS / Edge Topology | ⬜ BEKLIYOR | 0/9 |
@@ -712,6 +713,7 @@ Aktif blocker: —
 | 2026-03-15 | P5-1 | GIST EXCLUDE constraints restore (3 constraint) + appointment_holds RLS, 25→26 policy | P5-2 başlayabilir |
 | 2026-03-15 | P5-2 | Booking flow e2e tests (4/4 PASSED): hold, book, duplicate 409, status update | P5 devam |
 | 2026-03-15 | P5-3 | Double-booking stress test (3/3 PASSED): concurrent holds, duplicate book 409, GIST 23P01 | P5 devam |
+| 2026-03-15 | P5-4 | Scheduling cron + availability cache e2e (4/4 PASSED): expire holds, occupied slots, cache invalidation, available slots | P5 TAMAM |
 
 ---
 
