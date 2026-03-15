@@ -599,14 +599,54 @@ Migration squash (`init_clean_baseline`) sırasında kaybolan RLS politikaları 
 **Hedef çıktı:** `.env.example` dosyaları + `docs/infra/env-contract.md`
 
 ### Görevler
-- [ ] API env'leri tanımlandı (DATABASE_URL, REDIS_URL, JWT_SECRET, vb.)
+- [x] API env'leri tanımlandı (DATABASE_URL, REDIS_URL, JWT_SECRET, vb.)
 - [ ] Worker env'leri tanımlandı
 - [ ] Web/Booking env'leri tanımlandı (NEXT_PUBLIC_* vb.)
-- [ ] Hangi env Vercel'de / Natro'da / local'de dokümante edildi
-- [ ] `.env.example` dosyaları güncel
-- [ ] Eksik env ile app fail-fast veriyor testi
+- [x] Hangi env Vercel'de / Natro'da / local'de dokümante edildi
+- [x] `.env.example` dosyaları güncel
+- [x] Eksik env ile app fail-fast veriyor testi
 - [ ] Invalid env ile startup reddediliyor testi
-- [ ] `docs/infra/env-contract.md` yazıldı
+- [x] `docs/infra/env-contract.md` yazıldı
+
+### P6 Bulgular (2026-03-15)
+
+#### 1. env.validation.ts Güncellemesi
+
+12 eksik env var Joi schema'ya eklendi:
+
+| Eklenen | Tip | Default |
+|---------|-----|---------|
+| IYZICO_API_KEY | string min(10) | required |
+| IYZICO_BASE_URL | uri | sandbox URL |
+| IYZICO_CALLBACK_URL | uri | opsiyonel |
+| SITE_URL | uri | localhost:3000 |
+| APP_URL | uri | localhost:3000 |
+| BOOKING_URL | uri | localhost:3001 |
+| API_URL | uri | localhost:4000 |
+| CORS_ORIGIN | string | localhost:3000,3001 |
+| PUBLIC_RATE_TTL_MS | number | 60000 |
+| PUBLIC_HOLDS_LIMIT | number | 10 |
+| PUBLIC_BOOK_LIMIT | number | 5 |
+| ARCHIVE_RETENTION_DAYS | number | 90 |
+
+**PORT default düzeltmesi:** 3000 → 4000 (main.ts ile eşleştirildi)
+
+#### 2. .env.example Yeniden Yazıldı
+
+Tüm env var'lar kategorize edildi, açıklama satırları eklendi, production değerleri belirtildi.
+
+#### 3. docs/infra/env-contract.md Oluşturuldu
+
+- 22 env var tam dokümantasyonu
+- Production deployment checklist
+- Ortam farkları tablosu (dev/staging/prod)
+- Fail-fast davranışı açıklaması
+
+#### 4. Doğrulama
+
+- Build: clean (0 error)
+- Unit tests: 267/267 PASSED
+- E2E test: 4/4 PASSED (yeni validation uyumlu)
 
 ---
 
@@ -714,6 +754,8 @@ Aktif blocker: —
 | 2026-03-15 | P5-2 | Booking flow e2e tests (4/4 PASSED): hold, book, duplicate 409, status update | P5 devam |
 | 2026-03-15 | P5-3 | Double-booking stress test (3/3 PASSED): concurrent holds, duplicate book 409, GIST 23P01 | P5 devam |
 | 2026-03-15 | P5-4 | Scheduling cron + availability cache e2e (4/4 PASSED): expire holds, occupied slots, cache invalidation, available slots | P5 TAMAM |
+| 2026-03-15 | P5-close | Defense-in-Depth v3.0 docs, interceptor changelog, P5 completion summary | P6 başlayabilir |
+| 2026-03-15 | P6 | ENV validation: 12 missing vars added, PORT fix, .env.example rewrite, env-contract.md | P6 devam |
 
 ---
 
