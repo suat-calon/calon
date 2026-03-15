@@ -42,7 +42,7 @@ const TENANT_SCOPED_MODELS: ReadonlySet<string> = new Set([
   'loyaltytransaction', 'consentform',   'refreshtoken',
   'idempotencykey',  'auditlog',         'message',
   'campaigntemplate','customerphoto',    'payment',
-  'referral',
+  'referral',        'appointmenthold',
 ]);
 
 /** Soft-delete filtresi yalnızca bu modellere uygulanır (isDeleted alanı olanlar) */

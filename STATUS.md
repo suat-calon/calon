@@ -709,6 +709,7 @@ Aktif blocker: —
 | 2026-03-15 | P4 | Cross-tenant e2e testleri yazıldı ve geçti (3/3 PASSED) | P4 kalan: docs |
 | 2026-03-15 | P4.5 | Schema gap report + canonical data model + P4 TAMAM (8/8) | P5 başlayabilir |
 | 2026-03-15 | P5-0 | staff_working_hours/staff_services tenantId eklendi, RLS 23→25, build clean | P5 Booking Core başlayabilir |
+| 2026-03-15 | P5-1 | GIST EXCLUDE constraints restore (3 constraint) + appointment_holds RLS, 25→26 policy | P5-2 başlayabilir |
 
 ---
 
