@@ -68,6 +68,13 @@ services:
       JWT_SECRET:        ${JWT_SECRET}
       IYZICO_API_KEY:    ${IYZICO_API_KEY}
       IYZICO_SECRET_KEY: ${IYZICO_SECRET_KEY}
+      IYZICO_BASE_URL:   ${IYZICO_BASE_URL:-https://sandbox-api.iyzipay.com}
+      IYZICO_CALLBACK_URL: ${IYZICO_CALLBACK_URL:-}
+      SITE_URL:    ${SITE_URL:-http://localhost:3000}
+      APP_URL:     ${APP_URL:-http://localhost:3000}
+      BOOKING_URL: ${BOOKING_URL:-http://localhost:3001}
+      API_URL:     ${API_URL:-http://localhost:4000}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000,http://localhost:3001}
     ports:
       - "4000:4000"
     depends_on:
@@ -100,6 +107,13 @@ services:
       JWT_SECRET:        ${JWT_SECRET}
       IYZICO_API_KEY:    ${IYZICO_API_KEY}
       IYZICO_SECRET_KEY: ${IYZICO_SECRET_KEY}
+      IYZICO_BASE_URL:   ${IYZICO_BASE_URL:-https://sandbox-api.iyzipay.com}
+      IYZICO_CALLBACK_URL: ${IYZICO_CALLBACK_URL:-}
+      SITE_URL:    ${SITE_URL:-http://localhost:3000}
+      APP_URL:     ${APP_URL:-http://localhost:3000}
+      BOOKING_URL: ${BOOKING_URL:-http://localhost:3001}
+      API_URL:     ${API_URL:-http://localhost:4000}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000,http://localhost:3001}
     depends_on:
       postgres:
         condition: service_healthy

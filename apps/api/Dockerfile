@@ -6,7 +6,7 @@
 # =============================================================================
 
 # ─── STAGE 1: builder ─────────────────────────────────────────────────────────
-FROM node:lts-alpine AS builder
+FROM node:20-alpine3.19 AS builder
 
 WORKDIR /app
 
@@ -32,7 +32,7 @@ RUN yarn workspace @calon/api build
 
 
 # ─── STAGE 2: runner ──────────────────────────────────────────────────────────
-FROM node:lts-alpine AS runner
+FROM node:20-alpine3.19 AS runner
 
 WORKDIR /app
 

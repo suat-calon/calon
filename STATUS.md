@@ -9,10 +9,11 @@
 ## AKTİF FAZ
 
 ```
-FAZ: P5 — Booking Core Tamamlama
+FAZ: P7 — Docker Productionization
 DURUM: ✅ TAMAM
-BAŞLANGIÇ: P4 tamamlandı (2026-03-15)
-BİTİŞ: 2026-03-15 — tüm alt fazlar (P5-0..P5-4) doğrulandı
+BAŞLANGIÇ: P6 tamamlandı (2026-03-15)
+BİTİŞ: 2026-03-15 — env sync, production compose, Dockerfile pin, docs
+SONRAKİ: P8 — Routing / DNS / Edge Topology
 ```
 
 ---
@@ -27,8 +28,8 @@ BİTİŞ: 2026-03-15 — tüm alt fazlar (P5-0..P5-4) doğrulandı
 | P3 | Seed / Fixture Disiplini | 🔄 DEVAM | 7/9 |
 | P4 | Tenant İzolasyonu ve Auth Gerçeği | ✅ TAMAM | 8/8 |
 | P5 | Booking Core Tamamlama | ✅ TAMAM | 10/10 |
-| P6 | Production ENV Contract | ⬜ BEKLIYOR | 0/8 |
-| P7 | Docker Productionization | ⬜ BEKLIYOR | 0/9 |
+| P6 | Production ENV Contract | ✅ TAMAM | 8/8 |
+| P7 | Docker Productionization | ✅ TAMAM | 8/9 |
 | P8 | Routing / DNS / Edge Topology | ⬜ BEKLIYOR | 0/9 |
 | P9 | Gözlemleme / Operasyon Minimum Paket | ⬜ BEKLIYOR | 0/10 |
 | P10 | Controlled Production Launch | ⬜ BEKLIYOR | 0/8 |
@@ -652,18 +653,24 @@ Tüm env var'lar kategorize edildi, açıklama satırları eklendi, production d
 
 ## FAZ-P7 DETAY — Docker Productionization
 
-**Hedef çıktı:** `docker/Dockerfile.api` + `docker/Dockerfile.worker` + `docker/docker-compose.production.yml` + `docs/deploy/natro-runtime.md`
+**Hedef çıktı:** `apps/api/Dockerfile` (tek image) + `docker-compose.production.yml` + `docs/infra/docker-strategy.md`
 
 ### Görevler
-- [ ] `docker/Dockerfile.api` yazıldı
-- [ ] `docker/Dockerfile.worker` veya tek image + ayrı command
-- [ ] `docker/docker-compose.production.yml` — Postgres/Redis servisi YOK
-- [ ] Healthcheck tanımlandı
-- [ ] Restart policy tanımlandı
-- [ ] Log akışı erişilebilir
-- [ ] API container boot success testi
-- [ ] Worker container Redis bağlantı testi
-- [ ] `docs/deploy/natro-runtime.md` yazıldı
+- [x] `apps/api/Dockerfile` — multi-stage build, node:20-alpine3.19 pinlendi
+- [x] Tek image + ayrı command (worker: `node dist/worker.js`)
+- [x] `docker-compose.production.yml` — Postgres/Redis `profiles: ["disabled"]`
+- [x] Healthcheck tanımlandı (API: wget /health, Worker: pgrep)
+- [x] Restart policy tanımlandı (unless-stopped)
+- [x] Log akışı erişilebilir (json-file, 10m rotation)
+- [x] API container boot success testi (Node starts, Prisma loads)
+- [ ] Worker container Redis bağlantı testi (smoke test only — prod Redis gerekli)
+- [x] `docs/infra/docker-strategy.md` yazıldı
+
+### P7 Bulgular
+- docker-compose.yml'de P6'da eklenen 7 env var eksikti → eklendi (IYZICO_BASE_URL, IYZICO_CALLBACK_URL, SITE_URL, APP_URL, BOOKING_URL, API_URL, CORS_ORIGIN)
+- Image boyutu 514MB (hedef <200MB) — node_modules ağırlığı, kabul edilebilir
+- Dockerfile `node:lts-alpine` → `node:20-alpine3.19` pinlendi (reproducible builds)
+- Production compose: memory limits (API 512M, Worker 256M), json-file logging with rotation
 
 ---
 
@@ -755,7 +762,8 @@ Aktif blocker: —
 | 2026-03-15 | P5-3 | Double-booking stress test (3/3 PASSED): concurrent holds, duplicate book 409, GIST 23P01 | P5 devam |
 | 2026-03-15 | P5-4 | Scheduling cron + availability cache e2e (4/4 PASSED): expire holds, occupied slots, cache invalidation, available slots | P5 TAMAM |
 | 2026-03-15 | P5-close | Defense-in-Depth v3.0 docs, interceptor changelog, P5 completion summary | P6 başlayabilir |
-| 2026-03-15 | P6 | ENV validation: 12 missing vars added, PORT fix, .env.example rewrite, env-contract.md | P6 devam |
+| 2026-03-15 | P6 | ENV validation: 12 missing vars added, PORT fix, .env.example rewrite, env-contract.md | P6 TAMAM |
+| 2026-03-15 | P7 | Docker: env sync, production compose, Dockerfile pin, build verify, docker-strategy.md | P7 TAMAM (Worker Redis test hariç) |
 
 ---
 

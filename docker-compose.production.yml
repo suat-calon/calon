@@ -1,0 +1,51 @@
+# =============================================================================
+# CALON — PRODUCTION OVERRIDE
+# =============================================================================
+#
+# Kullanim:
+#   docker-compose -f docker-compose.yml -f docker-compose.production.yml up -d
+#
+# Bu dosya docker-compose.yml'i override eder:
+#   - Postgres ve Redis servisleri CIKARILIR (Neon + Cloud Redis)
+#   - API ve Worker icin resource limitleri ve logging eklenir
+#   - depends_on kaldirilir (external DB/Redis)
+#
+# KIRMIZI CIZGI: Production compose'a Postgres veya Redis servisi ekleme YASAK
+# =============================================================================
+
+services:
+
+  # Postgres ve Redis'i devre disi birak — production'da external
+  postgres:
+    profiles: ["disabled"]
+
+  redis:
+    profiles: ["disabled"]
+
+  # ---------------------------------------------------------------------------
+  api:
+    depends_on: {}
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ---------------------------------------------------------------------------
+  worker:
+    depends_on: {}
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
