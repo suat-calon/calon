@@ -284,7 +284,7 @@ export class AppointmentService {
       // ── Adım 2: Transaction: overlap check → INSERT ────────────────────────
       appointment = tx
         ? await executeInTx(tx)                        // caller'ın tx'ini kullan
-        : await this.prisma.$transaction(executeInTx); // kendi tx'ini aç
+        : await this.prisma.$tenantTransaction(executeInTx); // kendi tx'ini aç
     } catch (err: unknown) {
       if (isGistExclusionViolation(err)) {
         throw new ConflictException(
@@ -404,7 +404,7 @@ export class AppointmentService {
 
     try {
       // ── Adım 3: Transaction ─────────────────────────────────────────────
-      updated = await this.prisma.$transaction(async (tx) => {
+      updated = await this.prisma.$tenantTransaction(async (tx) => {
         // 3a. Row lock — başka transaction aynı satırı değiştiremesin
         await tx.$queryRaw`
           SELECT id FROM appointments
@@ -577,7 +577,7 @@ export class AppointmentService {
     }
 
     // ── 3. Atomik güncelleme + AuditLog + Ledger (COMPLETED hook) ────────────
-    const updated = await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const updated = await this.prisma.$tenantTransaction(async (tx: Prisma.TransactionClient) => {
       const appt = await tx.appointment.update({
         where: { id },
         data: {

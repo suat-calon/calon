@@ -12,12 +12,10 @@
  */
 
 // ── Ortam degiskenleri ─────────────────────────────────────────────────────
-// Superuser baglantisi: RLS bypass. RLS P4 e2e testlerinde dogrulanmis.
-// calon_app kullanicisiyla Promise.all + $extends interceptor race condition var
-// (P5 backlog: __rlsConfigured flag concurrent query uyumsuzlugu).
+// P5-2.1: calon_app kullanicisi — RLS ENFORCED. Race condition fix dogrulamasi.
 const TEST_DB_URL =
   process.env['TEST_DATABASE_URL'] ??
-  'postgresql://postgres:postgres_secret@localhost:5432/calon_dev';
+  'postgresql://calon_app:calon_app_dev_secret@localhost:5432/calon_dev';
 
 process.env['DATABASE_URL']      = TEST_DB_URL;
 process.env['JWT_SECRET']        = 'booking-flow-test-secret-32chars!';
@@ -26,6 +24,7 @@ process.env['REDIS_HOST']        = 'localhost';
 process.env['REDIS_PORT']        = '6379';
 process.env['REDIS_PASSWORD']    = '';
 process.env['IYZICO_SECRET_KEY'] = 'test-iyzico-secret-key-min10chars';
+process.env['IYZICO_API_KEY']    = 'test-iyzico-api-key-min10chars';
 
 import { Test, TestingModule }              from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';

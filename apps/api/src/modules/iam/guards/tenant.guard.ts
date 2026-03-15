@@ -99,18 +99,21 @@ export class TenantGuard implements CanActivate {
     request.userRole   = payload.role;
     request.tenantPlan = payload.plan ?? 'SOLO'; // Plan gating için
 
-    // AsyncLocalStorage'a yaz — Prisma middleware buradan okuyacak
+    // AsyncLocalStorage'a yaz — Prisma interceptor buradan okuyacak
     // SUPER_ADMIN için tenantId olmayabilir; context yine de çalışır
+    //
+    // enterWith(): Mevcut async execution context'e store'u bağlar.
+    // run() + callback pattern'ı NestJS guard pipeline'ında ÇALIŞMAZ:
+    //   run(store, () => resolve(true)) → callback biter → context kaybolur →
+    //   controller/service'te getStore() = undefined → RLS patlar.
+    // enterWith() ise callback gerektirmez — store, request'in tüm async
+    // zinciri boyunca (controller → service → Prisma) aktif kalır.
     const tenantId = payload.tenantId ?? 'super_admin';
-    return new Promise<boolean>((resolve) => {
-      tenantContext.run(
-        {
-          tenantId,
-          userId:   payload.sub,
-          userRole: payload.role,
-        },
-        () => resolve(true),
-      );
+    tenantContext.enterWith({
+      tenantId,
+      userId:   payload.sub,
+      userRole: payload.role,
     });
+    return Promise.resolve(true);
   }
 }

@@ -473,7 +473,7 @@ export class PublicService {
         // holdId: ACTIVE → CONSUMED, ardından randevu INSERT (GIST son güvence).
         // Redis hold key commit SONRASI silinir (tx dışında — atomik değil ama best-effort).
         try {
-          appointment = await this.prisma.$transaction(async (tx) => {
+          appointment = await this.prisma.$tenantTransaction(async (tx) => {
             const consumed = await this.holdService.consumeHold(
               dto.holdId!,
               dto.tenantId,
