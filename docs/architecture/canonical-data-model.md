@@ -1,6 +1,6 @@
 # Canonical Data Model — Calon OS
 
-**Son guncelleme:** 2026-03-15 (P5-1 sonrasi)
+**Son guncelleme:** 2026-03-15 (P5-4 sonrasi — P5 TAMAM)
 
 ---
 
@@ -62,13 +62,35 @@ Migration squash sirasinda kaybolan GIST constraint'ler `20260315004554_p5_1_gis
 
 ---
 
-## Defense-in-Depth Katmanlari
+## Defense-in-Depth v3.0 (P5-2.1 sonrasi)
 
-| Katman | Mekanizma | Konum |
-|--------|-----------|-------|
-| 1 | Prisma `$extends` interceptor | `prisma.service.ts` — uygulama seviyesi WHERE enjeksiyonu |
-| 2 | PostgreSQL RLS | `set_config('app.tenant_id', ...)` — DB seviyesi |
-| 3 | TenantGuard | `tenant.guard.ts` — JWT → AsyncLocalStorage |
+**Katman 1 — Prisma Interceptor (filter-only):**
+- `$extends` query interceptor (`prisma.service.ts`)
+- TENANT_SCOPED_MODELS (26 model) icin otomatik WHERE tenantId
+- SOFT_DELETE_MODELS icin otomatik WHERE isDeleted: false
+- $transaction/set_config YOK — race condition riski sifir
+- findUnique HARIC (Prisma kisitlamasi)
+
+**Katman 2 — PostgreSQL RLS (conditional):**
+- 26 tablo ENABLE + FORCE ROW LEVEL SECURITY
+- Policy pattern: NULLIF passthrough
+  * set_config cagrilmamissa → tum satirlar gorunur (interceptor filtreler)
+  * set_config cagrilmissa → strict tenant enforcement
+- `$tenantTransaction` helper: interactive tx + set_config
+  * `appointment.service.ts`: 3 kullanim
+  * `public.service.ts`: 1 kullanim
+
+**Katman 3 — GIST EXCLUDE Constraints:**
+- `appt_staff_overlap_excl` (appointments — staff cift rezervasyon)
+- `appt_room_overlap_excl` (appointments — oda cift rezervasyon)
+- `hold_staff_overlap_excl` (appointment_holds — hold cakisma)
+- tsrange half-open interval [start, end)
+- btree_gist extension
+
+**Katman 4 — TenantGuard (request level):**
+- JWT → AsyncLocalStorage (enterWith)
+- tenantId SADECE dogrulanmis token'dan
+- @Public() bypass → runInContext()
 
 **Akis:**
 ```
@@ -76,9 +98,16 @@ HTTP Request
   → TenantGuard (JWT dogrulama, tenantId cikarma)
     → tenantContext.run() (AsyncLocalStorage'a yazma)
       → Prisma interceptor (WHERE tenantId = ? enjeksiyonu)
-        → $transaction([set_config, query]) (RLS aktivasyonu)
+        → [Opsiyonel] $tenantTransaction (set_config + interactive tx)
           → PostgreSQL RLS policy (DB seviyesi filtre)
+            → GIST EXCLUDE constraint (slot cakisma hard guard)
 ```
+
+### Test Kapsami (P5)
+
+- 18 e2e test (booking-flow 4, double-booking 3, scheduling 4, tenant-isolation 3, concurrency onceden mevcut)
+- 267 unit test
+- Tumu calon_app kullanicisi ile (RLS enforced)
 
 ---
 

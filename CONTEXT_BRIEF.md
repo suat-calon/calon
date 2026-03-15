@@ -1,6 +1,6 @@
 # CALON — CONTEXT BRIEF
 > Yeni sohbet açıldığında bu dosyayı ilk mesaj olarak yapıştır.
-> Son güncelleme: P5 aktif (P5-3 sıradaki), P0-P4 + P5-0/1/2/2.1 tamamlandı.
+> Son güncelleme: P5 TAMAM (P5-0..P5-4 tamamlandı), P6 sırada.
 
 ---
 
@@ -65,15 +65,16 @@ docs/security/tenant-isolation.md → P4 güvenlik dokümantasyonu
 **CI ilk kez yeşil:** commit `745ab17`
 
 ### 4b. Tenant İzolasyonu — Üçlü Katman (Triple-Layer)
-**Katman 1 — Prisma interceptor v3.0:**
-- 25 model TENANT_SCOPED_MODELS (payments dahil)
-- findUnique artık da tenantId filtresi taşıyor (v3.0 ile eklendi)
-- $allOperations interceptor
+**Katman 1 — Prisma interceptor v3.0 (filter-only):**
+- 26 model TENANT_SCOPED_MODELS (appointmenthold dahil)
+- SADECE WHERE filtre — $transaction/set_config YOK (race condition riski sıfır)
+- findUnique HARİÇ (Prisma kısıtlaması)
+- SOFT_DELETE_MODELS için otomatik isDeleted: false
 
-**Katman 2 — PostgreSQL RLS (P4'te restore edildi):**
-- 25 tablo ENABLE + FORCE ROW LEVEL SECURITY
-- `calon_app` rolüne policy: `"tenantId" = current_setting('app.tenant_id', true)::uuid`
-- appointment_holds da RLS kapsamında
+**Katman 2 — PostgreSQL RLS (NULLIF passthrough):**
+- 26 tablo ENABLE + FORCE ROW LEVEL SECURITY
+- Policy pattern: NULLIF passthrough (set_config yoksa crash etmez, interceptor filtreler)
+- `$tenantTransaction` helper: interactive tx + set_config (4 kullanım)
 - Cast yönü: `::uuid` (sütun değil, current_setting cast ediliyor — index korunuyor)
 
 **Katman 3 — PostgreSQL GIST EXCLUDE (P5-1'de restore edildi):**
@@ -129,53 +130,33 @@ docs/security/tenant-isolation.md → P4 güvenlik dokümantasyonu
 | P2 | Migration Anayasası | ✅ TAMAM | Clean baseline, CI yeşil |
 | P3 | Seed Disiplini | ✅ TAMAM | Idempotent seed, sıfır DB doğrulandı |
 | P4 | Tenant İzolasyonu | ✅ TAMAM | RLS restore + docs yazıldı |
-| P5 | Booking Core | 🔄 AKTİF | P5-3 sırada |
-| P6 | Production ENV Contract | ⬜ | |
+| P5 | Booking Core | ✅ TAMAM | 18 e2e test, GIST+RLS+interceptor v3.0 |
+| P6 | Production ENV Contract | ⬜ SIRADA | |
 | P7 | Docker Productionization | ⬜ | |
 | P8 | Routing / DNS / Edge | ⬜ | |
 | P9 | Gözlemleme / Observability | ⬜ | |
 | P10 | Controlled Launch | ⬜ | |
 
-### P5 Alt Faz Detayı
+### P5 Alt Faz Detayı (TAMAM)
 | Alt Faz | İş | Durum | CI |
 |---------|---|-------|-----|
 | P5-0 | Schema gap fix (tenantId ekleme) | ✅ | ✅ |
 | P5-1 | GIST EXCLUDE + appointment_holds RLS | ✅ | ✅ #17 |
 | P5-2 | Booking flow e2e (4/4 test) | ✅ | ✅ #18 |
 | P5-2.1 | RLS race condition fix + interceptor v3.0 | ✅ | ✅ #20 |
-| P5-3 | Double-booking stress test (GIST doğrulama) | ⬜ | |
-| P5-4 | Scheduling cron + availability cache e2e | ⬜ | |
+| P5-3 | Double-booking stress test (3/3 PASSED) | ✅ | ✅ #22 |
+| P5-4 | Scheduling cron + availability cache (4/4 PASSED) | ✅ | ✅ |
 
-### P5-3 İçin Hazır Talimat (Claude Code'a ver)
-```
-C:\dev\calon klasöründe çalış. CLAUDE.md oku.
+### P5 Tamamlanma Özeti
 
-P5-3 — DOUBLE-BOOKING STRESS TEST
-
-ADIM 0 — Ön kontrol:
-cat apps/api/test/appointment-concurrency.e2e-spec.ts | head -50
-docker exec calon_postgres psql -U postgres -d calon_dev -c "
-SELECT conname FROM pg_constraint
-WHERE conname IN (
-  'appt_staff_overlap_excl',
-  'appt_room_overlap_excl', 
-  'hold_staff_overlap_excl'
-);"
-
-ADIM 1 — Test dosyası oluştur:
-apps/api/test/double-booking-stress.e2e-spec.ts
-
-3 senaryo:
-1. 5 eşzamanlı hold isteği → 1 başarılı, 4 × 409
-2. Dolu slota book isteği → 409
-3. Doğrudan DB insert → GIST violation (23P01)
-
-ADIM 2 — Çalıştır:
-yarn workspace @calon/api jest --config jest-e2e.config.js \
-  --testPathPattern=double-booking-stress --forceExit
-
-ADIM 3 — STATUS.md güncelle, commit + push
-```
+- **Interceptor v3.0:** filter-only, race condition yapısal olarak imkansız
+- **RLS:** 26 tablo NULLIF passthrough, $tenantTransaction 4 kullanım
+- **GIST:** 3 EXCLUDE constraint (staff overlap, room overlap, hold overlap)
+- **Triple-Layer Slot Security:** Redis NX → App overlap check → GIST hard guard
+- **Hold FSM:** ACTIVE → CONSUMED/RELEASED/EXPIRED, 10dk TTL, Lua CAS unlock
+- **Availability Cache:** 60s Redis TTL, invalidation on create/cancel/reschedule
+- **E2E testler:** 18 test (booking-flow 4, double-booking 3, scheduling 4, tenant-isolation 3, concurrency mevcut)
+- **Sıradaki:** P6 — Production ENV Contract
 
 ---
 
@@ -183,7 +164,7 @@ ADIM 3 — STATUS.md güncelle, commit + push
 
 **CI pipeline:** `yarn install` → `prisma generate` → `yarn build` → `yarn test`  
 **PostgreSQL servisi:** CI'a eklendi  
-**Son başarılı CI:** #20 — 267/267 test PASS  
+**Son başarılı CI:** #22 — 267/267 unit + 18 e2e test PASS  
 **Bilinen not:** Turbo cache local'de clean build'i gizleyebilir, CI --force ile kontrol eder  
 **Dual queue:** `bull` (eski) + `bullmq` (yeni) — temizlik P6'da
 
@@ -231,6 +212,8 @@ tracker.html:     Local takip arayüzü (C:\dev\calon\tracker.html, çift tıkla
 | P5-1 commit | GIST EXCLUDE constraints restore (btree_gist) |
 | P5-2 commit | Booking flow e2e 4/4 |
 | `3e0344a` | Interceptor v3.0 + worktree temizliği |
+| `ef137cf` | P5-3: double-booking stress test 3/3 |
+| `0d89ee8` | P5-4: scheduling cron + availability 4/4 — P5 TAMAM |
 
 ---
 
