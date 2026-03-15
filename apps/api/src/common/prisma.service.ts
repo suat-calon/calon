@@ -2,21 +2,20 @@
  * CALON PRISMA SERVICE — ÇİFT KATMANLI İZOLASYON KÖPRÜSÜ
  * ──────────────────────────────────────────────────────────────────────────────
  * Prisma v6 $extends / query interceptor implementasyonu.
- * (Eski $use middleware tamamen kaldırıldı — deprecated, Prisma v7'de mevcut değil)
  *
- * İki kritik görev:
- *   1. Uygulama katmanı filtresi: toplu sorgularda WHERE tenantId = <current>
- *   2. PostgreSQL RLS köprüsü: $transaction([set_config, query]) ile
- *      aynı DB bağlantısında SET CONFIG + sorgu garantisi sağlar.
+ * Katman 1 — Uygulama filtresi (interceptor):
+ *   Toplu sorgulara WHERE tenantId = <current> enjekte eder.
+ *   Interceptor $transaction/set_config YAPMAZ — saf filtre.
  *
- * Tasarım kararları (v2.0 — $extends):
+ * Katman 2 — PostgreSQL RLS ($tenantTransaction):
+ *   Interactive $transaction içinde set_config('app.tenant_id', ...) çağırır.
+ *   RLS policy'leri NULLIF ile boş string'e toleranslıdır (crash yerine 0 satır).
+ *
+ * Tasarım kararları (v3.0 — filter-only interceptor):
  *   - $extends.query.$allModels.$allOperations: tüm model+operasyonları yakalar.
- *   - $transaction([SET_CONFIG, query(processedArgs)]): sequential batch →
- *     her iki işlem AYNI bağlantıda çalışır → bağlantı havuzu tenant sızıntısı yok.
- *   - __rlsConfigured flag (TenantStore): iç içe interceptor tetiklendiğinde
- *     çift sarmalama engellenir (SET CONFIG $transaction → query → interceptor).
- *   - findUnique hâlâ HARIÇ: unique where'e ek alan eklenmez.
- *     (ADIM 2: findFirst + tenantId servis katmanı sorumluluğundadır)
+ *   - Interceptor SADECE WHERE/data filtresi uygular, doğrudan query() döner.
+ *   - $tenantTransaction: interactive tx + set_config → RLS uyumlu.
+ *   - findUnique HARIÇ: unique where'e ek alan eklenmez.
  *   - Object.assign(this, extended): NestJS DI referansını korur.
  * ──────────────────────────────────────────────────────────────────────────────
  */
@@ -27,7 +26,7 @@ import {
   OnModuleDestroy,
   Logger,
 } from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
+import { Prisma, PrismaClient } from '@prisma/client';
 import { tenantContext } from './tenant.context';
 
 // ─── Sabitler (Set → O(1) lookup) ────────────────────────────────────────────
@@ -106,7 +105,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
           async $allOperations({ model, operation, args, query }: any) {
             const store = tenantContext.getStore();
 
-            // ── 1. Tenant context yok → filtre uygulama (health, seed, @Public) ──
+            // Tenant context yok → filtre uygulama (health, seed, @Public)
             if (!store?.tenantId) {
               return query(args);
             }
@@ -114,35 +113,10 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
             const { tenantId } = store;
             const modelLower   = (model as string).toLowerCase();
 
-            // ── 2. İç içe çağrı koruması ──────────────────────────────────────
-            // SET CONFIG $transaction → query(processedArgs) → interceptor yeniden
-            // tetiklenir. Flag set ise: yalnızca filtre uygula, sarmalama yapma.
-            if (store.__rlsConfigured) {
-              return query(self.applyFilters(args, operation, modelLower, tenantId));
-            }
-
-            // ── 3. Filtre enjeksiyonu ─────────────────────────────────────────
+            // Filtre enjeksiyonu → doğrudan query() çağır
+            // set_config/RLS sorumluluğu $tenantTransaction'dadır.
             const processedArgs = self.applyFilters(args, operation, modelLower, tenantId);
-
-            // ── 4. Aynı bağlantıda SET CONFIG + sorgu (batch $transaction) ────
-            // $transaction dizisi: PostgreSQL aynı bağlantıyı kullanır →
-            // set_config transaction-local → başka tenant bağlamı sızmaz.
-            store.__rlsConfigured = true;
-            try {
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              const [, result] = await (self as any).$transaction([
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                (self as any).$executeRawUnsafe(
-                  `SELECT set_config('app.tenant_id', $1, true)`,
-                  tenantId,
-                ),
-                query(processedArgs),
-              ]);
-              return result;
-            } finally {
-              // Bayrağı her durumda temizle (hata dahil)
-              store.__rlsConfigured = false;
-            }
+            return query(processedArgs);
           },
         },
       },
@@ -150,6 +124,41 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
 
     // NestJS DI bağımlılık referansını koruyarak extension'ı uygula
     Object.assign(this, extended);
+  }
+
+  // ─── Interactive $transaction + RLS köprüsü ────────────────────────────────
+
+  /**
+   * Interactive $transaction içinde RLS set_config garantisi sağlar.
+   *
+   * Interceptor artık set_config YAPMAZ — sadece WHERE filtresi uygular.
+   * RLS gerektiren interactive transaction'lar bu helper ile sarılmalıdır:
+   *   1. tx.$executeRawUnsafe(set_config) → aynı connection'da tenant_id
+   *   2. Callback içindeki tüm sorgular (model + raw) RLS ile uyumlu çalışır
+   *
+   * RLS policy'leri NULLIF ile toleranslı: set_config yapılmamış sorgularda
+   * boş string → NULL → satır dönmez (crash yerine).
+   */
+  async $tenantTransaction<T>(
+    fn: (tx: Prisma.TransactionClient) => Promise<T>,
+    options?: { maxWait?: number; timeout?: number; isolationLevel?: Prisma.TransactionIsolationLevel },
+  ): Promise<T> {
+    const store = tenantContext.getStore();
+    const tenantId = store?.tenantId;
+
+    // Tenant context yoksa → normal $transaction (seed, migration, vb.)
+    if (!tenantId) {
+      return this.$transaction(fn, options);
+    }
+
+    return this.$transaction(async (tx) => {
+      // Aynı connection'da set_config → RLS policy tenant_id'yi görür
+      await tx.$executeRawUnsafe(
+        `SELECT set_config('app.tenant_id', $1, true)`,
+        tenantId,
+      );
+      return fn(tx);
+    }, options);
   }
 
   // ─── Filtre enjeksiyon yardımcıları ──────────────────────────────────────

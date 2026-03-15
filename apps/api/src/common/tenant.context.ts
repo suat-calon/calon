@@ -18,12 +18,6 @@ export interface TenantStore {
   tenantId: string;
   userId:   string;
   userRole: string;
-  /**
-   * PrismaService $extends interceptor iç bayrağı.
-   * SET CONFIG + query $transaction sarmalının tekrar tetiklenmesini önler.
-   * Kullanıcı kodu bu alanı okumamalı / yazmamalıdır.
-   */
-  __rlsConfigured?: boolean;
 }
 
 /** Singleton — tüm uygulama bu instance'ı paylaşır */

@@ -24,6 +24,8 @@ process.env['REDIS_HOST']     = 'localhost';
 process.env['REDIS_PORT']     = '6379';
 process.env['REDIS_PASSWORD']    = '';
 process.env['IYZICO_SECRET_KEY'] = 'test-iyzico-secret-key-min10chars';
+process.env['IYZICO_API_KEY']    = 'test-iyzico-api-key-min10chars';
+process.env['IYZICO_SECRET_KEY'] = 'test-iyzico-secret-key-min10chars';
 
 import { Test, TestingModule }              from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
