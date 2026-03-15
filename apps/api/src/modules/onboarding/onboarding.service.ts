@@ -242,6 +242,7 @@ export class OnboardingService {
             },
             update: { startTime: wh.startTime, endTime: wh.endTime },
             create: {
+              tenantId,
               staffId,
               dayOfWeek:   DAY_MAP[wh.dayOfWeek],
               startTime:   wh.startTime,
@@ -259,7 +260,7 @@ export class OnboardingService {
           await tx.staffService.upsert({
             where:  { staffId_serviceId: { staffId, serviceId } },
             update: {},
-            create: { staffId, serviceId },
+            create: { tenantId, staffId, serviceId },
           });
         }
       },

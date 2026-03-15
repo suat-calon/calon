@@ -135,6 +135,7 @@ export class StaffService {
             staffId_dayOfWeek: { staffId, dayOfWeek: entry.dayOfWeek },
           },
           create: {
+            tenantId,
             staffId,
             dayOfWeek:    entry.dayOfWeek,
             isWorkingDay: entry.isWorkingDay,
