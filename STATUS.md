@@ -9,11 +9,11 @@
 ## AKTİF FAZ
 
 ```
-FAZ: P7 — Docker Productionization
+FAZ: P9 — Observability Minimum
 DURUM: ✅ TAMAM
-BAŞLANGIÇ: P6 tamamlandı (2026-03-15)
-BİTİŞ: 2026-03-15 — env sync, production compose, Dockerfile pin, docs
-SONRAKİ: P8 — Routing / DNS / Edge Topology
+BAŞLANGIÇ: P8 tamamlandı (2026-03-15)
+BİTİŞ: 2026-03-16 — /ready + /version + Dockerfile build args + docs
+SONRAKİ: P10 — Controlled Production Launch
 ```
 
 ---
@@ -30,8 +30,8 @@ SONRAKİ: P8 — Routing / DNS / Edge Topology
 | P5 | Booking Core Tamamlama | ✅ TAMAM | 10/10 |
 | P6 | Production ENV Contract | ✅ TAMAM | 8/8 |
 | P7 | Docker Productionization | ✅ TAMAM | 8/9 |
-| P8 | Routing / DNS / Edge Topology | ⬜ BEKLIYOR | 0/9 |
-| P9 | Gözlemleme / Operasyon Minimum Paket | ⬜ BEKLIYOR | 0/10 |
+| P8 | Routing / DNS / Edge Topology | ✅ TAMAM | 9/9 |
+| P9 | Gözlemleme / Operasyon Minimum Paket | ✅ TAMAM | 10/10 |
 | P10 | Controlled Production Launch | ⬜ BEKLIYOR | 0/8 |
 
 **Toplam ilerleme: 0/95 görev**
@@ -764,6 +764,8 @@ Aktif blocker: —
 | 2026-03-15 | P5-close | Defense-in-Depth v3.0 docs, interceptor changelog, P5 completion summary | P6 başlayabilir |
 | 2026-03-15 | P6 | ENV validation: 12 missing vars added, PORT fix, .env.example rewrite, env-contract.md | P6 TAMAM |
 | 2026-03-15 | P7 | Docker: env sync, production compose, Dockerfile pin, build verify, docker-strategy.md | P7 TAMAM (Worker Redis test hariç) |
+| 2026-03-16 | P8 | Oracle Cloud deploy, Nginx reverse proxy, Cloudflare DNS, Vercel web+booking | P8 TAMAM (DNS propagation devam) |
+| 2026-03-16 | P9 | /health/ready (DB+Redis 200/503), /health/version, Dockerfile build args, env validation, 4/4 e2e PASSED, docs | P9 TAMAM |
 
 ---
 

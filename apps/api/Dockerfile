@@ -34,9 +34,17 @@ RUN yarn workspace @calon/api build
 # ─── STAGE 2: runner ──────────────────────────────────────────────────────────
 FROM node:20-alpine3.19 AS runner
 
+# Build-time metadata — injected by CI pipeline:
+#   docker build --build-arg GIT_COMMIT=$(git rev-parse --short HEAD) \
+#                --build-arg BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ) ...
+ARG GIT_COMMIT=unknown
+ARG BUILD_TIME=unknown
+
 WORKDIR /app
 
 ENV NODE_ENV=production
+ENV GIT_COMMIT=$GIT_COMMIT
+ENV BUILD_TIME=$BUILD_TIME
 
 # Create dedicated non-root system user
 RUN addgroup -S calon && adduser -S calon -G calon

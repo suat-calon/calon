@@ -101,4 +101,11 @@ export const envValidationSchema = Joi.object({
   ARCHIVE_RETENTION_DAYS: Joi.number()
     .integer()
     .default(90),
+
+  // ── Build metadata (Docker ARG → ENV) ─────────────────────────────────────
+  GIT_COMMIT: Joi.string()
+    .default('unknown'),
+
+  BUILD_TIME: Joi.string()
+    .default('unknown'),
 }).unknown(true); // allow other env vars not listed here
