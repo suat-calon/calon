@@ -28,15 +28,17 @@ const redisClientProvider = {
   provide:    REDIS_CLIENT,
   inject:     [ConfigService],
   useFactory: (config: ConfigService): Redis => {
+    const port = config.get<number>('REDIS_PORT', 6379);
     return new Redis({
       host:                config.get<string>('REDIS_HOST', 'localhost'),
-      port:                config.get<number>('REDIS_PORT', 6379),
+      port,
       password:            config.get<string>('REDIS_PASSWORD'),
       lazyConnect:         true,  // İlk komutta bağlan
       maxRetriesPerRequest: 3,
       enableReadyCheck:    true,
       // Hold kilidi için ayrı DB index (Bull: db=0, Lock: db=1)
       db:                  1,
+      ...(port === 6380 ? { tls: {} } : {}),
     });
   },
 };
@@ -47,12 +49,15 @@ const redisClientProvider = {
     // ── Bull / BullMQ kuyruk altyapısı ───────────────────────────────────────
     BullModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: (config: ConfigService) => ({
+      useFactory: (config: ConfigService) => {
+        const port = config.get<number>('REDIS_PORT', 6379);
+        return {
         redis: {
           host:     config.get<string>('REDIS_HOST', 'localhost'),
-          port:     config.get<number>('REDIS_PORT', 6379),
+          port,
           password: config.get<string>('REDIS_PASSWORD'),
           // Bull varsayılan db=0
+          ...(port === 6380 ? { tls: {} } : {}),
         },
         defaultJobOptions: {
           removeOnComplete: 100,
@@ -60,7 +65,8 @@ const redisClientProvider = {
           attempts:         3,
           backoff: { type: 'exponential', delay: 1000 },
         },
-      }),
+        };
+      },
       inject: [ConfigService],
     }),
     BullModule.registerQueue(
