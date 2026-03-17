@@ -58,9 +58,21 @@ async function bootstrap(): Promise<void> {
   // Cookie parser — HttpOnly cookie auth için
   app.use(cookieParser());
 
-  // CORS
+  // CORS — function-based validation (array form NestJS'te güvenilir değil)
   app.enableCors({
-    origin:      config.get<string>('CORS_ORIGIN', 'http://localhost:3000'),
+    origin: (origin, callback) => {
+      const allowedOrigins = [
+        'https://calon.com.tr',
+        'https://www.calon.com.tr',
+        'https://book.calon.com.tr',
+      ];
+      // Development: localhost'a izin ver; production: allowedOrigins listesi
+      if (!origin || allowedOrigins.includes(origin) || origin.includes('localhost')) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
   });
 
