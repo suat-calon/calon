@@ -11,17 +11,21 @@
  *   • axios.defaults.withCredentials = true — global güvenlik ağı.
  *     apiClient.create() zaten açıkça set eder; bu satır raw axios.post/get
  *     çağrılarını (register sayfası gibi) da kapsar.
+ *
+ * Cookie tutarlılığı (v4):
+ *   • baseURL relative ('/api/v1') — Next.js proxy üzerinden gider.
+ *   • Login sayfası da relative URL kullandığından cookie domain'i
+ *     her iki istek için de 'calon.com.tr' olur → /auth/me 401 sorunu çözüldü.
+ *   • Proxy hedefi: next.config.ts → NEXT_PUBLIC_API_URL/api/:path*
  */
 import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 
 // Global güvenlik: tüm axios örnekleri için withCredentials varsayılanı
 axios.defaults.withCredentials = true;
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
-
 const apiClient: AxiosInstance = axios.create({
-  baseURL:         `${BASE_URL}/api/v1`,
-  withCredentials: true,   // Cookie otomatik gönderilir (HttpOnly erişim gerekmez)
+  baseURL:         '/api/v1',  // Next.js proxy → cookie domain tutarlılığı
+  withCredentials: true,       // Cookie otomatik gönderilir (HttpOnly erişim gerekmez)
   timeout:         15_000,
 });
 
@@ -67,7 +71,7 @@ apiClient.interceptors.response.use(
       // calon_refresh cookie'si withCredentials ile otomatik gönderilir
       // Body gerekmez — server cookie'den okur ve yeni cookie set eder
       await axios.post(
-        `${BASE_URL}/api/v1/auth/refresh`,
+        '/api/v1/auth/refresh',
         {},
         { withCredentials: true },
       );
