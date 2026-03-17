@@ -25,6 +25,10 @@ export const envValidationSchema = Joi.object({
     .optional()
     .allow(''),
 
+  REDIS_TLS: Joi.string()
+    .valid('true', 'false')
+    .default('false'),
+
   // ── Auth ──────────────────────────────────────────────────────────────────
   JWT_SECRET: Joi.string()
     .min(32)

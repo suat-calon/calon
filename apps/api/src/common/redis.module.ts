@@ -38,7 +38,7 @@ const redisClientProvider = {
       enableReadyCheck:    true,
       // Hold kilidi için ayrı DB index (Bull: db=0, Lock: db=1)
       db:                  1,
-      ...(port === 6380 ? { tls: {} } : {}),
+      ...(config.get('REDIS_TLS') === 'true' ? { tls: {} } : {}),
     });
   },
 };
@@ -57,7 +57,7 @@ const redisClientProvider = {
           port,
           password: config.get<string>('REDIS_PASSWORD'),
           // Bull varsayılan db=0
-          ...(port === 6380 ? { tls: {} } : {}),
+          ...(config.get('REDIS_TLS') === 'true' ? { tls: {} } : {}),
         },
         defaultJobOptions: {
           removeOnComplete: 100,
