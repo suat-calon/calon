@@ -1,6 +1,6 @@
 # Docker Strategy — Calon OS
 
-**Son guncelleme:** 2026-03-15 (P7)
+**Son guncelleme:** 2026-03-18 (P7)
 
 ---
 
@@ -39,7 +39,7 @@ docker-compose up -d
 # Postgres (5432) + Redis (6379) + API (4000) + Worker
 ```
 
-## Production Deployment (Natro)
+## Production Deployment (Oracle Cloud) 
 
 ```bash
 docker-compose -f docker-compose.yml \
