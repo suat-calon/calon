@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calon — MVP-Exit-Gate Tracker</title>
+<style>
+:root{--bg:#0f0f0f;--s1:#161616;--s2:#1e1e1e;--s3:#242424;--b1:#252525;--b2:#2e2e2e;--t1:#e2e2e2;--t2:#888;--t3:#444;--g:#4ade80;--gb:#031a0c;--gbd:#14532d;--a:#fbbf24;--ab:#1a1000;--abd:#713f12;--r:#f87171;--rb:#1a0505;--rbd:#7f1d1d;--bl:#60a5fa;--blb:#0a1628;--blbd:#1e3a5f;--p:#c084fc;--mono:'Courier New',monospace}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--t1);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:13px;line-height:1.6}
+
+/* APP SHELL */
+.app{display:flex;flex-direction:column;height:100vh;overflow:hidden}
+.tabbar{display:flex;gap:2px;padding:7px 14px 0;background:var(--s1);border-bottom:1px solid var(--b1);flex-shrink:0}
+.tab{font-size:11px;font-weight:500;padding:5px 16px;border-radius:6px 6px 0 0;cursor:pointer;color:var(--t3);background:transparent;border:1px solid transparent;border-bottom:none;transition:all .15s;user-select:none}
+.tab:hover{color:var(--t2)}
+.tab.on{color:var(--t1);background:var(--bg);border-color:var(--b1)}
+.page{display:none;flex:1;overflow:hidden}
+.page.on{display:flex}
+
+/* ══ TRACKER PAGE ══ */
+.trk{display:grid;grid-template-columns:1fr 360px;width:100%;overflow:hidden}
+.trk-left{overflow-y:auto;padding:16px 18px;border-right:1px solid var(--b1)}
+.trk-right{overflow-y:auto;padding:14px;background:var(--s1);display:flex;flex-direction:column;gap:10px}
+
+.hdr h1{font-size:14px;font-weight:600;margin-bottom:2px}
+.hdr p{font-size:10px;color:var(--t3);margin-bottom:14px}
+.ci-badge{font-size:9px;padding:1px 5px;border-radius:3px;background:var(--gb);color:var(--g);font-family:var(--mono);margin-left:3px}
+
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px}
+.stat{background:var(--s2);border:1px solid var(--b1);border-radius:6px;padding:7px 10px}
+.sl{font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px}
+.sv{font-size:20px;font-weight:700;font-family:var(--mono)}
+.sv.g{color:var(--g)}.sv.a{color:var(--a)}
+
+.progbar{background:var(--s2);border-radius:100px;height:3px;margin-bottom:14px;overflow:hidden}
+.progfill{height:100%;border-radius:100px;background:var(--g);transition:width .4s}
+
+.phases{display:flex;flex-direction:column;gap:4px}
+.phase{background:var(--s1);border:1px solid var(--b1);border-radius:7px;overflow:hidden}
+.phase.done{border-color:var(--gbd)}.phase.active{border-color:var(--abd)}.phase.blocked{border-color:var(--rbd)}
+.ph{display:flex;align-items:center;gap:7px;padding:8px 11px;cursor:pointer}
+.ph:hover{background:var(--s2)}
+.bdg{font-size:9px;font-weight:700;padding:2px 7px;border-radius:100px;min-width:52px;text-align:center}
+.bdg.todo{background:var(--s3);color:var(--t3);border:1px solid var(--b2)}
+.bdg.active{background:var(--ab);color:var(--a);border:1px solid var(--abd)}
+.bdg.done{background:var(--gb);color:var(--g);border:1px solid var(--gbd)}
+.bdg.blocked{background:var(--rb);color:var(--r);border:1px solid var(--rbd)}
+.pid{font-family:var(--mono);font-size:10px;color:var(--t3);min-width:22px}
+.ptitle{font-size:12px;font-weight:500;flex:1}
+.pmeta{font-size:10px;color:var(--t3);font-family:var(--mono)}
+.chv{color:var(--t3);font-size:11px;transition:transform .2s;margin-left:2px}
+.chv.open{transform:rotate(90deg)}
+.pbody{display:none;padding:0 11px 10px;border-top:1px solid var(--b1)}
+.pbody.open{display:block}
+.pnote{font-size:11px;color:var(--t2);padding:7px 0 8px;margin-bottom:8px;border-bottom:1px solid var(--b1);line-height:1.5}
+.crit{background:var(--rb);border:1px solid var(--rbd);border-radius:4px;padding:6px 9px;margin-bottom:8px}
+.crit-t{font-size:9px;color:var(--r);text-transform:uppercase;letter-spacing:.07em;margin-bottom:2px;font-weight:700}
+.crit-c{font-size:10px;color:#fca5a5;line-height:1.5}
+.tasks{display:flex;flex-direction:column;gap:2px;margin-bottom:7px}
+.task{display:flex;align-items:flex-start;gap:7px;padding:3px 6px;border-radius:4px;cursor:pointer}
+.task:hover{background:var(--s2)}.task.dt{opacity:.4}
+.chk{width:13px;height:13px;border-radius:3px;border:1.5px solid var(--t3);flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center}
+.chk.c{background:var(--g);border-color:var(--g)}
+.chk.c::after{content:'';width:6px;height:4px;border-left:1.5px solid #000;border-bottom:1.5px solid #000;transform:rotate(-45deg) translateY(-1px);display:block}
+.tt{font-size:11px;flex:1;line-height:1.5}
+.tt.s{text-decoration:line-through;color:var(--t3)}
+.tag{font-size:9px;padding:1px 5px;border-radius:3px;font-family:var(--mono);flex-shrink:0;margin-top:2px}
+.tag.doc{background:var(--blb);color:var(--bl)}.tag.test{background:var(--pb);color:var(--p)}.tag.code{background:var(--ab);color:var(--a)}.tag.infra{background:var(--gb);color:var(--g)}
+.arts{margin-bottom:7px}
+.arts-t{font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px}
+.art{display:inline-block;font-family:var(--mono);font-size:9px;padding:1px 5px;background:var(--s3);border:1px solid var(--b2);border-radius:3px;color:var(--t2);margin:2px}
+.pact{display:flex;gap:4px;margin-top:3px}
+.btn{font-size:10px;padding:3px 7px;border-radius:4px;border:1px solid var(--b2);background:transparent;cursor:pointer;color:var(--t2);font-family:inherit}
+.btn:hover{background:var(--s3);color:var(--t1)}
+.btn.g{border-color:var(--gbd);color:var(--g)}.btn.a{border-color:var(--abd);color:var(--a)}.btn.r{border-color:var(--rbd);color:var(--r)}
+.lfooter{margin-top:10px;padding-top:8px;border-top:1px solid var(--b1);display:flex;justify-content:space-between;align-items:center}
+.fnote{font-size:10px;color:var(--t3);font-family:var(--mono)}
+.expbtn{font-size:10px;padding:3px 9px;border-radius:4px;border:1px solid var(--b2);background:transparent;cursor:pointer;color:var(--t2);font-family:inherit}
+.expbtn:hover{background:var(--s2)}
+
+/* RIGHT PANELS */
+.panel{background:var(--s2);border:1px solid var(--b1);border-radius:7px;padding:11px}
+.ptit{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--t3);margin-bottom:8px;display:flex;align-items:center;gap:5px}
+.ptit::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--a);flex-shrink:0}
+.ptit.gd::before{background:var(--g)}.ptit.rd::before{background:var(--r)}.ptit.bd::before{background:var(--bl)}
+.live-box{background:#052e16;border:1px solid var(--gbd);border-radius:5px;padding:6px 10px;margin-bottom:8px;display:flex;align-items:center;gap:7px}
+.ldot{width:7px;height:7px;border-radius:50%;background:var(--g);flex-shrink:0;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.ltext{font-size:10px;color:var(--g);font-family:var(--mono);word-break:break-all}
+.irow{display:flex;align-items:center;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--b1)}
+.irow:last-child{border-bottom:none}
+.iname{font-size:10px;font-weight:500}
+.inote{font-size:9px;color:var(--t3);margin-top:1px}
+.ibdg{font-size:9px;padding:1px 6px;border-radius:3px;font-weight:600;white-space:nowrap;margin-left:8px;flex-shrink:0}
+.ibdg.live{background:var(--gb);color:var(--g)}.ibdg.warn{background:var(--ab);color:var(--a)}.ibdg.pend{background:var(--s3);color:var(--t3);border:1px solid var(--b2)}
+.step{display:flex;gap:8px;padding:6px 0;border-bottom:1px solid var(--b1)}
+.step:last-child{border-bottom:none;padding-bottom:0}
+.snum{width:17px;height:17px;border-radius:50%;background:var(--s3);border:1px solid var(--b2);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:var(--t2);flex-shrink:0;margin-top:1px}
+.snum.d{background:var(--gb);border-color:var(--gbd);color:var(--g)}
+.stit{font-size:11px;font-weight:500;margin-bottom:1px}
+.stit.d{text-decoration:line-through;color:var(--t3)}
+.sdesc{font-size:10px;color:var(--t2);line-height:1.4}
+.swho{font-size:9px;margin-top:2px;color:var(--t3)}
+.swho .ps{color:var(--g)}.swho .me{color:var(--bl)}.swho .cc{color:var(--a)}
+.si{display:flex;align-items:center;gap:6px;padding:3px 0;border-bottom:1px solid var(--b1)}
+.si:last-child{border-bottom:none}
+.sdot{width:5px;height:5px;border-radius:50%;background:var(--g);flex-shrink:0}
+.sdot.r{background:var(--r)}
+.sitext{font-size:10px;color:var(--t2)}
+.appr{background:var(--rb);border:1px solid var(--rbd);border-radius:4px;padding:6px 9px;margin-bottom:5px}
+.appr:last-child{margin-bottom:0}
+.atit{font-size:10px;font-weight:600;color:var(--r);margin-bottom:2px}
+.adesc{font-size:10px;color:#fca5a5;line-height:1.4}
+.aact{font-size:9px;color:var(--t2);margin-top:3px;padding-top:3px;border-top:1px solid var(--rbd)}
+
+/* ══ JOURNEY PAGE ══ */
+.jrn{width:100%;overflow-y:auto;padding:24px 32px;background:var(--bg)}
+.jrn-hdr{margin-bottom:28px}
+.jrn-hdr h2{font-size:16px;font-weight:700;margin-bottom:4px}
+.jrn-hdr p{font-size:11px;color:var(--t3)}
+.jrn-body{display:grid;grid-template-columns:1fr 420px;gap:28px;max-width:1300px;align-items:start}
+
+/* Timeline */
+.tl{position:relative;padding-left:0}
+.tl::before{content:'';position:absolute;left:100px;top:8px;bottom:8px;width:2px;background:linear-gradient(to bottom,var(--gbd) 0%,var(--gbd) 70%,var(--abd) 80%,var(--b2) 100%);border-radius:2px}
+.trow{display:flex;gap:0;margin-bottom:6px;position:relative}
+.tcid{width:100px;padding:10px 14px 10px 0;text-align:right;flex-shrink:0}
+.tid{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--t3)}
+.tdate{font-size:9px;color:var(--t3);margin-top:1px}
+.tdotw{width:0;position:relative;flex-shrink:0}
+.tdot{width:12px;height:12px;border-radius:50%;border:2px solid var(--bg);position:absolute;left:-5px;top:14px;z-index:2}
+.tdot.done{background:var(--g);box-shadow:0 0 8px rgba(74,222,128,.5)}
+.tdot.active{background:var(--a);box-shadow:0 0 8px rgba(251,191,36,.5);animation:pulse 2s infinite}
+.tdot.todo{background:var(--s3);border-color:var(--b2)}
+.tcbody{flex:1;padding:6px 0 6px 22px}
+.tcard{background:var(--s1);border:1px solid var(--b1);border-radius:8px;padding:10px 14px}
+.tcard.done{border-left:3px solid var(--g)}.tcard.active{border-left:3px solid var(--a)}.tcard.todo{border-left:3px solid var(--b2)}
+.tchead{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.tct{font-size:12px;font-weight:600;flex:1}
+.tcbdg{font-size:8px;font-weight:700;padding:1px 6px;border-radius:100px}
+.tcbdg.done{background:var(--gb);color:var(--g)}.tcbdg.active{background:var(--ab);color:var(--a)}.tcbdg.todo{background:var(--s3);color:var(--t3);border:1px solid var(--b2)}
+.tcdesc{font-size:10px;color:var(--t2);line-height:1.5;margin-bottom:6px}
+.tctags{display:flex;flex-wrap:wrap;gap:3px}
+.tctag{font-size:9px;padding:1px 6px;border-radius:3px;font-family:var(--mono)}
+.tctag.ci{background:var(--gb);color:var(--g)}.tctag.inf{background:var(--blb);color:var(--bl)}.tctag.lk{background:#1a0a00;color:#fb923c;border:1px solid #7c2d12}.tctag.ts{background:var(--pb);color:var(--p)}
+
+/* Arch diagram */
+.arch{background:var(--s1);border:1px solid var(--b1);border-radius:10px;padding:20px;position:sticky;top:0}
+.arch-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--t3);margin-bottom:16px;text-align:center}
+.layer-label{font-size:9px;color:var(--t3);text-align:center;text-transform:uppercase;letter-spacing:.07em;margin:10px 0 6px;position:relative}
+.layer-label::before,.layer-label::after{content:'';position:absolute;top:50%;width:25%;height:1px;background:var(--b1)}
+.layer-label::before{left:0}.layer-label::after{right:0}
+.arow{display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:6px;flex-wrap:wrap}
+.anode{background:var(--s2);border:1px solid var(--b1);border-radius:7px;padding:7px 10px;text-align:center;min-width:88px}
+.anode.live{border-color:var(--gbd);background:var(--gb)}.anode.warn{border-color:var(--abd);background:var(--ab)}.anode.off{opacity:.45}
+.aicon{font-size:15px;margin-bottom:2px}
+.aname{font-size:10px;font-weight:600}.anode.live .aname{color:var(--g)}.anode.warn .aname{color:var(--a)}
+.asub{font-size:8px;color:var(--t3);margin-top:1px}
+.arr{font-size:12px;color:var(--t3);flex-shrink:0}.arr.g{color:var(--g)}
+.legend{margin-top:14px;padding-top:10px;border-top:1px solid var(--b1);display:flex;justify-content:center;gap:14px;flex-wrap:wrap}
+.ldot2{width:6px;height:6px;border-radius:50%;display:inline-block;vertical-align:middle;margin-right:3px}
+.ldot2.g{background:var(--g);box-shadow:0 0 5px rgba(74,222,128,.5)}.ldot2.a{background:var(--a)}.ldot2.x{background:var(--t3)}
+.lleg{font-size:9px;color:var(--t3)}
+
+/* ══ PROJE TAB ══ */
+.proje{width:100%;overflow-y:auto;padding:24px 32px;background:var(--bg)}
+.proje-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;max-width:1200px;margin:0 auto}
+.proje-wide{grid-column:1/-1}
+.proje-half{grid-column:span 2}
+.pcard{background:var(--s1);border:1px solid var(--b1);border-radius:10px;padding:16px}
+.pcard-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--t3);margin-bottom:12px;display:flex;align-items:center;gap:6px}
+.pcard-title .icon{font-size:14px}
+.badge-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.badge{font-size:10px;padding:3px 8px;border-radius:4px;font-family:var(--mono);font-weight:500;display:inline-flex;align-items:center;gap:4px}
+.badge.green{background:var(--gb);color:var(--g);border:1px solid var(--gbd)}
+.badge.blue{background:var(--blb);color:var(--bl);border:1px solid var(--blbd)}
+.badge.amber{background:var(--ab);color:var(--a);border:1px solid var(--abd)}
+.badge.purple{background:var(--pb);color:var(--p);border:1px solid #4c1d95}
+.badge.gray{background:var(--s3);color:var(--t2);border:1px solid var(--b2)}
+.badge.red{background:var(--rb);color:var(--r);border:1px solid var(--rbd)}
+.tech-section{margin-bottom:14px}
+.tech-section:last-child{margin-bottom:0}
+.tech-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--t3);margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid var(--b1)}
+.kv{display:flex;align-items:flex-start;gap:0;padding:4px 0;border-bottom:1px solid var(--b1)}
+.kv:last-child{border-bottom:none}
+.kk{font-size:10px;color:var(--t3);min-width:120px;flex-shrink:0}
+.kv-val{font-size:10px;color:var(--t1);flex:1;font-family:var(--mono)}
+.kv-sub{font-size:9px;color:var(--t3);display:block;margin-top:1px;font-family:inherit}
+.rule-item{display:flex;align-items:flex-start;gap:7px;padding:5px 0;border-bottom:1px solid var(--b1)}
+.rule-item:last-child{border-bottom:none}
+.rule-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0;margin-top:5px}
+.rule-dot.g{background:var(--g)}.rule-dot.r{background:var(--r)}.rule-dot.a{background:var(--a)}
+.rule-text{font-size:10px;color:var(--t1);flex:1;line-height:1.5}
+.rule-text span{color:var(--t3);font-size:9px}
+.layer-stack{display:flex;flex-direction:column;gap:4px}
+.lstack-item{background:var(--s2);border:1px solid var(--b1);border-radius:6px;padding:7px 10px;display:flex;align-items:center;gap:8px}
+.lstack-item.hl{border-color:var(--gbd)}
+.lstack-num{width:18px;height:18px;border-radius:50%;background:var(--s3);border:1px solid var(--b2);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:var(--t3);flex-shrink:0}
+.lstack-name{font-size:11px;font-weight:500;flex:1}
+.lstack-desc{font-size:9px;color:var(--t3)}
+.lstack-tag{font-size:8px;padding:1px 5px;border-radius:3px;background:var(--gb);color:var(--g);font-family:var(--mono)}
+.flow-step{display:flex;gap:8px;padding:6px 0;border-bottom:1px solid var(--b1)}
+.flow-step:last-child{border-bottom:none;padding-bottom:0}
+.flow-num{font-size:9px;font-weight:700;width:18px;height:18px;border-radius:50%;background:var(--blb);border:1px solid var(--blbd);display:flex;align-items:center;justify-content:center;color:var(--bl);flex-shrink:0;margin-top:1px}
+.flow-title{font-size:11px;font-weight:500;margin-bottom:1px}
+.flow-desc{font-size:10px;color:var(--t2);line-height:1.4}
+.flow-cmd{font-size:9px;font-family:var(--mono);color:#a3e635;background:var(--s3);border:1px solid var(--b2);border-radius:3px;padding:2px 6px;margin-top:3px;display:inline-block}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="tabbar">
+    <div class="tab on" onclick="ST('tracker')">📋 Tracker</div>
+    <div class="tab" onclick="ST('journey')">🗺️ Yolculuk Haritası</div>
+    <div class="tab" onclick="ST('proje')">⚙️ Proje & Teknoloji</div>
+  </div>
+
+  <!-- ═══ TRACKER ═══ -->
+  <div class="page on" id="pg-tracker">
+  <div class="trk">
+    <div class="trk-left">
+      <div class="hdr">
+        <h1>Calon — MVP-Exit-Gate Tracker</h1>
+        <p>P0→P10 · Oracle Cloud / Neon / Redis / Cloudflare / Vercel · CI <span class="ci-badge">#27+ ✓</span></p>
+      </div>
+      <div class="stats">
+        <div class="stat"><div class="sl">Toplam</div><div class="sv">11</div></div>
+        <div class="stat"><div class="sl">Tamam</div><div class="sv g" id="sd">0</div></div>
+        <div class="stat"><div class="sl">Devam</div><div class="sv a" id="sa">0</div></div>
+        <div class="stat"><div class="sl">Görev%</div><div class="sv" id="sp">0%</div></div>
+      </div>
+      <div class="progbar"><div class="progfill" id="prog"></div></div>
+      <div class="phases" id="pc"></div>
+      <div class="lfooter"><span class="fnote" id="lu">—</span><button class="expbtn" onclick="exp()">Durumu kopyala</button></div>
+    </div>
+    <div class="trk-right">
+      <div class="panel">
+        <div class="ptit gd">API Canlı</div>
+        <div class="live-box"><div class="ldot"></div><span class="ltext">api.calon.com.tr/api/v1/health/ready ✓</span></div>
+        <div class="irow"><div><div class="iname">Oracle Cloud Free</div><div class="inote">141.144.243.114 · Ubuntu 24.04 · Docker 29.3</div></div><span class="ibdg live">CANLI</span></div>
+        <div class="irow"><div><div class="iname">Neon PostgreSQL</div><div class="inote">Tüm migration'lar uygulandı · calon_app rolü</div></div><span class="ibdg live">CANLI</span></div>
+        <div class="irow"><div><div class="iname">Redis Labs</div><div class="inote">Free 30MB · Bağlantı aktif</div></div><span class="ibdg live">CANLI</span></div>
+        <div class="irow"><div><div class="iname">Nginx Reverse Proxy</div><div class="inote">Port 80 → 4000 · SSL henüz yok</div></div><span class="ibdg live">CANLI</span></div>
+        <div class="irow"><div><div class="iname">Cloudflare DNS</div><div class="inote">Domain/zone eklenmedi</div></div><span class="ibdg pend">P8'DE</span></div>
+        <div class="irow"><div><div class="iname">İyzico</div><div class="inote">Sandbox key aktif</div></div><span class="ibdg warn">SANDBOX</span></div>
+      </div>
+      <div class="panel" style="border-color:#14532d;background:#031a0c">
+        <div class="ptit gd">P8 TAMAM — HTTPS Canlı</div>
+        <div style="font-size:10px;color:var(--g);font-family:var(--mono);margin-bottom:4px">https://api.calon.com.tr/api/v1/health ✅</div>
+        <div style="font-size:10px;color:var(--g);font-family:var(--mono);margin-bottom:4px">https://calon.com.tr ✅ (Vercel)</div>
+        <div style="font-size:10px;color:var(--g);font-family:var(--mono)">https://book.calon.com.tr ✅ (Vercel)</div>
+      </div>
+      <div class="panel">
+        <div class="ptit">P8 — Sıradaki Adımlar</div>
+        <div class="step"><div class="snum d">✓</div><div class="sc"><div class="stit d">API production'da çalışıyor</div><div class="sdesc">port 80 → {"status":"ok"}</div></div></div>
+        <div class="step"><div class="snum d">✓</div><div class="sc"><div class="stit done">Cloudflare'e calon.com.tr ekle</div><div class="sdesc">Add site → Natro NS kayıtlarını güncelle.</div><div class="swho"><span class="ps">● Sen (manual)</span></div></div></div>
+        <div class="step"><div class="snum d">✓</div><div class="sc"><div class="stit done">api.calon.com.tr → 141.144.243.114</div><div class="sdesc">Cloudflare DNS → A kaydı (proxy kapalı).</div><div class="swho"><span class="ps">● Sen (manual)</span></div></div></div>
+        <div class="step"><div class="snum">1</div><div class="sc"><div class="stit">SSL — Let's Encrypt + Certbot</div><div class="sdesc">DNS yayıldıktan sonra Oracle sunucusunda.</div><div class="swho"><span class="me">● Bu chat talimat verir</span></div></div></div>
+        <div class="step"><div class="snum d">✓</div><div class="sc"><div class="stit done">Vercel deploy + domain bağlandı</div><div class="sdesc">apps/web + apps/booking canlıda · calon.com.tr + book.calon.com.tr</div><div class="swho"><span class="cc">● Claude Code</span></div></div></div>
+        <div class="step"><div class="snum d">✓</div><div class="sc"><div class="stit done">Worker container başlatıldı</div><div class="sdesc">calon-worker çalışıyor · BullMQ aktif.</div><div class="swho"><span class="me">● Bu chat talimat verir</span></div></div></div>
+      </div>
+      <div class="panel">
+        <div class="ptit rd">Dur → Bu Chat'e Getir</div>
+        <div class="si"><div class="sdot r"></div><div class="sitext">DNS / Cloudflare kararı öncesi</div></div>
+        <div class="si"><div class="sdot r"></div><div class="sitext">Natro NS değişikliği öncesi</div></div>
+        <div class="si"><div class="sdot r"></div><div class="sitext">CI kırmızı — log buraya</div></div>
+        <div class="si"><div class="sdot r"></div><div class="sitext">Faz geçiş kararı</div></div>
+      </div>
+      <div class="panel">
+        <div class="ptit gd">Hep Onay Ver</div>
+        <div class="si"><div class="sdot"></div><div class="sitext">grep, cat, ls, git log</div></div>
+        <div class="si"><div class="sdot"></div><div class="sitext">git add + git commit</div></div>
+        <div class="si"><div class="sdot"></div><div class="sitext">docker build / docker run</div></div>
+        <div class="si"><div class="sdot"></div><div class="sitext">sudo apt install</div></div>
+        <div class="si"><div class="sdot"></div><div class="sitext">jest / yarn test</div></div>
+      </div>
+    </div>
+  </div>
+  </div>
+
+  <!-- ═══ JOURNEY ═══ -->
+  <div class="page" id="pg-journey">
+  <div class="jrn">
+    <div class="jrn-hdr">
+      <h2>Calon OS — MVP Yolculuk Haritası</h2>
+      <p>P0 Repo Otopsisi → P10 Controlled Launch · Kronolojik faz haritası + güncel infra mimarisi</p>
+    </div>
+    <div class="jrn-body">
+      <!-- Timeline -->
+      <div class="tl">
+        <div class="trow"><div class="tcid"><div class="tid">P0</div><div class="tdate">Mar 14</div></div><div class="tdotw"><div class="tdot done"></div></div><div class="tcbody"><div class="tcard done"><div class="tchead"><span class="tct">Gerçeklik Tespiti</span><span class="tcbdg done">TAMAM</span></div><div class="tcdesc">Repo otopsisi. 7 kritik bulgu: eksik enum'lar, duplicate timestamp, migration sorunları. CLAUDE.md + STATUS.md eklendi. calon-os arşiv, calon aktif repo.</div><div class="tctags"><span class="tctag inf">46 model haritalandı</span><span class="tctag inf">schema gap raporu</span></div></div></div></div>
+        <div class="trow"><div class="tcid"><div class="tid">P1</div><div class="tdate">Mar 14</div></div><div class="tdotw"><div class="tdot done"></div></div><div class="tcbody"><div class="tcard done"><div class="tchead"><span class="tct">Canonical Domain Model</span><span class="tcbdg done">TAMAM</span></div><div class="tcdesc">46 Prisma modeli haritalandı. StaffProfile doğru isim (staff_members değil). User/Staff ayrımı netleştirildi.</div><div class="tctags"><span class="tctag inf">46 model</span><span class="tctag lk">domain lock</span></div></div></div></div>
+        <div class="trow"><div class="tcid"><div class="tid">P2</div><div class="tdate">Mar 14</div></div><div class="tdotw"><div class="tdot done"></div></div><div class="tcbody"><div class="tcard done"><div class="tchead"><span class="tct">Migration Anayasası</span><span class="tcbdg done">TAMAM</span></div><div class="tcdesc">24 migration → clean baseline (1368 satır, 46 model). CI düzeltildi: PostgreSQL servisi + prisma generate. Duplicate timestamp çözüldü.</div><div class="tctags"><span class="tctag ci">CI #1 YEŞİL</span><span class="tctag lk">append-only</span></div></div></div></div>
+        <div class="trow"><div class="tcid"><div class="tid">P3</div><div class="tdate">Mar 14</div></div><div class="tdotw"><div class="tdot done"></div></div><div class="tcbody"><div class="tcard done"><div class="tchead"><span class="tct">Seed Disiplini</span><span class="tcbdg done">TAMAM</span></div><div class="tcdesc">Idempotent upsert seed. Sıfır DB'de doğrulandı: 1 tenant / 1 owner / 2 staff / 3 service / 5 customer / 10 appointment.</div><div class="tctags"><span class="tctag ts">sıfır DB doğrulandı</span><span class="tctag lk">idempotent</span></div></div></div></div>
+        <div class="trow"><div class="tcid"><div class="tid">P4</div><div class="tdate">Mar 14</div></div><div class="tdotw"><div class="tdot done"></div></div><div class="tcbody"><div class="tcard done"><div class="tchead"><span class="tct">Tenant İzolasyonu</span><span class="tcbdg done">TAMAM</span></div><div class="tcdesc">Triple-Layer: Prisma interceptor v3.0 (25 model, findUnique dahil) + RLS 25 tablo FORCE ROW LEVEL SECURITY + GIST EXCLUDE constraints. Race condition sıfır.</div><div class="tctags"><span class="tctag lk">RLS FORCE</span><span class="tctag lk">GIST EXCLUDE</span><span class="tctag ts">cross-tenant denied</span></div></div></div></div>
+        <div class="trow"><div class="tcid"><div class="tid">P5</div><div class="tdate">Mar 15</div></div><div class="tdotw"><div class="tdot done"></div></div><div class="tcbody"><div class="tcard done"><div class="tchead"><span class="tct">Booking Core</span><span class="tcbdg done">TAMAM</span></div><div class="tcdesc">XState v5 FSM + Hold service (Redis NX + Lua CAS) + GIST EXCLUDE. 267/267 unit + 18 e2e test PASS. Interceptor v3.0 ile race condition fix.</div><div class="tctags"><span class="tctag ci">CI #20 YEŞİL</span><span class="tctag ts">267+18 test</span><span class="tctag lk">XState v5</span><span class="tctag lk">BullMQ</span></div></div></div></div>
+        <div class="trow"><div class="tcid"><div class="tid">P6</div><div class="tdate">Mar 15</div></div><div class="tdotw"><div class="tdot done"></div></div><div class="tcbody"><div class="tcard done"><div class="tchead"><span class="tct">Production ENV Contract</span><span class="tcbdg done">TAMAM</span></div><div class="tcdesc">Joi validation'a 12 eksik var eklendi. PORT default fix. .env.example production-ready. 22 env var tam dokümante. Production checklist yazıldı.</div><div class="tctags"><span class="tctag ci">CI #25 YEŞİL</span><span class="tctag inf">22 env var</span></div></div></div></div>
+        <div class="trow"><div class="tcid"><div class="tid">P7</div><div class="tdate">Mar 15</div></div><div class="tdotw"><div class="tdot done"></div></div><div class="tcbody"><div class="tcard done"><div class="tchead"><span class="tct">Docker + Production Deploy</span><span class="tcbdg done">TAMAM</span></div><div class="tcdesc">Dockerfile node:20-alpine3.19 pinlendi. docker-compose.production.yml (DB/Redis YOK). Oracle Cloud Free VPS kuruldu. Neon production migration + calon_app rolü. API canlı!</div><div class="tctags"><span class="tctag ci">CI #26 YEŞİL</span><span class="tctag inf">Oracle Free</span><span class="tctag inf">Docker 29.3</span><span class="tctag ts">health ✓</span></div></div></div></div>
+        <div class="trow"><div class="tcid"><div class="tid">P8</div><div class="tdate">Mar 16</div></div><div class="tdotw"><div class="tdot active"></div></div><div class="tcbody"><div class="tcard active"><div class="tchead"><span class="tct">Routing / DNS / Edge Topology</span><span class="tcbdg active">DEVAM</span></div><div class="tcdesc">Cloudflare DNS + SSL/TLS + Vercel deploy + Worker container. api.calon.com.tr → 141.144.243.114, calon.com.tr + book.calon.com.tr → Vercel.</div><div class="tctags"><span class="tctag inf">Cloudflare</span><span class="tctag inf">Let's Encrypt</span><span class="tctag inf">Vercel</span></div></div></div></div>
+        <div class="trow"><div class="tcid"><div class="tid">P9</div><div class="tdate">—</div></div><div class="tdotw"><div class="tdot todo"></div></div><div class="tcbody"><div class="tcard todo"><div class="tchead"><span class="tct">Observability Minimum</span><span class="tcbdg todo">BEKLIYOR</span></div><div class="tcdesc">/ready + /version endpoint. Structured logs + requestId/correlationId. Failed job visibility.</div><div class="tctags"><span class="tctag inf">structured logs</span></div></div></div></div>
+        <div class="trow"><div class="tcid"><div class="tid">P10</div><div class="tdate">—</div></div><div class="tdotw"><div class="tdot todo"></div></div><div class="tcbody"><div class="tcard todo"><div class="tchead"><span class="tct">Controlled Production Launch</span><span class="tcbdg todo">BEKLIYOR</span></div><div class="tcdesc">İyzico live key. Neon + Redis upgrade. Internal test tenant → 1 pilot salon → genişleme. Rollback playbook.</div><div class="tctags"><span class="tctag inf">pilot tenant</span><span class="tctag lk">rollback</span></div></div></div></div>
+      </div>
+
+      <!-- Arch -->
+      <div class="arch">
+        <div class="arch-title">Güncel Infra Mimarisi</div>
+
+        <div class="layer-label">İstemci Katmanı</div>
+        <div class="arow">
+          <div class="anode off" style="min-width:130px">
+            <div class="aicon">💻</div><div class="aname">Web Admin</div>
+            <div class="asub">calon.com.tr</div>
+            <div style="margin-top:4px;font-size:8px;color:#60a5fa">Vercel · P8'de</div>
+          </div>
+          <div class="anode off" style="min-width:130px">
+            <div class="aicon">📱</div><div class="aname">Booking App</div>
+            <div class="asub">book.calon.com.tr</div>
+            <div style="margin-top:4px;font-size:8px;color:#60a5fa">Vercel · P8'de</div>
+          </div>
+        </div>
+        <div style="text-align:center;margin:8px 0 4px"><span class="arr" style="font-size:20px">↓</span><br><span style="font-size:9px;color:var(--t3)">HTTPS (P8 sonrası)</span></div>
+
+        <div class="layer-label">Edge / DNS</div>
+        <div class="arow">
+          <div class="anode off" style="width:100%;padding:12px 16px">
+            <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:8px">
+              <div class="aicon">☁️</div>
+              <div><div class="aname">Cloudflare</div><div class="asub">DNS · WAF · DDoS · CDN</div></div>
+            </div>
+            <div style="display:flex;gap:4px;justify-content:center;flex-wrap:wrap">
+              <span style="font-size:8px;padding:2px 6px;background:var(--s3);border:1px solid var(--b2);border-radius:3px;color:var(--t3)">calon.com.tr</span>
+              <span style="font-size:8px;padding:2px 6px;background:var(--s3);border:1px solid var(--b2);border-radius:3px;color:var(--t3)">api.calon.com.tr</span>
+              <span style="font-size:8px;padding:2px 6px;background:var(--s3);border:1px solid var(--b2);border-radius:3px;color:var(--t3)">book.calon.com.tr</span>
+            </div>
+          </div>
+        </div>
+        <div style="text-align:center;margin:8px 0 4px"><span class="arr g" style="font-size:20px">↓</span><br><span style="font-size:9px;color:var(--g)">api.calon.com.tr → 141.144.243.114</span></div>
+
+        <div class="layer-label">Sunucu · Oracle Cloud Free</div>
+        <div style="background:rgba(74,222,128,.05);border:1px solid var(--gbd);border-radius:8px;padding:12px;margin-bottom:8px">
+          <div style="text-align:center;font-size:9px;color:var(--g);font-family:var(--mono);margin-bottom:10px">141.144.243.114 · Ubuntu 24.04 · Docker 29.3</div>
+          <div class="arow" style="gap:8px">
+            <div class="anode live" style="flex:1">
+              <div class="aicon">🔀</div><div class="aname">Nginx</div>
+              <div class="asub">:80 → :4000</div>
+              <div style="margin-top:4px;font-size:8px;color:var(--g)">✓ SSL hazır</div>
+            </div>
+            <span class="arr g" style="font-size:20px">→</span>
+            <div class="anode live" style="flex:1">
+              <div class="aicon">🚀</div><div class="aname">API Container</div>
+              <div class="asub">NestJS · :4000</div>
+              <div style="margin-top:4px;font-size:8px;color:var(--g)">✓ health OK</div>
+            </div>
+            <span class="arr" style="font-size:20px">→</span>
+            <div class="anode off" style="flex:1">
+              <div class="aicon">⚙️</div><div class="aname">Worker</div>
+              <div class="asub">BullMQ</div>
+              <div style="margin-top:4px;font-size:8px;color:#f59e0b">P8'de başlar</div>
+            </div>
+          </div>
+        </div>
+        <div style="text-align:center;margin:4px 0"><span class="arr g" style="font-size:20px">↓</span></div>
+
+        <div class="layer-label">Veri Katmanı</div>
+        <div class="arow" style="gap:8px">
+          <div class="anode live" style="flex:1">
+            <div class="aicon">🗄️</div><div class="aname">Neon</div>
+            <div class="asub">PostgreSQL</div>
+            <div style="margin-top:4px;font-size:8px;color:var(--g)">eu-central-1</div>
+            <div style="font-size:8px;color:var(--g)">46 tablo ✓</div>
+          </div>
+          <div class="anode live" style="flex:1">
+            <div class="aicon">⚡</div><div class="aname">Redis Labs</div>
+            <div class="asub">Cache + Queue</div>
+            <div style="margin-top:4px;font-size:8px;color:var(--g)">us-east-1</div>
+            <div style="font-size:8px;color:var(--g)">BullMQ + Hold ✓</div>
+          </div>
+          <div class="anode warn" style="flex:1">
+            <div class="aicon">💳</div><div class="aname">İyzico</div>
+            <div class="asub">Ödeme</div>
+            <div style="margin-top:4px;font-size:8px;color:var(--a)">Sandbox</div>
+            <div style="font-size:8px;color:var(--a)">Live key P10'da</div>
+          </div>
+        </div>
+
+        <div class="legend" style="margin-top:14px">
+          <span class="lleg"><span class="ldot2 g"></span>Canlı</span>
+          <span class="lleg"><span class="ldot2 a"></span>Sandbox / Free</span>
+          <span class="lleg"><span class="ldot2 x"></span>P8'de gelecek</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  </div>
+
+  <!-- ═══ PROJE ═══ -->
+  <div class="page" id="pg-proje">
+  <div class="proje">
+    <div class="hdr" style="margin-bottom:20px;max-width:1200px;margin-left:auto;margin-right:auto">
+      <h1 style="font-size:16px;font-weight:700;margin-bottom:4px">Calon OS — Proje & Teknoloji Rehberi</h1>
+      <p style="font-size:11px;color:var(--t3)">Orion Technology · Suat Gökçe + Cansever Aslan + Hüseyin Karabulut · Repo: github.com/suat-calon/calon</p>
+    </div>
+    <div class="proje-grid">
+
+      <!-- Proje Özeti -->
+      <div class="pcard proje-wide">
+        <div class="pcard-title"><span class="icon">🎯</span>Proje Özeti</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+          <div>
+            <div class="tech-label">Ne?</div>
+            <div style="font-size:11px;color:var(--t1);line-height:1.6">Çok kiracılı (multi-tenant) güzellik salonu yönetim SaaS platformu. Randevu booking, personel yönetimi, müşteri takibi ve ödeme altyapısı.</div>
+          </div>
+          <div>
+            <div class="tech-label">Vizyon</div>
+            <div style="font-size:11px;color:var(--t1);line-height:1.6">"Fair, Transparent, Collective" — Fresha, Square, Zenoti'ye karşı etik alternatif. Salon çalışanlarına adil muameleyi ön plana çıkaran "Justice Layer" konsepti.</div>
+          </div>
+          <div>
+            <div class="tech-label">MVP Hedef</div>
+            <div style="font-size:11px;color:var(--t1);line-height:1.6">P10 sonunda: 1 pilot salon, canlı booking, gerçek ödeme. Zero-debt, enterprise-grade güvenlik. Rollback-ready production.</div>
+          </div>
+        </div>
+        <div class="badge-row" style="margin-top:12px;padding-top:10px;border-top:1px solid var(--b1)">
+          <span class="badge green">✓ Multi-tenant</span>
+          <span class="badge green">✓ White-label hazır</span>
+          <span class="badge green">✓ Booking FSM</span>
+          <span class="badge green">✓ RLS güvenlik</span>
+          <span class="badge amber">⏳ DNS & SSL</span>
+          <span class="badge amber">⏳ Vercel deploy</span>
+          <span class="badge gray">○ İyzico live</span>
+          <span class="badge gray">○ Pilot tenant</span>
+        </div>
+      </div>
+
+      <!-- Backend Stack -->
+      <div class="pcard">
+        <div class="pcard-title"><span class="icon">🚀</span>Backend Stack</div>
+        <div class="tech-section">
+          <div class="tech-label">Runtime & Framework</div>
+          <div class="kv"><span class="kk">Runtime</span><div><span class="kv-val">Node.js 20 LTS</span><span class="kv-sub">Docker: node:20-alpine3.19</span></div></div>
+          <div class="kv"><span class="kk">Framework</span><div><span class="kv-val">NestJS</span><span class="kv-sub">Modüler mimari, DI container</span></div></div>
+          <div class="kv"><span class="kk">Language</span><div><span class="kv-val">TypeScript 5.x</span><span class="kv-sub">strict mode, path aliases</span></div></div>
+          <div class="kv"><span class="kk">API Style</span><div><span class="kv-val">REST + Swagger</span><span class="kv-sub">/api/v1/* — OpenAPI dokümantasyonu</span></div></div>
+        </div>
+        <div class="tech-section">
+          <div class="tech-label">Auth & Security</div>
+          <div class="kv"><span class="kk">Auth</span><div><span class="kv-val">JWT + Refresh Token</span><span class="kv-sub">Rotation, cross-tenant attack önlemi</span></div></div>
+          <div class="kv"><span class="kk">Context</span><div><span class="kv-val">AsyncLocalStorage</span><span class="kv-sub">TenantGuard → tenantId propagation</span></div></div>
+          <div class="kv"><span class="kk">Admin</span><div><span class="kv-val">API Key Guard</span><span class="kv-sub">Super admin endpoint koruması</span></div></div>
+        </div>
+        <div class="tech-section">
+          <div class="tech-label">Observability</div>
+          <div class="kv"><span class="kk">Logging</span><div><span class="kv-val">nestjs-pino</span><span class="kv-sub">Structured JSON logs</span></div></div>
+          <div class="kv"><span class="kk">Monitoring</span><div><span class="kv-val">Sentry (opsiyonel)</span><span class="kv-sub">DSN env ile aktif</span></div></div>
+        </div>
+        <div class="badge-row">
+          <span class="badge blue">NestJS</span>
+          <span class="badge blue">TypeScript</span>
+          <span class="badge blue">JWT</span>
+          <span class="badge blue">Pino</span>
+        </div>
+      </div>
+
+      <!-- Veritabanı & Cache -->
+      <div class="pcard">
+        <div class="pcard-title"><span class="icon">🗄️</span>Veritabanı & Cache</div>
+        <div class="tech-section">
+          <div class="tech-label">PostgreSQL (Neon)</div>
+          <div class="kv"><span class="kk">ORM</span><div><span class="kv-val">Prisma 6.x</span><span class="kv-sub">$extends interceptor + query client</span></div></div>
+          <div class="kv"><span class="kk">Schema</span><div><span class="kv-val">46 model</span><span class="kv-sub">7 migration, clean baseline</span></div></div>
+          <div class="kv"><span class="kk">Multi-tenant</span><div><span class="kv-val">tenantId + RLS</span><span class="kv-sub">FORCE ROW LEVEL SECURITY · 25 tablo</span></div></div>
+          <div class="kv"><span class="kk">Çakışma</span><div><span class="kv-val">GIST EXCLUDE</span><span class="kv-sub">btree_gist · slot overlap önlemi</span></div></div>
+          <div class="kv"><span class="kk">Rol</span><div><span class="kv-val">calon_app</span><span class="kv-sub">RLS policy: NULLIF passthrough</span></div></div>
+        </div>
+        <div class="tech-section">
+          <div class="tech-label">Redis (Redis Labs)</div>
+          <div class="kv"><span class="kk">Client</span><div><span class="kv-val">ioredis + BullMQ</span><span class="kv-sub">Queue yönetimi</span></div></div>
+          <div class="kv"><span class="kk">Hold Lock</span><div><span class="kv-val">Redis NX + Lua CAS</span><span class="kv-sub">Atomic slot rezervasyonu</span></div></div>
+          <div class="kv"><span class="kk">Cache</span><div><span class="kv-val">Availability cache</span><span class="kv-sub">60 sn TTL, invalidation</span></div></div>
+        </div>
+        <div class="badge-row">
+          <span class="badge green">Prisma</span>
+          <span class="badge green">Neon</span>
+          <span class="badge green">ioredis</span>
+          <span class="badge green">BullMQ</span>
+        </div>
+      </div>
+
+      <!-- Booking Mimarisi -->
+      <div class="pcard">
+        <div class="pcard-title"><span class="icon">📅</span>Booking Core Mimarisi</div>
+        <div class="tech-section">
+          <div class="tech-label">State Machine</div>
+          <div class="kv"><span class="kk">Engine</span><div><span class="kv-val">XState v5</span><span class="kv-sub">Appointment FSM</span></div></div>
+          <div class="kv"><span class="kk">States</span><div><span class="kv-val">PENDING → CONFIRMED</span><span class="kv-sub">→ COMPLETED / CANCELLED / NO_SHOW</span></div></div>
+        </div>
+        <div class="tech-section">
+          <div class="tech-label">Triple-Layer Slot Security</div>
+          <div class="layer-stack">
+            <div class="lstack-item hl"><div class="lstack-num">1</div><div><div class="lstack-name">Prisma Interceptor v3.0</div><div class="lstack-desc">WHERE tenantId otomatik · filter-only</div></div><span class="lstack-tag">race-safe</span></div>
+            <div class="lstack-item hl"><div class="lstack-num">2</div><div><div class="lstack-name">PostgreSQL RLS</div><div class="lstack-desc">FORCE ROW LEVEL SECURITY · NULLIF passthrough</div></div><span class="lstack-tag">DB-level</span></div>
+            <div class="lstack-item hl"><div class="lstack-num">3</div><div><div class="lstack-name">GIST EXCLUDE</div><div class="lstack-desc">staff + room çift rezervasyon önlemi</div></div><span class="lstack-tag">constraint</span></div>
+          </div>
+        </div>
+        <div class="tech-section">
+          <div class="tech-label">Test Kapsamı</div>
+          <div class="kv"><span class="kk">Unit</span><span class="kv-val">267 test — PASS</span></div>
+          <div class="kv"><span class="kk">E2E</span><span class="kv-val">18 test — PASS</span></div>
+          <div class="kv"><span class="kk">Kapsam</span><span class="kv-val">booking-flow, double-booking, scheduling, tenant-isolation, concurrency</span></div>
+        </div>
+        <div class="badge-row">
+          <span class="badge purple">XState v5</span>
+          <span class="badge purple">FSM</span>
+          <span class="badge purple">Lua CAS</span>
+        </div>
+      </div>
+
+      <!-- Monorepo & Build -->
+      <div class="pcard">
+        <div class="pcard-title"><span class="icon">🏗️</span>Monorepo & Build Sistemi</div>
+        <div class="tech-section">
+          <div class="tech-label">Monorepo</div>
+          <div class="kv"><span class="kk">Tool</span><div><span class="kv-val">Turborepo</span><span class="kv-sub">Pipeline: build → test → lint</span></div></div>
+          <div class="kv"><span class="kk">Package Mgr</span><div><span class="kv-val">Yarn Workspaces</span><span class="kv-sub">frozen-lockfile · shared deps</span></div></div>
+          <div class="kv"><span class="kk">Apps</span><div><span class="kv-val">api / web / booking</span><span class="kv-sub">apps/ dizini</span></div></div>
+          <div class="kv"><span class="kk">Packages</span><div><span class="kv-val">database / ui / config</span><span class="kv-sub">packages/ dizini</span></div></div>
+        </div>
+        <div class="tech-section">
+          <div class="tech-label">API Build</div>
+          <div class="kv"><span class="kk">Compiler</span><div><span class="kv-val">NestJS CLI → nest build</span><span class="kv-sub">tsc + tsconfig-paths</span></div></div>
+          <div class="kv"><span class="kk">Output</span><div><span class="kv-val">apps/api/dist/</span><span class="kv-sub">main.js (API) + worker.js (Worker)</span></div></div>
+        </div>
+        <div class="tech-section">
+          <div class="tech-label">Docker Multi-Stage</div>
+          <div class="flow-step"><div class="flow-num">1</div><div><div class="flow-title">builder stage</div><div class="flow-desc">node:20-alpine3.19 · yarn install · prisma generate · nest build</div></div></div>
+          <div class="flow-step"><div class="flow-num">2</div><div><div class="flow-title">runner stage</div><div class="flow-desc">prod deps only · non-root calon user · 514MB image</div></div></div>
+        </div>
+        <div class="badge-row">
+          <span class="badge amber">Turborepo</span>
+          <span class="badge amber">Yarn WS</span>
+          <span class="badge amber">Docker</span>
+          <span class="badge amber">Alpine</span>
+        </div>
+      </div>
+
+      <!-- CI/CD & Deployment -->
+      <div class="pcard">
+        <div class="pcard-title"><span class="icon">🔄</span>CI/CD & Deployment</div>
+        <div class="tech-section">
+          <div class="tech-label">CI Pipeline (GitHub Actions)</div>
+          <div class="flow-step"><div class="flow-num">1</div><div><div class="flow-title">Checkout + Node 20 setup</div><div class="flow-desc">actions/checkout@v4 + setup-node@v4</div></div></div>
+          <div class="flow-step"><div class="flow-num">2</div><div><div class="flow-title">PostgreSQL 16 servisi başlat</div><div class="flow-desc">service container · sağlık kontrolü</div></div></div>
+          <div class="flow-step"><div class="flow-num">3</div><div><div class="flow-title">yarn install + prisma generate</div><div class="flow-desc">frozen-lockfile · Prisma client üretimi</div></div></div>
+          <div class="flow-step"><div class="flow-num">4</div><div><div class="flow-title">migrate deploy + build</div><div class="flow-desc">nest build · tsc --noEmit</div></div></div>
+          <div class="flow-step"><div class="flow-num">5</div><div><div class="flow-title">Test + lint</div><div class="flow-desc">jest · 267 unit test · CI #26 YEŞİL</div><div class="flow-cmd">push origin dev → auto-trigger</div></div></div>
+        </div>
+        <div class="tech-section">
+          <div class="tech-label">Production Deploy</div>
+          <div class="kv"><span class="kk">Sunucu</span><div><span class="kv-val">Oracle Cloud Free</span><span class="kv-sub">141.144.243.114 · AMD · Ubuntu 24.04</span></div></div>
+          <div class="kv"><span class="kk">Container</span><div><span class="kv-val">docker run --dns 8.8.8.8</span><span class="kv-sub">--restart unless-stopped · --env-file</span></div></div>
+          <div class="kv"><span class="kk">Proxy</span><div><span class="kv-val">Nginx</span><span class="kv-sub">port 80 → localhost:4000</span></div></div>
+        </div>
+        <div class="badge-row">
+          <span class="badge green">GitHub Actions</span>
+          <span class="badge green">Docker</span>
+          <span class="badge green">Nginx</span>
+          <span class="badge green">CI #26 ✓</span>
+        </div>
+      </div>
+
+      <!-- Kilitli Kararlar -->
+      <div class="pcard proje-wide">
+        <div class="pcard-title"><span class="icon">🔒</span>Kilitli Mimari Kararlar (Değiştirilemez)</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
+          <div>
+            <div class="tech-label">Güvenlik</div>
+            <div class="rule-item"><div class="rule-dot r"></div><div class="rule-text">Migration append-only — mevcut migration'lara dokunulmaz <span>(CLAUDE.md)</span></div></div>
+            <div class="rule-item"><div class="rule-dot r"></div><div class="rule-text">Production compose'a Postgres/Redis servisi ekleme YASAK</div></div>
+            <div class="rule-item"><div class="rule-dot r"></div><div class="rule-text">Production'da prisma db push YASAK — sadece migrate deploy</div></div>
+            <div class="rule-item"><div class="rule-dot r"></div><div class="rule-text">API ve Worker farklı image versiyonuyla deploy YASAK</div></div>
+          </div>
+          <div>
+            <div class="tech-label">Teknik Kilitler</div>
+            <div class="rule-item"><div class="rule-dot a"></div><div class="rule-text">BullMQ — queue sistemi kilitli, değiştirilemez</div></div>
+            <div class="rule-item"><div class="rule-dot a"></div><div class="rule-text">Outbox Pattern — event güvenilirliği için kilitli</div></div>
+            <div class="rule-item"><div class="rule-dot a"></div><div class="rule-text">Booking FSM (XState v5) — state machine kilitli</div></div>
+            <div class="rule-item"><div class="rule-dot a"></div><div class="rule-text">GIST EXCLUDE — slot çakışma koruması kilitli</div></div>
+            <div class="rule-item"><div class="rule-dot a"></div><div class="rule-text">Webhook idempotency — kilitli</div></div>
+          </div>
+          <div>
+            <div class="tech-label">Silinen Dosyalar (Bilinçli)</div>
+            <div class="rule-item"><div class="rule-dot g"></div><div class="rule-text">AI_EXECUTION_RULES.md — kaldırıldı</div></div>
+            <div class="rule-item"><div class="rule-dot g"></div><div class="rule-text">ARCHITECTURE_LOCK.md — kaldırıldı</div></div>
+            <div class="rule-item"><div class="rule-dot g"></div><div class="rule-text">CALON_ENGINEERING_CONSTITUTION.md — kaldırıldı</div></div>
+            <div class="rule-item"><div class="rule-dot g"></div><div class="rule-text">PROJECT_PROTOCOL.md — kaldırıldı</div></div>
+            <div class="rule-item"><div class="rule-dot g"></div><div class="rule-text">CLAUDE.md + STATUS.md — aktif, repo kökünde</div></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+  </div>
+
+</div>
+
+<script>
+function ST(id){
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('on',['tracker','journey','proje'][i]===id));
+  document.querySelectorAll('.page').forEach(p=>p.classList.toggle('on',p.id==='pg-'+id));
+}
+
+const D=[
+  {id:"P0",title:"Gerçeklik Tespiti",ds:"done",note:"calon aktif repo. 7 kritik bulgu.",arts:["docs/infra/schema-gap-report.md"],crit:["staff/service/appointment net değilse başarısız"],tasks:[{id:"p0t1",done:true,text:"Prisma schema incelendi",done:true,type:"code"},{id:"p0t2",done:true,text:"Migration klasörü gözden geçirildi",done:true,type:"code"},{id:"p0t3",done:true,text:"Seed incelendi",done:true,type:"code"},{id:"p0t4",done:true,text:"Docker-compose + env incelendi",done:true,type:"infra"},{id:"p0t5",done:true,text:"Eksik entity listesi çıkarıldı",done:true,type:"code"},{id:"p0t6",done:true,text:"Domain model farkı belirlendi",done:true,type:"code"}]},
+  {id:"P1",title:"Canonical Domain Model",ds:"done",note:"46 model. StaffProfile doğru isim.",arts:["prisma/schema.prisma"],crit:["User/Staff ayrımı bulanıksa başarısız"],tasks:[{id:"p1t1",done:true,text:"Tüm modeller haritalandı",done:true,type:"code"},{id:"p1t2",done:true,text:"users/StaffProfile ayrımı netleştirildi",done:true,type:"code"},{id:"p1t3",done:true,text:"appointments tenantId doğrulandı",done:true,type:"code"},{id:"p1t4",done:true,text:"billing, usage, payments doğrulandı",done:true,type:"code"},{id:"p1t5",done:true,text:"event_outbox, notification tespit edildi",done:true,type:"code"}]},
+  {id:"P2",title:"Migration Anayasası",ds:"done",note:"24 migration → clean baseline. CI #1 YEŞİL.",arts:["docs/infra/migration-discipline.md"],crit:["Yeni DB sıfırdan ayağa kalkmıyorsa başarısız"],tasks:[{id:"p2t1",done:true,text:"Tüm migration'lar gözden geçirildi",done:true,type:"code"},{id:"p2t2",done:true,text:"CI'a PostgreSQL + prisma generate eklendi",done:true,type:"infra"},{id:"p2t3",done:true,text:"Duplicate timestamp çözüldü",done:true,type:"code"},{id:"p2t4",done:true,text:"SQUASH → clean baseline (1368 satır)",done:true,type:"code"},{id:"p2t5",done:true,text:"Sıfır DB → migrate deploy → sıfır hata",done:true,type:"test"}]},
+  {id:"P3",title:"Seed Disiplini",ds:"done",note:"Idempotent upsert. Sıfır DB'de doğrulandı.",arts:["packages/database/prisma/seed.ts"],crit:["Seed idempotent değilse başarısız"],tasks:[{id:"p3t1",done:true,text:"Seed canonical schema ile uyumlu",done:true,type:"code"},{id:"p3t2",done:true,text:"1/1/2/3/5/10 demo veri",done:true,type:"code"},{id:"p3t3",done:true,text:"Seed idempotent (upsert)",done:true,type:"code"},{id:"p3t4",done:true,text:"Sıfır DB reset + seed success",done:true,type:"test"}]},
+  {id:"P4",title:"Tenant İzolasyonu",ds:"done",note:"Triple-Layer: Prisma v3.0 + RLS 25 tablo + GIST EXCLUDE.",arts:["docs/security/tenant-isolation.md"],crit:["Tek bir cross-tenant data leak varsa BAŞARISIZ"],tasks:[{id:"p4t1",done:true,text:"RLS restore — 25 tablo FORCE ROW LEVEL SECURITY",done:true,type:"infra"},{id:"p4t2",done:true,text:"Prisma interceptor v3.0",done:true,type:"code"},{id:"p4t3",done:true,text:"Cross-tenant data denied testleri",done:true,type:"test"},{id:"p4t4",done:true,text:"docs/security/tenant-isolation.md",done:true,type:"doc"}]},
+  {id:"P5",title:"Booking Core",ds:"done",note:"XState v5 + Hold service + 267 unit + 18 e2e. CI #20.",arts:["docs/api/public-booking-contract.md"],crit:["Booking state bozuksa başarısız"],tasks:[{id:"p5t1",done:true,text:"Service/staff/slot listing + booking core",done:true,type:"code"},{id:"p5t2",done:true,text:"Appointment FSM (XState v5)",done:true,type:"code"},{id:"p5t3",done:true,text:"Hold service + GIST + Interceptor v3.0",done:true,type:"code"},{id:"p5t4",done:true,text:"267 unit + 18 e2e test PASS",done:true,type:"test"}]},
+  {id:"P6",title:"Production ENV Contract",ds:"done",note:"22 env var. Joi +12 var. CI #25.",arts:[".env.example","docs/infra/env-contract.md"],crit:["App sessizce yanlış env ile boot oluyorsa başarısız"],tasks:[{id:"p6t1",done:true,text:"env.validation.ts — 12 eksik var eklendi",done:true,type:"code"},{id:"p6t2",done:true,text:"PORT fix + .env.example production-ready",done:true,type:"infra"},{id:"p6t3",done:true,text:"docs/infra/env-contract.md",done:true,type:"doc"}]},
+  {id:"P7",title:"Docker + Production Deploy",ds:"done",note:"Oracle Cloud Free. API canlı http://141.144.243.114. CI #26.",arts:["apps/api/Dockerfile","docker-compose.production.yml","docs/infra/docker-strategy.md"],crit:["Prod compose local DB/Redis içeriyorsa başarısız"],tasks:[{id:"p7t1",done:true,text:"docker-compose.production.yml (DB/Redis YOK)",done:true,type:"infra"},{id:"p7t2",done:true,text:"Dockerfile node:20-alpine3.19 pinlendi",done:true,type:"infra"},{id:"p7t3",done:true,text:"Oracle Cloud Free VPS + Docker 29.3",done:true,type:"infra"},{id:"p7t4",done:true,text:"Neon production migration + calon_app rolü",done:true,type:"infra"},{id:"p7t5",done:true,text:"API container + Nginx aktif",done:true,type:"infra"},{id:"p7t6",done:true,text:"health endpoint → {status:ok} ✓",done:true,type:"test"},{id:"p7t7",done:true,text:"docs/infra/docker-strategy.md",done:true,type:"doc"}]},
+  {id:"P8",title:"Routing / DNS / Edge Topology",ds:"done",note:"SSL kuruldu. https://api.calon.com.tr ✅ Let's Encrypt, auto-renewal aktif. Vercel: calon.com.tr + book.calon.com.tr. DNS tam yayıldı.",arts:["docs/infra/routing-topology.md"],crit:["Bozuk SSL varsa başarısız","Stale API response varsa başarısız"],tasks:[{id:"p8t1",done:true,text:"API production'da çalışıyor (port 80)",done:true,type:"infra"},{id:"p8t2",done:true,text:"Nginx reverse proxy aktif",done:true,type:"infra"},{id:"p8t3",done:true,text:"calon.com.tr → Cloudflare'e eklendi",done:false,type:"infra"},{id:"p8t4",done:true,text:"Natro NS → Cloudflare NS güncellendi",done:false,type:"infra"},{id:"p8t5",done:true,text:"api.calon.com.tr → 141.144.243.114",done:false,type:"infra"},{id:"p8t6",done:true,text:"SSL — Let's Encrypt + Certbot",done:false,type:"infra"},{id:"p8t7",done:true,text:"calon.com.tr + book.calon.com.tr → Vercel",done:false,type:"infra"},{id:"p8t8",done:true,text:"Worker container başlatıldı",done:false,type:"infra"},{id:"p8t9",done:true,text:"CORS production domain'lere güncellendi",done:false,type:"code"},{id:"p8t10",done:true,text:"Tüm domainler HTTPS doğrulandı",done:false,type:"test"},{id:"p8t11",done:true,text:"docs/infra/routing-topology.md",done:false,type:"doc"}]},
+  {id:"P9",title:"Observability Minimum",ds:"done",note:"/ready (DB+Redis 200/503) + /version (commit/buildTime) eklendi. Upstash TLS fix. Production deploy tamamlandı. https://api.calon.com.tr/health/ready → UP",arts:["docs/ops/minimum-observability.md"],crit:["Hata 5 dakikada anlaşılamıyorsa başarısız"],tasks:[{id:"p9t1",done:true,text:"/health endpoint aktif",done:true,type:"code"},{id:"p9t2",done:true,text:"/ready bağımlılık kontrolü",done:false,type:"code"},{id:"p9t3",done:true,text:"/version commit/build bilgisi",done:false,type:"code"},{id:"p9t4",done:true,text:"Structured logs + requestId",done:false,type:"infra"},{id:"p9t5",done:true,text:"Failed job log'da görünür",done:false,type:"code"}]},
+  {id:"P10",title:"Controlled Production Launch",ds:"active",note:"",arts:["docs/deploy/controlled-launch-checklist.md"],crit:["Rollback belgesizse başarısız"],tasks:[{id:"p10t1",text:"İyzico live key",done:false,type:"infra"},{id:"p10t2",text:"Neon + Redis production plan",done:false,type:"infra"},{id:"p10t3",text:"Internal test tenant",done:false,type:"infra"},{id:"p10t4",text:"Production smoke testi",done:false,type:"test"},{id:"p10t5",text:"1 pilot tenant canlı",done:false,type:"infra"},{id:"p10t6",text:"Rollback dry-run success",done:false,type:"test"},{id:"p10t7",text:"controlled-launch-checklist.md",done:false,type:"doc"}]},
+];
+
+const SK='calon-trk-v10';let S={ph:{},tk:{}};
+function load(){const s=localStorage.getItem(SK);let saved={ph:{},tk:{}};if(s){try{saved=JSON.parse(s);}catch(e){}}D.forEach(p=>{// Phase status: saved overrides default, but only if saved exists
+S.ph[p.id]=saved.ph[p.id]||p.ds||'todo';p.tasks.forEach(t=>{// Task done: data's done:true is PERMANENT and cannot be overridden by localStorage
+S.tk[t.id]=t.done===true?true:(saved.tk[t.id]||false);});});}
+function save(){localStorage.setItem(SK,JSON.stringify(S));document.getElementById('lu').textContent='Kaydedildi: '+new Date().toLocaleTimeString('tr-TR');}
+function upStats(){let dn=0,ac=0,td=0,tt=0;D.forEach(p=>{if(S.ph[p.id]==='done')dn++;if(S.ph[p.id]==='active')ac++;p.tasks.forEach(t=>{tt++;if(S.tk[t.id])td++;});});document.getElementById('sd').textContent=dn;document.getElementById('sa').textContent=ac;const pct=tt>0?Math.round(td/tt*100):0;document.getElementById('sp').textContent=pct+'%';document.getElementById('prog').style.width=pct+'%';}
+function bc(s){return s==='done'?'done':s==='active'?'active':s==='blocked'?'blocked':'todo'}
+function bt(s){return s==='done'?'TAMAM':s==='active'?'DEVAM':s==='blocked'?'BLOKE':'BEKLIYOR'}
+function pc(s){return s==='done'?'done':s==='active'?'active':s==='blocked'?'blocked':''}
+function render(){const c=document.getElementById('pc');c.innerHTML='';D.forEach(p=>{const td=p.tasks.filter(t=>S.tk[t.id]).length;const s=S.ph[p.id];const d=document.createElement('div');d.className='phase '+pc(s);d.id='ph-'+p.id;d.innerHTML=`<div class="ph" onclick="tog('${p.id}')"><span class="bdg ${bc(s)}" id="b-${p.id}">${bt(s)}</span><span class="pid">${p.id}</span><span class="ptitle">${p.title}</span><span class="pmeta" id="m-${p.id}">${td}/${p.tasks.length}</span><span class="chv" id="c-${p.id}">›</span></div><div class="pbody" id="bd-${p.id}">${p.note?`<div class="pnote">${p.note}</div>`:''}${p.crit&&p.crit.length?`<div class="crit"><div class="crit-t">Başarısızlık Kriterleri</div><div class="crit-c">${p.crit.map(c=>'· '+c).join('<br>')}</div></div>`:''}<div class="tasks">${p.tasks.map(t=>`<div class="task ${S.tk[t.id]?'dt':''}" onclick="ck('${t.id}','${p.id}')"><div class="chk ${S.tk[t.id]?'c':''}" id="chk-${t.id}"></div><span class="tt ${S.tk[t.id]?'s':''}" id="tx-${t.id}">${t.text}</span><span class="tag ${t.type}">${t.type.toUpperCase()}</span></div>`).join('')}</div>${p.arts&&p.arts.length?`<div class="arts"><div class="arts-t">Artefaktlar</div>${p.arts.map(a=>`<span class="art">${a}</span>`).join('')}</div>`:''}<div class="pact"><button class="btn a" onclick="ss('${p.id}','active',event)">Başlat</button><button class="btn g" onclick="ss('${p.id}','done',event)">Tamamlandı</button><button class="btn r" onclick="ss('${p.id}','blocked',event)">Bloke</button><button class="btn" onclick="ss('${p.id}','todo',event)">Sıfırla</button></div></div>`;c.appendChild(d);});}
+function tog(id){document.getElementById('bd-'+id).classList.toggle('open');document.getElementById('c-'+id).classList.toggle('open');}
+function ck(tid,pid){S.tk[tid]=!S.tk[tid];document.getElementById('chk-'+tid).className='chk'+(S.tk[tid]?' c':'');document.getElementById('tx-'+tid).className='tt'+(S.tk[tid]?' s':'');document.getElementById('chk-'+tid).closest('.task').className='task'+(S.tk[tid]?' dt':'');const p=D.find(x=>x.id===pid);document.getElementById('m-'+pid).textContent=p.tasks.filter(t=>S.tk[t.id]).length+'/'+p.tasks.length;upStats();save();}
+function ss(pid,s,e){e.stopPropagation();S.ph[pid]=s;document.getElementById('b-'+pid).className='bdg '+bc(s);document.getElementById('b-'+pid).textContent=bt(s);document.getElementById('ph-'+pid).className='phase '+pc(s);upStats();save();}
+function exp(){let o='CALON — DURUM\n'+new Date().toLocaleString('tr-TR')+'\n\n';D.forEach(p=>{const s=S.ph[p.id];const td=p.tasks.filter(t=>S.tk[t.id]).length;o+=`[${s.toUpperCase()}] ${p.id}: ${p.title} (${td}/${p.tasks.length})\n`;p.tasks.forEach(t=>{o+=`  ${S.tk[t.id]?'[x]':'[ ]'} ${t.text}\n`;});o+='\n';});navigator.clipboard.writeText(o).then(()=>{const b=document.querySelector('.expbtn');b.textContent='Kopyalandı!';setTimeout(()=>{b.textContent='Durumu kopyala'},2000);});}
+load();render();upStats();document.getElementById('lu').textContent='Yüklendi: '+new Date().toLocaleTimeString('tr-TR');
+</script>
+</body>
+</html>
