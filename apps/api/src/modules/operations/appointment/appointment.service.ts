@@ -20,17 +20,24 @@ import {
   BadRequestException,
   ConflictException,
   NotFoundException,
+  Inject,
+  Logger,
 } from '@nestjs/common';
 import { InjectQueue }      from '@nestjs/bull';
 import { Queue }            from 'bull';
 import {
-  Prisma,
   Appointment,
   AppointmentStatus,
   TransactionType,
-} from '@prisma/client';
+  Money,
+  DbTransaction,
+  isGistExclusionViolation,
+  isDeadlockError,
+  GistExclusionError,
+} from '@calon/database';
 
 import { PrismaService }                  from '../../../common/prisma.service';
+import { APPOINTMENT_REPO, IAppointmentRepository } from './appointment.repository.interface';
 import { QUEUE_NAMES }                    from '../../../common/redis.module';
 import { LedgerService }                  from '../../finance/ledger.service';
 import { CommissionService }              from '../../staff/commission.service';
@@ -53,29 +60,7 @@ const DEFAULT_TENANT_TIMEZONE = 'Europe/Istanbul';
 
 // ── GIST / Deadlock yardımcıları ─────────────────────────────────────────────
 
-/**
- * PostgreSQL GIST exclusion constraint ihlalini (23P01) tespit eder.
- * Prisma P2010 "raw query failed" kodu veya mesajdaki 23P01 değeri kontrol edilir.
- */
-function isGistExclusionViolation(err: unknown): boolean {
-  if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2010') {
-    const meta = err.meta as { code?: string; message?: string } | undefined;
-    if (meta?.code === '23P01') return true;
-    if (meta?.message?.includes('23P01')) return true;
-  }
-  if (err instanceof Error && err.message.includes('23P01')) return true;
-  return false;
-}
-
-/**
- * PostgreSQL deadlock (40P01) tespit eder.
- * Yüksek eşzamanlılıkta GIST yarışı sırasında oluşabilir.
- */
-function isDeadlock(err: unknown): boolean {
-  if (err instanceof Error && err.message.includes('40P01')) return true;
-  if (err instanceof Error && err.message.toLowerCase().includes('deadlock')) return true;
-  return false;
-}
+// isGistExclusionViolation ve isDeadlockError @calon/database'den import edilir.
 
 // ── Raw SQL overlap kontrolü ──────────────────────────────────────────────────
 
@@ -86,7 +71,7 @@ function isDeadlock(err: unknown): boolean {
  * @param excludeId  Reschedule'da mevcut randevunun kendi ID'si — çakışma sayılmaz
  */
 async function checkOverlapRaw(
-  tx:        Prisma.TransactionClient,
+  tx:        DbTransaction,
   tenantId:  string,
   staffId:   string,
   startTime: Date,
@@ -146,6 +131,8 @@ const CANCELLATION_STATUSES: AppointmentStatus[] = [
 
 @Injectable()
 export class AppointmentService {
+  private readonly logger = new Logger(AppointmentService.name);
+
   constructor(
     private readonly prisma:         PrismaService,
     private readonly ledger:         LedgerService,
@@ -158,6 +145,7 @@ export class AppointmentService {
     private readonly inventoryQueue: Queue,
     @InjectQueue(QUEUE_NAMES.LOYALTY_EARN)
     private readonly loyaltyQueue: Queue,
+    @Inject(APPOINTMENT_REPO) private readonly appointmentRepo: IAppointmentRepository,
   ) {}
 
   // ── findAll ─────────────────────────────────────────────────────────────────
@@ -175,30 +163,7 @@ export class AppointmentService {
       customerId?: string;
     },
   ): Promise<Appointment[]> {
-    const where: any = {
-      tenantId,
-      isDeleted: false,
-    };
-
-    if (filters.startDate || filters.endDate) {
-      where.startTime = {};
-      if (filters.startDate) where.startTime.gte = new Date(filters.startDate);
-      if (filters.endDate)   where.startTime.lte = new Date(filters.endDate);
-    }
-    if (filters.status)     where.status     = filters.status;
-    if (filters.staffId)    where.staffId    = filters.staffId;
-    if (filters.customerId) where.customerId = filters.customerId;
-
-    return this.prisma.appointment.findMany({
-      where,
-      orderBy: { startTime: 'asc' },
-      include: {
-        customer: { select: { id: true, firstName: true, lastName: true, phone: true } },
-        service:  { select: { id: true, name: true, durationMin: true, price: true } },
-        staff:    { select: { id: true, firstName: true, lastName: true } },
-        room:     { select: { id: true, name: true } },
-      },
-    });
+    return this.appointmentRepo.findAll(tenantId, filters);
   }
 
   // ── findOne ─────────────────────────────────────────────────────────────────
@@ -207,15 +172,7 @@ export class AppointmentService {
    * Randevu detayı + relations.
    */
   async findOne(tenantId: string, id: string) {
-    const appointment = await this.prisma.appointment.findFirst({
-      where: { id, tenantId, isDeleted: false },
-      include: {
-        customer: { select: { id: true, firstName: true, lastName: true, phone: true, email: true } },
-        service:  { select: { id: true, name: true, description: true, durationMin: true, price: true } },
-        staff:    { select: { id: true, firstName: true, lastName: true } },
-        room:     { select: { id: true, name: true, capacity: true } },
-      },
-    });
+    const appointment = await this.appointmentRepo.findByIdWithRelations(id, tenantId);
 
     if (!appointment) {
       throw new NotFoundException('Randevu bulunamadı');
@@ -248,7 +205,7 @@ export class AppointmentService {
     tenantId: string,
     dto:      CreateAppointmentDto,
     actorId?: string,
-    tx?:      Prisma.TransactionClient,
+    tx?:      DbTransaction,
   ): Promise<Appointment> {
     const startTime = new Date(dto.startTime);
     const endTime   = new Date(dto.endTime);
@@ -282,32 +239,35 @@ export class AppointmentService {
     ]);
 
     // ── DB işlem mantığını ayrı fonksiyona çıkar (tx reuse için) ─────────────
-    const executeInTx = async (db: Prisma.TransactionClient): Promise<Appointment> => {
+    const executeInTx = async (db: DbTransaction): Promise<Appointment> => {
       // Yazılımsal overlap kontrolü (GIST constraint yedekçisi)
       if (dto.staffId) {
-        await checkOverlapRaw(db, tenantId, dto.staffId, startTime, endTime);
+        const overlap = await this.appointmentRepo.hasOverlap(tenantId, dto.staffId, startTime, endTime);
+        if (overlap) {
+          throw new ConflictException(
+            'Seçilen saat bu personel için müsait değil (overlap)',
+          );
+        }
       }
 
-      const appt = await db.appointment.create({
-        data: {
-          tenantId,
-          customerId:    dto.customerId,
-          staffId:       dto.staffId,
-          serviceId:     dto.serviceId,
-          locationId:    dto.locationId,
-          roomId:        dto.roomId,
-          startTime,
-          endTime,
-          source:        dto.source,
-          notes:         dto.notes,
-          internalNotes: dto.internalNotes,
-          totalPrice:    dto.totalPrice,
-          depositPaid:   dto.depositPaid,
-          // Faz 19: Opsiyonel başlangıç durumu (PENDING_PAYMENT for deposit flow)
-          ...(dto.status !== undefined && { status: dto.status }),
-          // Faz 21.9: Test rezervasyonu — public.service.ts tarafından set edilir
-          ...(dto.isTestBooking === true && { isTestBooking: true }),
-        },
+      const appt = await this.appointmentRepo.create({
+        tenantId,
+        customerId:    dto.customerId,
+        staffId:       dto.staffId,
+        serviceId:     dto.serviceId,
+        locationId:    dto.locationId,
+        roomId:        dto.roomId,
+        startTime,
+        endTime,
+        source:        dto.source,
+        notes:         dto.notes,
+        internalNotes: dto.internalNotes,
+        totalPrice:    dto.totalPrice as never,
+        depositPaid:   dto.depositPaid as never,
+        // Faz 19: Opsiyonel başlangıç durumu (PENDING_PAYMENT for deposit flow)
+        ...(dto.status !== undefined && { status: dto.status }),
+        // Faz 21.9: Test rezervasyonu — public.service.ts tarafından set edilir
+        ...(dto.isTestBooking === true && { isTestBooking: true }),
       });
 
       // ── Faz 24: booking.created outbox event — aynı tx'e yaz ───────────────
@@ -350,12 +310,12 @@ export class AppointmentService {
         ? await executeInTx(tx)                        // caller'ın tx'ini kullan
         : await this.prisma.$tenantTransaction(executeInTx); // kendi tx'ini aç
     } catch (err: unknown) {
-      if (isGistExclusionViolation(err)) {
+      if (err instanceof GistExclusionError || isGistExclusionViolation(err)) {
         throw new ConflictException(
           'Seçilen saat bu personel veya oda için müsait değil',
         );
       }
-      if (isDeadlock(err)) {
+      if (isDeadlockError(err)) {
         throw new ConflictException(
           'Eşzamanlı istek çakışması — slot meşgul',
         );
@@ -370,8 +330,17 @@ export class AppointmentService {
 
     // ── Adım 4: Redis hold kilidini kaldır (eski SETNX format — DEL idempotent)
     // tx verilmişse caller zaten Redis temizliğini yönetiyor → atla
+    // Redis hatası randevu kaydını etkilemez — yutulur, loglanır
     if (!tx && dto.staffId) {
-      await this.lock.releaseSlot(tenantId, dto.staffId, dto.startTime);
+      try {
+        await this.lock.releaseSlot(tenantId, dto.staffId, dto.startTime);
+      } catch (e) {
+        // Redis DEL başarısız olsa da randevu DB'de commit edildi — güvenli
+        this.logger.warn(
+          `Redis hold slot release failed after booking commit — TTL will expire ` +
+          `(tenantId: ${tenantId}, staffId: ${dto.staffId}, err: ${(e as Error)?.message})`,
+        );
+      }
     }
 
     // ── Adım 5: Availability cache invalidate ────────────────────────────────
@@ -534,7 +503,7 @@ export class AppointmentService {
             oldEndAtUtc:    existing.endTime.toISOString(),
           },
           tenantId,
-          tx as Prisma.TransactionClient,
+          tx as DbTransaction,
         );
 
         return appt;
@@ -545,7 +514,7 @@ export class AppointmentService {
           'Yeni saat bu personel veya oda için müsait değil',
         );
       }
-      if (isDeadlock(err)) {
+      if (isDeadlockError(err)) {
         throw new ConflictException(
           'Eşzamanlı istek çakışması — yeni slot meşgul',
         );
@@ -641,7 +610,7 @@ export class AppointmentService {
     }
 
     // ── 3. Atomik güncelleme + AuditLog + Ledger (COMPLETED hook) ────────────
-    const updated = await this.prisma.$tenantTransaction(async (tx: Prisma.TransactionClient) => {
+    const updated = await this.prisma.$tenantTransaction(async (tx: DbTransaction) => {
       const appt = await tx.appointment.update({
         where: { id },
         data: {
@@ -696,7 +665,10 @@ export class AppointmentService {
 
       // ── COMPLETED → Deftere kayıt + Hakediş + Loyalty Outbox ──────────────
       if (dto.status === AppointmentStatus.COMPLETED) {
-        const totalAmount = appt.totalPrice ?? new Prisma.Decimal(0);
+        if (!appt.totalPrice) {
+          throw new BadRequestException('Tamamlanacak randevunun toplam tutarı girilmemiş');
+        }
+        const totalAmount = new Money(appt.totalPrice.toString());
 
         await this.ledger.record(
           {

@@ -18,7 +18,7 @@
  */
 
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma, Customer }              from '@prisma/client';
+import { Customer, DbTransaction }       from '@calon/database';
 import { randomUUID }                    from 'node:crypto';
 
 import { PrismaService }          from '../../common/prisma.service';
@@ -76,7 +76,7 @@ export class CustomerService {
     const take = query.take ?? 20;
     const skip = query.skip ?? 0;
 
-    const where: Prisma.CustomerWhereInput = {
+    const where = {
       tenantId,
       isDeleted: false,
       ...(query.search
@@ -142,7 +142,7 @@ export class CustomerService {
     tenantId:   string,
     actorId?:   string,
   ): Promise<void> {
-    await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    await this.prisma.$transaction(async (tx: DbTransaction) => {
 
       // ── 1. Müşteri doğrulaması ───────────────────────────────────────────────
       // findFirst + tenantId: WHERE tenantId filtresi enjekte edilir
@@ -153,9 +153,9 @@ export class CustomerService {
       }
 
       // ── 2. Finansal ledger soft-delete (bağlantıyı koru) ────────────────────
-      // Randevular middleware ile tenantId+isDeleted filtreli — yalnızca aktif randevular
+      // isDeleted: undefined → middleware filtresini override eder, silinmiş randevular dahil
       const appointments = await tx.appointment.findMany({
-        where:  { tenantId, customerId },
+        where:  { tenantId, customerId, isDeleted: undefined },
         select: { id: true },
       });
 

@@ -21,23 +21,27 @@ import {
   Injectable,
   BadRequestException,
   NotFoundException,
+  Inject,
 } from '@nestjs/common';
 import { InjectQueue }        from '@nestjs/bull';
 import { Queue }              from 'bull';
 import {
-  Prisma,
   Appointment,
   AppointmentStatus,
   TransactionLedger,
   TransactionType,
-} from '@prisma/client';
+  Money,
+} from '@calon/database';
 
 import { PrismaService }     from '../../common/prisma.service';
+import { getActiveTxClient } from '../../common/tx.context';
+import { Prisma }             from '@prisma/client';
 import { QUEUE_NAMES }       from '../../common/redis.module';
 import { LedgerService }     from './ledger.service';
 import { isValidTransition } from '../operations/appointment/appointment.machine';
 import { TakeDepositDto }    from './dto/take-deposit.dto';
 import { CheckoutDto }       from './dto/checkout.dto';
+import { PAYMENT_REPO, IPaymentRepository } from './payment.repository.interface';
 
 // ── Çıkış tipi ───────────────────────────────────────────────────────────────
 
@@ -55,6 +59,7 @@ export class PaymentService {
     private readonly ledger:  LedgerService,
     @InjectQueue(QUEUE_NAMES.STOCK_DEDUCT)
     private readonly inventoryQueue: Queue,
+    @Inject(PAYMENT_REPO) private readonly paymentRepo: IPaymentRepository,
   ) {}
 
   // ── takeDeposit ────────────────────────────────────────────────────────────
@@ -76,10 +81,10 @@ export class PaymentService {
     dto:           TakeDepositDto,
     actorId?:      string,
   ): Promise<PaymentResult> {
-    return this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    return this.prisma.withTenantTransaction(async () => {
 
       // ── 1. Randevuyu bul — findFirst + tenantId filtresi enjekte edilir ────
-      const appt = await tx.appointment.findFirst({ where: { id: appointmentId, tenantId } });
+      const appt = await this.paymentRepo.findAppointmentById(appointmentId, tenantId);
 
       if (!appt || appt.isDeleted) {
         throw new NotFoundException('Randevu bulunamadı');
@@ -107,20 +112,17 @@ export class PaymentService {
           description: `Kaparo alındı — Randevu: ${appointmentId}`,
           reference:   dto.reference,
         },
-        tx,
       );
 
       // ── 4. depositPaid kümülatif güncelleme ──────────────────────────────
       const prev     = appt.depositPaid ? Number(appt.depositPaid) : 0;
-      const newTotal = new Prisma.Decimal(prev + dto.amount);
+      const newTotal = new Money(prev + dto.amount);
 
-      const updated = await tx.appointment.update({
-        where: { id: appointmentId },
-        data:  { depositPaid: newTotal },
-      });
+      const updated = await this.paymentRepo.updateAppointmentDeposit(appointmentId, { depositPaid: newTotal });
 
       // ── 5. AuditLog ───────────────────────────────────────────────────────
-      await tx.auditLog.create({
+      const _db = getActiveTxClient(this.prisma as unknown as Prisma.TransactionClient);
+      await _db.auditLog.create({
         data: {
           tenantId,
           entityType: 'Appointment',
@@ -162,10 +164,10 @@ export class PaymentService {
     actorRole?:    string,
   ): Promise<PaymentResult> {
 
-    const result = await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const result = await this.prisma.withTenantTransaction(async () => {
 
       // ── 1. Randevuyu bul — findFirst + tenantId filtresi enjekte edilir ────
-      const appt = await tx.appointment.findFirst({ where: { id: appointmentId, tenantId } });
+      const appt = await this.paymentRepo.findAppointmentById(appointmentId, tenantId);
 
       if (!appt || appt.isDeleted) {
         throw new NotFoundException('Randevu bulunamadı');
@@ -188,20 +190,17 @@ export class PaymentService {
           description: dto.notes ?? `Hesap kapatma — Randevu: ${appointmentId}`,
           reference:   dto.reference,
         },
-        tx,
       );
 
       // ── 4. Durum geçişi + toplam tutar kaydı ─────────────────────────────
-      const updated = await tx.appointment.update({
-        where: { id: appointmentId },
-        data:  {
-          status:     AppointmentStatus.COMPLETED,
-          totalPrice: new Prisma.Decimal(dto.amount),
-        },
+      const updated = await this.paymentRepo.checkoutAppointment(appointmentId, {
+        status:     AppointmentStatus.COMPLETED,
+        totalPrice: new Money(dto.amount),
       });
 
       // ── 5. AuditLog ───────────────────────────────────────────────────────
-      await tx.auditLog.create({
+      const _db = getActiveTxClient(this.prisma as unknown as Prisma.TransactionClient);
+      await _db.auditLog.create({
         data: {
           tenantId,
           entityType: 'Appointment',
