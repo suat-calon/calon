@@ -3,12 +3,14 @@
  * POST /public/holds
  */
 
-import { IsISO8601, IsUUID } from 'class-validator';
+import { IsISO8601, IsString, IsUUID, MaxLength, MinLength } from 'class-validator';
 
 export class AcquireHoldDto {
-  /** Tenant kimliği (booking sayfasından salon ID'si olarak gelir) */
-  @IsUUID('4')
-  tenantId!: string;
+  /** Salon slug — backend tenantId'ye çevirir */
+  @IsString()
+  @MinLength(1)
+  @MaxLength(100)
+  slug!: string;
 
   /** Personel kimliği */
   @IsUUID('4')

@@ -71,35 +71,35 @@ export class PublicController {
     return this.svc.getSalon(slug);
   }
 
-  // ── GET /public/services?tenantId={id} ────────────────────────────────────
+  // ── GET /public/services?slug={slug} ──────────────────────────────────────
   @Get('services')
-  getServices(@Query('tenantId') tenantId: string) {
-    return this.svc.getServices(tenantId);
+  getServices(@Query('slug') slug: string) {
+    return this.svc.getServices(slug);
   }
 
-  // ── GET /public/staff?tenantId={id} ──────────────────────────────────────
+  // ── GET /public/staff?slug={slug} ─────────────────────────────────────────
   @Get('staff')
-  getStaff(@Query('tenantId') tenantId: string) {
-    return this.svc.getStaff(tenantId);
+  getStaff(@Query('slug') slug: string) {
+    return this.svc.getStaff(slug);
   }
 
-  // ── GET /public/availability?tenantId&staffId&date&serviceDurationMin ─────
+  // ── GET /public/availability?slug&staffId&date&serviceDurationMin ──────────
   /**
    * Belirtilen personel ve tarih için boş slot listesi.
-   * date: YYYY-MM-DD (UTC gün)
+   * date: YYYY-MM-DD (tenant yerel tarihi)
    * serviceDurationMin: varsayılan 30
    */
   @Get('availability')
   @Throttle({ default: { limit: AVAILABILITY_LIMIT, ttl: RATE_TTL_MS } })
   @UseGuards(AvailabilityAbuseGuard)
   getAvailability(
-    @Query('tenantId')          tenantId: string,
-    @Query('staffId')           staffId:  string,
-    @Query('date')              date:     string,
+    @Query('slug')              slug:    string,
+    @Query('staffId')           staffId: string,
+    @Query('date')              date:    string,
     @Query('serviceDurationMin', new DefaultValuePipe(30), ParseIntPipe)
     serviceDurationMin: number,
   ) {
-    return this.svc.getAvailability(tenantId, staffId, date, serviceDurationMin);
+    return this.svc.getAvailability(slug, staffId, date, serviceDurationMin);
   }
 
   // ── POST /public/holds ────────────────────────────────────────────────────
@@ -128,10 +128,10 @@ export class PublicController {
   @Delete('holds/:holdId')
   @HttpCode(HttpStatus.NO_CONTENT)
   releaseHold(
-    @Param('holdId') holdId:   string,
-    @Query('tenantId') tenantId: string,
+    @Param('holdId') holdId: string,
+    @Query('slug')   slug:   string,
   ) {
-    return this.svc.releaseHold(holdId, tenantId);
+    return this.svc.releaseHold(holdId, slug);
   }
 
   // ── POST /public/book ─────────────────────────────────────────────────────

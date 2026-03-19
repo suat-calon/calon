@@ -1,10 +1,12 @@
 'use client';
 
 /**
- * P10.3 — Minimal Booking Flow
+ * P10.3 — Minimal Booking Flow (P10.3.1: slug-first contract)
  * Route: /booking/[tenantSlug]
  *
  * Steps: service → date+slot → customer form → success
+ *
+ * tenantId backend'e ASLA gönderilmez — tek giriş noktası slug.
  */
 
 import { use, useEffect, useState } from 'react';
@@ -14,28 +16,27 @@ const API = '/api/v1/public';
 // ── Types ──────────────────────────────────────────────────────────────────────
 
 interface Salon {
-  id: string;
-  name: string;
+  name:     string;
   location: { id: string } | null;
 }
 
 interface Service {
-  id: string;
-  name: string;
+  id:          string;
+  name:        string;
   durationMin: number;
-  price: string;
-  currency: string;
+  price:       string;
+  currency:    string;
 }
 
 interface Staff {
-  id: string;
+  id:        string;
   firstName: string;
-  lastName: string;
+  lastName:  string;
 }
 
 interface Slot {
   startTime: string;
-  endTime: string;
+  endTime:   string;
 }
 
 // ── Page ───────────────────────────────────────────────────────────────────────
@@ -45,8 +46,7 @@ export default function BookingPage({
 }: {
   params: Promise<{ tenantSlug: string }>;
 }) {
-  const resolvedParams = use(params);
-  const { tenantSlug } = resolvedParams;
+  const { tenantSlug } = use(params);
 
   const [salon, setSalon]         = useState<Salon | null>(null);
   const [services, setServices]   = useState<Service[]>([]);
@@ -62,7 +62,7 @@ export default function BookingPage({
   const [error, setError]         = useState('');
   const [success, setSuccess]     = useState(false);
 
-  // ── Step 1: Load salon + services ─────────────────────────────────────────
+  // ── Step 1: Load salon + services (slug-first) ─────────────────────────────
 
   useEffect(() => {
     fetch(`${API}/salon/${tenantSlug}`)
@@ -70,36 +70,37 @@ export default function BookingPage({
       .then((s: Salon | null) => {
         if (!s) { setError('Salon bulunamadı.'); return; }
         setSalon(s);
-        return fetch(`${API}/services?tenantId=${s.id}`)
+        // slug gönder — tenantId asla frontend'de olmaz
+        return fetch(`${API}/services?slug=${tenantSlug}`)
           .then((r) => r.json() as Promise<Service[]>)
           .then(setServices);
       })
       .catch(() => setError('Bağlantı hatası.'));
   }, [tenantSlug]);
 
-  // ── Step 2: Load staff when service selected ───────────────────────────────
+  // ── Step 2: Load staff when service selected (slug-first) ─────────────────
 
   useEffect(() => {
-    if (!salon || !service) return;
-    fetch(`${API}/staff?tenantId=${salon.id}`)
+    if (!service) return;
+    fetch(`${API}/staff?slug=${tenantSlug}`)
       .then((r) => r.json() as Promise<Staff[]>)
       .then(setStaff)
       .catch(() => {});
-  }, [salon, service]);
+  }, [tenantSlug, service]);
 
-  // ── Step 3: Load slots when date selected ─────────────────────────────────
+  // ── Step 3: Load slots when date selected (slug-first) ────────────────────
 
   useEffect(() => {
-    if (!salon || !service || !date || staff.length === 0) return;
+    if (!service || !date || staff.length === 0) return;
     const staffId = staff[0]!.id;
-    const url = `${API}/availability?tenantId=${salon.id}&staffId=${staffId}&date=${date}&serviceDurationMin=${service.durationMin}`;
+    const url = `${API}/availability?slug=${tenantSlug}&staffId=${staffId}&date=${date}&serviceDurationMin=${service.durationMin}`;
     fetch(url)
       .then((r) => r.json() as Promise<Slot[]>)
       .then(setSlots)
       .catch(() => setSlots([]));
-  }, [salon, service, date, staff]);
+  }, [tenantSlug, service, date, staff]);
 
-  // ── Submit ─────────────────────────────────────────────────────────────────
+  // ── Submit (slug-first — tenantId body'de YOK) ────────────────────────────
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -111,7 +112,7 @@ export default function BookingPage({
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          tenantId:   salon.id,
+          slug:       tenantSlug,   // ← tenantId değil, slug gönder
           locationId: salon.location?.id ?? '',
           staffId:    staff[0]!.id,
           serviceId:  service.id,

@@ -22,9 +22,11 @@ import {
 } from 'class-validator';
 
 export class BookPublicDto {
-  /** Salon tenant UUID — salon sayfasından alınır */
-  @IsUUID('4')
-  tenantId!: string;
+  /** Salon slug — backend tenantId'ye çevirir; UUID asla frontend'e sızmaz */
+  @IsString()
+  @MinLength(1)
+  @MaxLength(100)
+  slug!: string;
 
   /** Lokasyon UUID */
   @IsUUID('4')

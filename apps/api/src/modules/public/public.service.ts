@@ -193,11 +193,12 @@ export class PublicService {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // GET /public/services?tenantId={id}
+  // GET /public/services?slug={slug}
   // ═══════════════════════════════════════════════════════════════════════════
 
-  async getServices(tenantId: string): Promise<ServicePublicDto[]> {
-    const services = await this.runInContext(tenantId, () =>
+  async getServices(slug: string): Promise<ServicePublicDto[]> {
+    const tenant   = await this.resolveTenantBySlug(slug);
+    const services = await this.runInContext(tenant.id, () =>
       this.prisma.service.findMany({
         where:   { isActive: true },
         include: { category: { select: { name: true } } },
@@ -217,11 +218,12 @@ export class PublicService {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // GET /public/staff?tenantId={id}
+  // GET /public/staff?slug={slug}
   // ═══════════════════════════════════════════════════════════════════════════
 
-  async getStaff(tenantId: string): Promise<StaffPublicDto[]> {
-    const staffList = await this.runInContext(tenantId, () =>
+  async getStaff(slug: string): Promise<StaffPublicDto[]> {
+    const tenant    = await this.resolveTenantBySlug(slug);
+    const staffList = await this.runInContext(tenant.id, () =>
       this.prisma.staffProfile.findMany({
         where:   { isActive: true },
         include: {
@@ -246,15 +248,18 @@ export class PublicService {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // GET /public/availability?tenantId&staffId&date&serviceDurationMin
+  // GET /public/availability?slug&staffId&date&serviceDurationMin
   // ═══════════════════════════════════════════════════════════════════════════
 
   async getAvailability(
-    tenantId:          string,
-    staffId:           string,
-    date:              string,   // YYYY-MM-DD (tenant yerel tarihi)
+    slug:               string,
+    staffId:            string,
+    date:               string,   // YYYY-MM-DD (tenant yerel tarihi)
     serviceDurationMin: number,
   ): Promise<SlotDto[]> {
+    const tenant   = await this.resolveTenantBySlug(slug);
+    const tenantId = tenant.id;
+
     // §8 MVP-EXIT-FINAL+: 5s Redis cache — slot hesabı pahalı, sık tekrar sorgularda DB'yi korur
     const cacheKey = `avail_cache:${tenantId}:${staffId}:${date}:${serviceDurationMin}`;
     const cached   = await this.redis.get(cacheKey).catch(() => null);
@@ -265,18 +270,11 @@ export class PublicService {
     return this.runInContext(tenantId, async () => {
       // Faz 23: SchedulingAvailabilityService'e delege et.
       // Timezone-aware, shift-aware ve hold-aware slot hesabı yapar.
-      // Tenant timezone'u çekilerek doğru yerel gün sınırı kullanılır.
-      const tenant = await this.prisma.tenant.findUnique({
-        where:  { id: tenantId },
-        select: { timezone: true },
-      });
-      const timezone = tenant?.timezone ?? 'UTC';
-
       const slots = await this.schedulingAvail.getAvailableSlots(
         tenantId,
         staffId,
         date,
-        timezone,
+        tenant.timezone ?? 'UTC',
         serviceDurationMin,
       );
 
@@ -297,29 +295,26 @@ export class PublicService {
    * Tenant timezone'u tenant kaydından alınır — doğru cache key için.
    */
   async acquireHold(dto: AcquireHoldDto): Promise<{ holdId: string; expiresAt: string }> {
-    return this.runInContext(dto.tenantId, async () => {
+    const tenant   = await this.resolveTenantBySlug(dto.slug);
+    const tenantId = tenant.id;
+
+    return this.runInContext(tenantId, async () => {
       const service = await this.prisma.service.findFirst({
-        where:  { id: dto.serviceId, tenantId: dto.tenantId },
+        where:  { id: dto.serviceId, tenantId },
         select: { durationMin: true },
       });
       if (!service) throw new NotFoundException('Hizmet bulunamadı.');
-
-      const tenant = await this.prisma.tenant.findUnique({
-        where:  { id: dto.tenantId },
-        select: { timezone: true },
-      });
-      const timezone = tenant?.timezone ?? 'UTC';
 
       const startTime = new Date(dto.startTime);
       const endTime   = new Date(startTime.getTime() + service.durationMin * 60_000);
 
       const result = await this.holdService.acquireHold(
-        dto.tenantId,
+        tenantId,
         dto.staffId,
         dto.serviceId,
         startTime,
         endTime,
-        timezone,
+        tenant.timezone ?? 'UTC',
       );
 
       return { holdId: result.holdId, expiresAt: result.expiresAt.toISOString() };
@@ -335,14 +330,12 @@ export class PublicService {
    * Kullanıcı booking akışından çıktığında veya geri döndüğünde çağrılır.
    * Idempotent: terminal durumda hold'a dokunmaz.
    */
-  async releaseHold(holdId: string, tenantId: string): Promise<void> {
+  async releaseHold(holdId: string, slug: string): Promise<void> {
+    const tenant   = await this.resolveTenantBySlug(slug);
+    const tenantId = tenant.id;
+
     return this.runInContext(tenantId, async () => {
-      const tenant = await this.prisma.tenant.findUnique({
-        where:  { id: tenantId },
-        select: { timezone: true },
-      });
-      const timezone = tenant?.timezone ?? 'UTC';
-      await this.holdService.releaseHold(holdId, tenantId, timezone);
+      await this.holdService.releaseHold(holdId, tenantId, tenant.timezone ?? 'UTC');
     });
   }
 
@@ -351,20 +344,10 @@ export class PublicService {
   // ═══════════════════════════════════════════════════════════════════════════
 
   async book(dto: BookPublicDto): Promise<BookingResultDto> {
-    // Tenant'ı doğrula (public endpoint → slug değil tenantId geliyor,
-    // ama salon sayfasından alındığı için zaten güvenilir kabul edilir)
-    // Faz 21.9: TRIAL tenant'lar da test rezervasyonu yapabilir.
-    // TenantStatus.TRIAL diye bir değer yoktur; TRIAL olan salon billing.status=TRIAL
-    // taşır ama tenant.status=ACTIVE'tir. Dolayısıyla burada yalnızca ACTIVE kontrol edilir.
-    const tenant = await this.prisma.tenant.findFirst({
-      where: {
-        id:        dto.tenantId,
-        isDeleted: false,
-        status:    TenantStatus.ACTIVE,
-      },
-      include: { billing: { select: { status: true } } },
-    });
-    if (!tenant) throw new NotFoundException('Salon aktif değil.');
+    // slug → tenant çözümle. resolveTenantBySlug ACTIVE kontrolü yapar.
+    // Faz 21.9: TRIAL tenant'lar da test rezervasyonu yapabilir (status=ACTIVE taşır).
+    const tenant   = await this.resolveTenantBySlug(dto.slug);
+    const tenantId = tenant.id;
 
     // Faz 22: SUSPENDED tenant'lar public booking yapamaz.
     // BillingGuard @Public() endpoint'lerde çalışmaz; bu yüzden burada kontrol edilir.
@@ -374,10 +357,10 @@ export class PublicService {
       );
     }
 
-    return this.runInContext(dto.tenantId, async () => {
+    return this.runInContext(tenantId, async () => {
       // ── 1. Hizmet bilgisini al (endTime hesabı için) ─────────────────────
       const service = await this.prisma.service.findFirst({
-        where: { id: dto.serviceId, tenantId: dto.tenantId },
+        where: { id: dto.serviceId, tenantId },
       });
       if (!service) {
         throw new NotFoundException('Hizmet bulunamadı.');
@@ -388,13 +371,13 @@ export class PublicService {
 
       // ── 2. Personeli doğrula ─────────────────────────────────────────────
       const staff = await this.prisma.staffProfile.findFirst({
-        where: { id: dto.staffId, tenantId: dto.tenantId, isActive: true, isDeleted: false },
+        where: { id: dto.staffId, tenantId, isActive: true, isDeleted: false },
       });
       if (!staff) throw new NotFoundException('Personel bulunamadı.');
 
       // ── 3. Müşteri upsert (telefon bazlı, tenant içi) ────────────────────
       let customer = await this.prisma.customer.findFirst({
-        where: { phone: dto.phone, tenantId: dto.tenantId },
+        where: { phone: dto.phone, tenantId },
       });
 
       let isNewCustomer = false;
@@ -403,7 +386,7 @@ export class PublicService {
         isNewCustomer = true;
         customer = await this.prisma.customer.create({
           data: {
-            tenantId:     dto.tenantId,
+            tenantId,
             firstName:    dto.firstName,
             lastName:     dto.lastName,
             phone:        dto.phone,
@@ -415,13 +398,13 @@ export class PublicService {
           },
         });
         this.logger.log(
-          `Yeni müşteri oluşturuldu: ${customer.id} | tenant=${dto.tenantId} | refCode=${customer.referralCode}`,
+          `Yeni müşteri oluşturuldu: ${customer.id} | tenant=${tenantId} | refCode=${customer.referralCode}`,
         );
       }
 
       // ── 4. Lokasyonu doğrula ─────────────────────────────────────────────
       const location = await this.prisma.location.findFirst({
-        where: { id: dto.locationId, tenantId: dto.tenantId, isActive: true, isDeleted: false },
+        where: { id: dto.locationId, tenantId, isActive: true, isDeleted: false },
       });
       if (!location) throw new NotFoundException('Lokasyon bulunamadı.');
 
@@ -433,16 +416,15 @@ export class PublicService {
 
       // ── Faz 21.9: isTestBooking tespiti (hizmet katmanı — app logic değil) ─
       // TRIAL tenant'ın ilk randevusu test olarak işaretlenir.
-      // Koşul: billing.status = TRIAL AND mevcut randevu sayısı = 0
       const billingStatus = tenant.billing?.status;
       const isTestBooking = billingStatus === 'TRIAL'
         ? (await this.prisma.appointment.count({
-            where: { tenantId: dto.tenantId, isDeleted: false },
+            where: { tenantId, isDeleted: false },
           })) === 0
         : false;
 
       if (isTestBooking) {
-        this.logger.log(`[isTestBooking] İlk test randevusu tespit edildi: tenant=${dto.tenantId}`);
+        this.logger.log(`[isTestBooking] İlk test randevusu tespit edildi: tenant=${tenantId}`);
       }
 
       // ── 5. Randevu oluştur ─────────────────────────────────────────────────
@@ -450,7 +432,7 @@ export class PublicService {
       // Phase 3'te legacy yol kaldırılacak, holdId zorunlu hale gelecek.
 
       let appointment;
-      let holdRedisKey:  string | undefined;
+      let holdRedisKey:   string | undefined;
       let holdRedisToken: string | undefined;
 
       const appointmentData = {
@@ -469,34 +451,19 @@ export class PublicService {
 
       if (dto.holdId) {
         // ── Hold-based commit (Faz 23) ─────────────────────────────────────
-        // consumeHold + randevu insert aynı DB transaction → atomik geçiş.
-        // holdId: ACTIVE → CONSUMED, ardından randevu INSERT (GIST son güvence).
-        // Redis hold key commit SONRASI silinir (tx dışında — atomik değil ama best-effort).
         try {
           appointment = await this.prisma.$tenantTransaction(async (tx) => {
-            const consumed = await this.holdService.consumeHold(
-              dto.holdId!,
-              dto.tenantId,
-              tx,
-            );
+            const consumed = await this.holdService.consumeHold(dto.holdId!, tenantId, tx);
             holdRedisKey   = consumed.redisKey;
             holdRedisToken = consumed.holdToken;
-
-            return this.appointments.create(
-              dto.tenantId,
-              appointmentData,
-              'public-booking',
-              tx,
-            );
+            return this.appointments.create(tenantId, appointmentData, 'public-booking', tx);
           });
         } catch (err) {
           if (err instanceof ConflictException) throw err;
           throw err;
         }
 
-        // Post-commit: Redis hold key'i hemen sil (TTL'yi bekleme).
-        // Slot artık randevuyla dolu; Redis key stale kalsa bile availability
-        // appointment overlap filtresiyle doğru sonuç verir.
+        // Post-commit: Redis hold key'i hemen sil
         if (holdRedisKey && holdRedisToken) {
           await this.holdService.deleteHoldRedisKey(holdRedisKey, holdRedisToken);
         }
@@ -504,9 +471,7 @@ export class PublicService {
         // ── Legacy direct commit (Faz 16 — Phase 3'te kaldırılacak) ────────
         try {
           appointment = await this.appointments.create(
-            dto.tenantId,
-            appointmentData,
-            'public-booking',
+            tenantId, appointmentData, 'public-booking',
           );
         } catch (err) {
           if (err instanceof ConflictException) throw err;
@@ -519,14 +484,14 @@ export class PublicService {
       const serviceSlug = slugify(service.name);
 
       this.logger.log(
-        `Public booking: appt=${appointment.id} | tenant=${dto.tenantId} | staff=${dto.staffId}`,
+        `Public booking: appt=${appointment.id} | tenant=${tenantId} | staff=${dto.staffId}`,
       );
 
-      // ── 6. Faz 18: Referral işleme — fire and forget (senkron hızı koruma) ─
+      // ── 6. Faz 18: Referral işleme — fire and forget ──────────────────────
       if (dto.referralCode && isNewCustomer) {
         void this.referralQueue
           .add('process-referral', {
-            tenantId:           dto.tenantId,
+            tenantId,
             referredCustomerId: customer.id,
             referralCode:       dto.referralCode,
             appointmentId:      appointment.id,
@@ -540,7 +505,7 @@ export class PublicService {
 
       return {
         appointmentId: appointment.id,
-        status:        appointment.status,   // PENDING_PAYMENT | PENDING
+        status:        appointment.status,
         startTime:     appointment.startTime.toISOString(),
         endTime:       appointment.endTime.toISOString(),
         service:  { name: service.name, durationMin: service.durationMin },
@@ -572,6 +537,19 @@ export class PublicService {
   // ═══════════════════════════════════════════════════════════════════════════
   // ÖZEL YARDIMCILAR
   // ═══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Slug → tenant kaydı çöz.
+   * Tüm public endpoint'lerin tek giriş noktası — tenantId asla frontend'e sızmaz.
+   */
+  private async resolveTenantBySlug(slug: string) {
+    const tenant = await this.prisma.tenant.findFirst({
+      where:   { slug, isDeleted: false, status: TenantStatus.ACTIVE },
+      include: { billing: { select: { status: true } } },
+    });
+    if (!tenant) throw new NotFoundException(`Salon bulunamadı: ${slug}`);
+    return tenant;
+  }
 
   /**
    * Verilen tenantId ile AsyncLocalStorage context'i başlatır.
