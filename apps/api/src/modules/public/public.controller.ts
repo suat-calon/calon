@@ -18,6 +18,7 @@
  */
 
 import {
+  BadRequestException,
   Controller,
   Delete,
   Get,
@@ -74,12 +75,14 @@ export class PublicController {
   // ── GET /public/services?slug={slug} ──────────────────────────────────────
   @Get('services')
   getServices(@Query('slug') slug: string) {
+    if (!slug) throw new BadRequestException('slug gerekli');
     return this.svc.getServices(slug);
   }
 
   // ── GET /public/staff?slug={slug} ─────────────────────────────────────────
   @Get('staff')
   getStaff(@Query('slug') slug: string) {
+    if (!slug) throw new BadRequestException('slug gerekli');
     return this.svc.getStaff(slug);
   }
 
@@ -99,6 +102,9 @@ export class PublicController {
     @Query('serviceDurationMin', new DefaultValuePipe(30), ParseIntPipe)
     serviceDurationMin: number,
   ) {
+    if (!slug)    throw new BadRequestException('slug gerekli');
+    if (!staffId) throw new BadRequestException('staffId gerekli');
+    if (!date)    throw new BadRequestException('date gerekli (YYYY-MM-DD)');
     return this.svc.getAvailability(slug, staffId, date, serviceDurationMin);
   }
 
@@ -131,6 +137,7 @@ export class PublicController {
     @Param('holdId') holdId: string,
     @Query('slug')   slug:   string,
   ) {
+    if (!slug) throw new BadRequestException('slug gerekli');
     return this.svc.releaseHold(holdId, slug);
   }
 

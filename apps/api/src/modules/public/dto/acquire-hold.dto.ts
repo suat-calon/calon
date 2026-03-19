@@ -1,22 +1,22 @@
 /**
- * ACQUIRE HOLD DTO — Faz 23
+ * ACQUIRE HOLD DTO — P10.3.2 Contract Hardening
  * POST /public/holds
  */
 
-import { IsISO8601, IsString, IsUUID, MaxLength, MinLength } from 'class-validator';
+import { IsISO8601, IsNotEmpty, IsString, IsUUID, MaxLength } from 'class-validator';
 
 export class AcquireHoldDto {
-  /** Salon slug — backend tenantId'ye çevirir */
+  /** Salon slug — backend tenantId'ye çevirir; UUID asla frontend'e sızmaz */
   @IsString()
-  @MinLength(1)
+  @IsNotEmpty()
   @MaxLength(100)
   slug!: string;
 
-  /** Personel kimliği */
+  /** Seçilen personel UUID */
   @IsUUID('4')
   staffId!: string;
 
-  /** Hizmet kimliği (endTime hesabı için) */
+  /** Seçilen hizmet UUID (endTime hesabı için backend kullanır) */
   @IsUUID('4')
   serviceId!: string;
 

@@ -1,26 +1,30 @@
 'use client';
 
 /**
- * P10.3 — Minimal Booking Flow (P10.3.1: slug-first contract)
+ * P10.3 — Minimal Booking Flow (P10.3.2: Contract Hardening)
  * Route: /booking/[tenantSlug]
  *
  * Steps: service → date+slot → customer form → success
  *
- * tenantId backend'e ASLA gönderilmez — tek giriş noktası slug.
+ * Güvenlik kuralları:
+ *   - tenantId backend'e ASLA gönderilmez; tek giriş noktası slug.
+ *   - Her fetch → res.ok kontrolü → silent fail yok.
+ *   - Book response → appointmentId varlık kontrolü.
+ *   - Tüm hata yolları kullanıcıya gösterilir.
  */
 
 import { use, useEffect, useState } from 'react';
 
 const API = '/api/v1/public';
 
-// ── Types ──────────────────────────────────────────────────────────────────────
+// ── Response tipleri (API sözleşmesi) ─────────────────────────────────────────
 
-interface Salon {
+interface SalonDto {
   name:     string;
   location: { id: string } | null;
 }
 
-interface Service {
+interface ServiceDto {
   id:          string;
   name:        string;
   durationMin: number;
@@ -28,15 +32,41 @@ interface Service {
   currency:    string;
 }
 
-interface Staff {
+interface StaffDto {
   id:        string;
   firstName: string;
   lastName:  string;
 }
 
-interface Slot {
+interface SlotDto {
   startTime: string;
   endTime:   string;
+}
+
+interface BookResultDto {
+  appointmentId:   string;
+  status:          string;
+  startTime:       string;
+  endTime:         string;
+  service:         { name: string; durationMin: number };
+  staff:           { firstName: string; lastName: string };
+  location:        { name: string };
+  requiresPayment: boolean;
+  salonSlug:       string;
+  citySlug:        string | null;
+  serviceSlug:     string | null;
+}
+
+// ── Yardımcı: API hata mesajını çöz ──────────────────────────────────────────
+
+async function parseApiError(res: Response, fallback: string): Promise<string> {
+  try {
+    const body = await res.json() as { message?: string | string[] };
+    if (Array.isArray(body.message)) return body.message.join(', ');
+    return body.message ?? fallback;
+  } catch {
+    return fallback;
+  }
 }
 
 // ── Page ───────────────────────────────────────────────────────────────────────
@@ -48,13 +78,13 @@ export default function BookingPage({
 }) {
   const { tenantSlug } = use(params);
 
-  const [salon, setSalon]         = useState<Salon | null>(null);
-  const [services, setServices]   = useState<Service[]>([]);
-  const [service, setService]     = useState<Service | null>(null);
-  const [staff, setStaff]         = useState<Staff[]>([]);
+  const [salon, setSalon]         = useState<SalonDto | null>(null);
+  const [services, setServices]   = useState<ServiceDto[]>([]);
+  const [service, setService]     = useState<ServiceDto | null>(null);
+  const [staff, setStaff]         = useState<StaffDto[]>([]);
   const [date, setDate]           = useState('');
-  const [slots, setSlots]         = useState<Slot[]>([]);
-  const [slot, setSlot]           = useState<Slot | null>(null);
+  const [slots, setSlots]         = useState<SlotDto[]>([]);
+  const [slot, setSlot]           = useState<SlotDto | null>(null);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName]   = useState('');
   const [phone, setPhone]         = useState('');
@@ -62,45 +92,69 @@ export default function BookingPage({
   const [error, setError]         = useState('');
   const [success, setSuccess]     = useState(false);
 
-  // ── Step 1: Load salon + services (slug-first) ─────────────────────────────
+  // ── Step 1: Load salon + services ─────────────────────────────────────────
 
   useEffect(() => {
-    fetch(`${API}/salon/${tenantSlug}`)
-      .then((r) => r.ok ? r.json() : null)
-      .then((s: Salon | null) => {
-        if (!s) { setError('Salon bulunamadı.'); return; }
-        setSalon(s);
-        // slug gönder — tenantId asla frontend'de olmaz
-        return fetch(`${API}/services?slug=${tenantSlug}`)
-          .then((r) => r.json() as Promise<Service[]>)
-          .then(setServices);
-      })
-      .catch(() => setError('Bağlantı hatası.'));
+    (async () => {
+      try {
+        // 1a. Salon bilgisi
+        const salonRes = await fetch(`${API}/salon/${tenantSlug}`);
+        if (!salonRes.ok) {
+          const msg = await parseApiError(salonRes, 'Salon bulunamadı.');
+          setError(msg);
+          return;
+        }
+        const salonData = await salonRes.json() as SalonDto;
+        if (!salonData?.name) { setError('Geçersiz salon verisi.'); return; }
+        setSalon(salonData);
+
+        // 1b. Servis listesi
+        const svcRes = await fetch(`${API}/services?slug=${tenantSlug}`);
+        if (!svcRes.ok) {
+          const msg = await parseApiError(svcRes, 'Hizmetler yüklenemedi.');
+          setError(msg);
+          return;
+        }
+        const svcData = await svcRes.json() as ServiceDto[];
+        if (!Array.isArray(svcData)) { setError('Geçersiz hizmet verisi.'); return; }
+        setServices(svcData);
+      } catch {
+        setError('Bağlantı hatası. Lütfen tekrar deneyin.');
+      }
+    })();
   }, [tenantSlug]);
 
-  // ── Step 2: Load staff when service selected (slug-first) ─────────────────
+  // ── Step 2: Load staff when service selected ───────────────────────────────
 
   useEffect(() => {
     if (!service) return;
-    fetch(`${API}/staff?slug=${tenantSlug}`)
-      .then((r) => r.json() as Promise<Staff[]>)
-      .then(setStaff)
-      .catch(() => {});
+    (async () => {
+      try {
+        const res = await fetch(`${API}/staff?slug=${tenantSlug}`);
+        if (!res.ok) return; // staff hatası kullanıcıya gösterilmez — slotlar zaten boş gelir
+        const data = await res.json() as StaffDto[];
+        if (Array.isArray(data)) setStaff(data);
+      } catch { /* network hatası — availability zaten boş döner */ }
+    })();
   }, [tenantSlug, service]);
 
-  // ── Step 3: Load slots when date selected (slug-first) ────────────────────
+  // ── Step 3: Load slots when date selected ─────────────────────────────────
 
   useEffect(() => {
     if (!service || !date || staff.length === 0) return;
     const staffId = staff[0]!.id;
     const url = `${API}/availability?slug=${tenantSlug}&staffId=${staffId}&date=${date}&serviceDurationMin=${service.durationMin}`;
-    fetch(url)
-      .then((r) => r.json() as Promise<Slot[]>)
-      .then(setSlots)
-      .catch(() => setSlots([]));
+    (async () => {
+      try {
+        const res = await fetch(url);
+        if (!res.ok) { setSlots([]); return; }
+        const data = await res.json() as SlotDto[];
+        setSlots(Array.isArray(data) ? data : []);
+      } catch { setSlots([]); }
+    })();
   }, [tenantSlug, service, date, staff]);
 
-  // ── Submit (slug-first — tenantId body'de YOK) ────────────────────────────
+  // ── Submit ─────────────────────────────────────────────────────────────────
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -112,7 +166,7 @@ export default function BookingPage({
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          slug:       tenantSlug,   // ← tenantId değil, slug gönder
+          slug:       tenantSlug,
           locationId: salon.location?.id ?? '',
           staffId:    staff[0]!.id,
           serviceId:  service.id,
@@ -122,13 +176,22 @@ export default function BookingPage({
           phone,
         }),
       });
+
       if (!res.ok) {
-        const err = await res.json().catch(() => ({})) as { message?: string };
-        throw new Error(err.message ?? 'Randevu oluşturulamadı.');
+        const msg = await parseApiError(res, 'Randevu oluşturulamadı.');
+        throw new Error(msg);
       }
+
+      const data = await res.json() as BookResultDto;
+
+      // Response contract doğrula — silent success yasak
+      if (!data?.appointmentId) {
+        throw new Error('Geçersiz sunucu yanıtı. Lütfen tekrar deneyin.');
+      }
+
       setSuccess(true);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Hata oluştu.');
+      setError(e instanceof Error ? e.message : 'Beklenmeyen hata oluştu.');
     } finally {
       setLoading(false);
     }
@@ -137,7 +200,17 @@ export default function BookingPage({
   // ── Render ─────────────────────────────────────────────────────────────────
 
   if (error && !salon) {
-    return <div className="p-8 text-red-600">{error}</div>;
+    return (
+      <div className="p-8 max-w-lg mx-auto">
+        <p className="text-red-600">{error}</p>
+        <button
+          className="mt-4 text-blue-600 underline text-sm"
+          onClick={() => { setError(''); setSalon(null); }}
+        >
+          Tekrar dene
+        </button>
+      </div>
+    );
   }
 
   if (!salon) {
@@ -151,7 +224,13 @@ export default function BookingPage({
         <p className="mt-2 text-gray-600">{salon.name} — onay için sizi arayacağız.</p>
         <button
           className="mt-6 text-blue-600 underline"
-          onClick={() => { setSuccess(false); setSlot(null); setService(null); setDate(''); }}
+          onClick={() => {
+            setSuccess(false);
+            setSlot(null);
+            setService(null);
+            setDate('');
+            setError('');
+          }}
         >
           Yeni randevu
         </button>
@@ -166,25 +245,29 @@ export default function BookingPage({
       {/* STEP 1: Service */}
       <section>
         <h2 className="text-lg font-semibold mb-3">Hizmet seçin</h2>
-        <ul className="space-y-2">
-          {services.map((s) => (
-            <li key={s.id}>
-              <button
-                onClick={() => { setService(s); setSlot(null); setSlots([]); setDate(''); }}
-                className={`w-full text-left px-4 py-3 rounded border ${
-                  service?.id === s.id
-                    ? 'border-blue-600 bg-blue-50'
-                    : 'border-gray-200 hover:border-gray-400'
-                }`}
-              >
-                <span className="font-medium">{s.name}</span>
-                <span className="ml-2 text-sm text-gray-500">
-                  {s.durationMin} dk — {s.price} {s.currency}
-                </span>
-              </button>
-            </li>
-          ))}
-        </ul>
+        {services.length === 0 ? (
+          <p className="text-sm text-gray-500">Hizmet bulunamadı.</p>
+        ) : (
+          <ul className="space-y-2">
+            {services.map((s) => (
+              <li key={s.id}>
+                <button
+                  onClick={() => { setService(s); setSlot(null); setSlots([]); setDate(''); }}
+                  className={`w-full text-left px-4 py-3 rounded border ${
+                    service?.id === s.id
+                      ? 'border-blue-600 bg-blue-50'
+                      : 'border-gray-200 hover:border-gray-400'
+                  }`}
+                >
+                  <span className="font-medium">{s.name}</span>
+                  <span className="ml-2 text-sm text-gray-500">
+                    {s.durationMin} dk — {s.price} {s.currency}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
       {/* STEP 2: Date + Slots */}
@@ -195,7 +278,7 @@ export default function BookingPage({
             type="date"
             value={date}
             min={new Date().toISOString().slice(0, 10)}
-            onChange={(e) => { setDate(e.target.value); setSlot(null); }}
+            onChange={(e) => { setDate(e.target.value); setSlot(null); setSlots([]); }}
             className="border rounded px-3 py-2"
           />
 
@@ -238,6 +321,7 @@ export default function BookingPage({
           <form onSubmit={handleSubmit} className="space-y-3">
             <input
               required
+              minLength={2}
               placeholder="Ad"
               value={firstName}
               onChange={(e) => setFirstName(e.target.value)}
@@ -245,6 +329,7 @@ export default function BookingPage({
             />
             <input
               required
+              minLength={2}
               placeholder="Soyad"
               value={lastName}
               onChange={(e) => setLastName(e.target.value)}
@@ -252,12 +337,17 @@ export default function BookingPage({
             />
             <input
               required
-              placeholder="Telefon"
+              type="tel"
+              placeholder="Telefon (05XX...)"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               className="w-full border rounded px-3 py-2"
             />
-            {error && <p className="text-red-600 text-sm">{error}</p>}
+            {error && (
+              <p className="text-red-600 text-sm border border-red-200 bg-red-50 rounded px-3 py-2">
+                {error}
+              </p>
+            )}
             <button
               type="submit"
               disabled={loading}

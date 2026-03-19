@@ -1,9 +1,8 @@
 /**
- * PUBLIC BOOKING DTO — Faz 16 + Faz 23
+ * PUBLIC BOOKING DTO — P10.3.2 Contract Hardening
  * ──────────────────────────────────────────────────────────────────────────────
- * POST /public/book için giriş DTO'su.
- * tenantId body'den alınır (JWT yok — public endpoint).
- * IDOR riski yok: tenantId slug üzerinden zaten doğrulanmış olmalı.
+ * POST /public/book
+ * tenantId body'ye ASLA girmez — slug üzerinden backend çözer.
  *
  * Faz 23: holdId opsiyonel (Phase 1 geriye uyumluluk).
  *   Var → hold-based commit (consumeHold + create aynı DB transaction içinde).
@@ -17,6 +16,8 @@ import {
   IsString,
   IsEmail,
   IsOptional,
+  IsNotEmpty,
+  IsPhoneNumber,
   MinLength,
   MaxLength,
 } from 'class-validator';
@@ -24,7 +25,7 @@ import {
 export class BookPublicDto {
   /** Salon slug — backend tenantId'ye çevirir; UUID asla frontend'e sızmaz */
   @IsString()
-  @MinLength(1)
+  @IsNotEmpty()
   @MaxLength(100)
   slug!: string;
 
@@ -46,19 +47,24 @@ export class BookPublicDto {
 
   /** Müşteri adı */
   @IsString()
-  @MinLength(1)
+  @IsNotEmpty()
+  @MinLength(2)
   @MaxLength(80)
   firstName!: string;
 
   /** Müşteri soyadı */
   @IsString()
-  @MinLength(1)
+  @IsNotEmpty()
+  @MinLength(2)
   @MaxLength(80)
   lastName!: string;
 
-  /** Müşteri telefon (tenant içinde benzersiz aranacak) */
-  @IsString()
-  @MinLength(7)
+  /**
+   * Müşteri telefon.
+   * @IsPhoneNumber('TR') — libphonenumber-js ile TR formatı doğrulanır.
+   * Kabul: 05XX..., +905XX..., 905XX...
+   */
+  @IsPhoneNumber('TR')
   @MaxLength(20)
   phone!: string;
 
