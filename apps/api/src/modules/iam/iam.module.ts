@@ -1,6 +1,7 @@
-import { Module }          from '@nestjs/common';
-import { AuthService }     from './auth.service';
-import { AuthController }  from './auth.controller';
+import { Module }           from '@nestjs/common';
+import { AuthService }      from './auth.service';
+import { AuthController }   from './auth.controller';
+import { TenantController } from './tenant.controller';
 
 /**
  * IAM Module — Kimlik ve Erişim Yönetimi
@@ -11,7 +12,7 @@ import { AuthController }  from './auth.controller';
  *   - ConfigModule : @nestjs/config (global, AppModule'de kayıtlı)
  */
 @Module({
-  controllers: [AuthController],
+  controllers: [AuthController, TenantController],
   providers:   [AuthService],
   exports:     [AuthService],
 })

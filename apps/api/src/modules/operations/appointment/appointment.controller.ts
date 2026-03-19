@@ -1,9 +1,11 @@
 import {
   Controller,
+  Get,
   Post,
   Patch,
   Param,
   Body,
+  Query,
   HttpCode,
   HttpStatus,
   ParseUUIDPipe,
@@ -20,6 +22,7 @@ import {
   ApiConflictResponse,
 } from '@nestjs/swagger';
 
+import { Appointment } from '@prisma/client';
 import { AppointmentService }         from './appointment.service';
 import { AppointmentLockService }     from './appointment-lock.service';
 import { CreateAppointmentDto }       from './dto/create-appointment.dto';
@@ -46,6 +49,57 @@ export class AppointmentController {
     private readonly appointmentService: AppointmentService,
     private readonly lockService:        AppointmentLockService,
   ) {}
+
+  // ── GET / ─────────────────────────────────────────────────────────────────
+
+  /**
+   * Randevu listesi + filtreleme (tarih aralığı, durum, personel, müşteri).
+   *
+   * Query params:
+   *   ?startDate=2025-01-01&endDate=2025-01-31
+   *   &status=CONFIRMED
+   *   &staffId=uuid
+   *   &customerId=uuid
+   *
+   * 200: Randevu listesi döner.
+   */
+  @Get()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Randevu listesi + filtreleme' })
+  @ApiOkResponse({ description: 'Randevu listesi başarıyla döndü' })
+  async findAll(
+    @CurrentTenant() tenantId: string,
+    @Query('startDate')  startDate?:  string,
+    @Query('endDate')    endDate?:    string,
+    @Query('status')     status?:     string,
+    @Query('staffId')    staffId?:    string,
+    @Query('customerId') customerId?: string,
+  ): Promise<Appointment[]> {
+    return this.appointmentService.findAll(
+      tenantId,
+      { startDate, endDate, status, staffId, customerId },
+    );
+  }
+
+  // ── GET /:id ──────────────────────────────────────────────────────────────
+
+  /**
+   * Randevu detayı + relations (customer, service, staff, room).
+   *
+   * 200: Randevu detayı döner.
+   * 404: Randevu bulunamadı.
+   */
+  @Get(':id')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Randevu detayı + relations' })
+  @ApiOkResponse({ description: 'Randevu detayı döndü' })
+  @ApiNotFoundResponse({ description: 'Randevu bulunamadı' })
+  async findOne(
+    @CurrentTenant()            tenantId: string,
+    @Param('id', ParseUUIDPipe) id:       string,
+  ) {
+    return this.appointmentService.findOne(tenantId, id);
+  }
 
   // ── POST /hold ────────────────────────────────────────────────────────────
 

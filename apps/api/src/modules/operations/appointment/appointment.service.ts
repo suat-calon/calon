@@ -160,6 +160,70 @@ export class AppointmentService {
     private readonly loyaltyQueue: Queue,
   ) {}
 
+  // ── findAll ─────────────────────────────────────────────────────────────────
+
+  /**
+   * Randevu listesi + filtreleme.
+   */
+  async findAll(
+    tenantId: string,
+    filters: {
+      startDate?:  string;
+      endDate?:    string;
+      status?:     string;
+      staffId?:    string;
+      customerId?: string;
+    },
+  ): Promise<Appointment[]> {
+    const where: any = {
+      tenantId,
+      isDeleted: false,
+    };
+
+    if (filters.startDate || filters.endDate) {
+      where.startTime = {};
+      if (filters.startDate) where.startTime.gte = new Date(filters.startDate);
+      if (filters.endDate)   where.startTime.lte = new Date(filters.endDate);
+    }
+    if (filters.status)     where.status     = filters.status;
+    if (filters.staffId)    where.staffId    = filters.staffId;
+    if (filters.customerId) where.customerId = filters.customerId;
+
+    return this.prisma.appointment.findMany({
+      where,
+      orderBy: { startTime: 'asc' },
+      include: {
+        customer: { select: { id: true, firstName: true, lastName: true, phone: true } },
+        service:  { select: { id: true, name: true, durationMin: true, price: true } },
+        staff:    { select: { id: true, firstName: true, lastName: true } },
+        room:     { select: { id: true, name: true } },
+      },
+    });
+  }
+
+  // ── findOne ─────────────────────────────────────────────────────────────────
+
+  /**
+   * Randevu detayı + relations.
+   */
+  async findOne(tenantId: string, id: string) {
+    const appointment = await this.prisma.appointment.findFirst({
+      where: { id, tenantId, isDeleted: false },
+      include: {
+        customer: { select: { id: true, firstName: true, lastName: true, phone: true, email: true } },
+        service:  { select: { id: true, name: true, description: true, durationMin: true, price: true } },
+        staff:    { select: { id: true, firstName: true, lastName: true } },
+        room:     { select: { id: true, name: true, capacity: true } },
+      },
+    });
+
+    if (!appointment) {
+      throw new NotFoundException('Randevu bulunamadı');
+    }
+
+    return appointment;
+  }
+
   // ── create ──────────────────────────────────────────────────────────────────
 
   /**
