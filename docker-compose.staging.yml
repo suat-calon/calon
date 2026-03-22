@@ -1,0 +1,51 @@
+# =============================================================================
+# CALON — STAGE ENVIRONMENT OVERRIDE
+# =============================================================================
+#
+# Kullanim:
+#   docker compose -f docker-compose.yml -f docker-compose.staging.yml up -d
+#
+# Bu dosya docker-compose.yml'i override eder:
+#   - Postgres ve Redis servisleri CIKARILIR (Neon + Cloud Redis)
+#   - Container adlari stage prefix'i alir (prod ile carpisma yok)
+#   - env_file ile stage ortam degiskenleri yuklenir
+#   - depends_on kaldirilir (external DB/Redis)
+#
+# KIRMIZI CIZGI:
+#   - Stage compose'a Postgres veya Redis servisi ekleme YASAK
+#   - Prod .env dosyasini stage'de kullanma YASAK
+#   - Stage DB'ye db push YASAK — sadece migrate deploy
+# =============================================================================
+
+services:
+
+  # Postgres ve Redis devre disi — stage'de external servisler kullanilir
+  postgres:
+    profiles: ["disabled"]
+
+  redis:
+    profiles: ["disabled"]
+
+  # ---------------------------------------------------------------------------
+  api:
+    container_name: calon_stage_api
+    depends_on: {}
+    env_file: .env.staging
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ---------------------------------------------------------------------------
+  worker:
+    container_name: calon_stage_worker
+    depends_on: {}
+    env_file: .env.staging
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
