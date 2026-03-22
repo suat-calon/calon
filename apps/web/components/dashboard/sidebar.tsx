@@ -14,8 +14,8 @@ import {
 import { cn } from '@/lib/utils';
 
 const NAV_ITEMS = [
-  { href: '/dashboard',  label: 'Dashboard',  icon: LayoutDashboard },
   { href: '/calendar',   label: 'Randevular', icon: CalendarDays },
+  { href: '/dashboard',  label: 'Özet',       icon: LayoutDashboard },
   { href: '/catalog',    label: 'Katalog',    icon: FolderOpen },
   { href: '/customers',  label: 'Müşteriler', icon: Users },
   { href: '/staff',      label: 'Personel',   icon: UserCog },
