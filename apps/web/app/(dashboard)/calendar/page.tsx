@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z }           from 'zod';
 import { format, isSameDay, parseISO } from 'date-fns';
 import { tr }          from 'date-fns/locale';
-import { CalendarIcon, Plus, Loader2, Clock } from 'lucide-react';
+import { CalendarIcon, Plus, Loader2, Clock, User, Scissors, MapPin } from 'lucide-react';
 
 import { Button }  from '@/components/ui/button';
 import { Input }   from '@/components/ui/input';
@@ -29,9 +29,16 @@ import { toast } from '@/hooks/use-toast';
 import {
   useAppointments,
   useCreateAppointment,
+  useUpdateAppointmentStatus,
+  NEXT_ACTIONS,
+  type Appointment,
   type AppointmentStatus,
   type AppointmentSource,
 } from '@/hooks/api/use-appointments';
+import {
+  Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
+} from '@/components/ui/sheet';
+import { Separator } from '@/components/ui/separator';
 import { useServices } from '@/hooks/api/use-services';
 import { cn }          from '@/lib/utils';
 
@@ -53,6 +60,26 @@ const STATUS_VARIANT: Record<AppointmentStatus, 'default' | 'success' | 'info' |
   CHECKED_IN: 'info',
   IN_SERVICE: 'default',
   COMPLETED:  'success',
+  CANCELLED:  'destructive',
+  NO_SHOW:    'secondary',
+};
+
+const ACTION_LABEL: Record<AppointmentStatus, string> = {
+  PENDING:    'Beklet',
+  CONFIRMED:  'Onayla',
+  CHECKED_IN: 'Geldi',
+  IN_SERVICE: 'Hizmete Al',
+  COMPLETED:  'Tamamla',
+  CANCELLED:  'İptal Et',
+  NO_SHOW:    'Gelmedi',
+};
+
+const ACTION_VARIANT: Record<AppointmentStatus, 'default' | 'destructive' | 'outline' | 'secondary'> = {
+  PENDING:    'outline',
+  CONFIRMED:  'default',
+  CHECKED_IN: 'default',
+  IN_SERVICE: 'default',
+  COMPLETED:  'default',
   CANCELLED:  'destructive',
   NO_SHOW:    'secondary',
 };
@@ -81,10 +108,12 @@ export default function CalendarPage() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [dialogOpen, setDialogOpen]     = useState(false);
   const [calPopoverOpen, setCalPopoverOpen] = useState(false);
+  const [detailApt, setDetailApt]       = useState<Appointment | null>(null);
 
   const { data: appointments, isLoading: appsLoading } = useAppointments();
   const { data: services }                             = useServices();
   const createAppointment                              = useCreateAppointment();
+  const updateStatus                                   = useUpdateAppointmentStatus();
 
   // Seçilen güne ait randevular
   const dayAppointments = (appointments ?? []).filter((apt) => {
@@ -189,7 +218,8 @@ export default function CalendarPage() {
                 return (
                   <div
                     key={apt.id}
-                    className="bg-white rounded-lg border shadow-sm p-4 flex items-start gap-4 hover:border-primary/30 transition-colors"
+                    className="bg-white rounded-lg border shadow-sm p-4 flex items-start gap-4 hover:border-primary/30 transition-colors cursor-pointer"
+                    onClick={() => setDetailApt(apt)}
                   >
                     <div className="flex flex-col items-center min-w-[56px] text-center">
                       <Clock className="h-4 w-4 text-muted-foreground mb-1" />
@@ -431,9 +461,172 @@ export default function CalendarPage() {
           </Form>
         </DialogContent>
       </Dialog>
+
+      {/* ── RANDEVU DETAY SHEET ────────────────────────────────────────────── */}
+      <Sheet open={!!detailApt} onOpenChange={(open) => !open && setDetailApt(null)}>
+        <SheetContent className="overflow-y-auto sm:max-w-md">
+          {detailApt && (
+            <>
+              <SheetHeader>
+                <SheetTitle>Randevu Detayı</SheetTitle>
+                <SheetDescription>
+                  {format(parseISO(detailApt.startTime), 'd MMMM yyyy, EEEE', { locale: tr })}
+                </SheetDescription>
+              </SheetHeader>
+
+              <div className="mt-6 space-y-4">
+                {/* Status badge */}
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">Durum:</span>
+                  <Badge variant={STATUS_VARIANT[detailApt.status]}>
+                    {STATUS_LABEL[detailApt.status]}
+                  </Badge>
+                  {detailApt.source === 'ONLINE' && (
+                    <Badge variant="outline" className="text-xs">Online Booking</Badge>
+                  )}
+                </div>
+
+                <Separator />
+
+                {/* Time */}
+                <div className="flex items-center gap-3">
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm">
+                    {format(parseISO(detailApt.startTime), 'HH:mm')} - {format(parseISO(detailApt.endTime), 'HH:mm')}
+                  </span>
+                </div>
+
+                {/* Service */}
+                <div className="flex items-center gap-3">
+                  <Scissors className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <span className="text-sm font-medium">
+                      {detailApt.service?.name ?? detailApt.serviceId.slice(0, 8) + '...'}
+                    </span>
+                    {detailApt.service?.durationMin && (
+                      <span className="text-xs text-muted-foreground ml-2">
+                        ({detailApt.service.durationMin} dk)
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Customer */}
+                <div className="flex items-center gap-3">
+                  <User className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <span className="text-sm font-medium">
+                      {detailApt.customer
+                        ? `${detailApt.customer.firstName} ${detailApt.customer.lastName}`
+                        : detailApt.customerId.slice(0, 8) + '...'}
+                    </span>
+                    {detailApt.customer?.phone && (
+                      <span className="text-xs text-muted-foreground ml-2">
+                        {detailApt.customer.phone}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Staff */}
+                <div className="flex items-center gap-3">
+                  <MapPin className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm">
+                    {detailApt.staff
+                      ? `${detailApt.staff.firstName} ${detailApt.staff.lastName}`
+                      : detailApt.staffId.slice(0, 8) + '...'}
+                  </span>
+                </div>
+
+                {/* Price */}
+                {detailApt.totalPrice && (
+                  <div className="flex items-center justify-between bg-muted/50 rounded-lg p-3">
+                    <span className="text-sm text-muted-foreground">Toplam</span>
+                    <span className="text-lg font-semibold">
+                      {Number(detailApt.totalPrice).toLocaleString('tr-TR')} ₺
+                    </span>
+                  </div>
+                )}
+
+                {/* Notes */}
+                {detailApt.notes && (
+                  <div className="bg-muted/30 rounded-lg p-3">
+                    <span className="text-xs text-muted-foreground">Not:</span>
+                    <p className="text-sm mt-1">{detailApt.notes}</p>
+                  </div>
+                )}
+
+                {detailApt.cancellationReason && (
+                  <div className="bg-destructive/10 rounded-lg p-3">
+                    <span className="text-xs text-destructive">İptal sebebi:</span>
+                    <p className="text-sm mt-1">{detailApt.cancellationReason}</p>
+                  </div>
+                )}
+
+                <Separator />
+
+                {/* Lifecycle Actions */}
+                {NEXT_ACTIONS[detailApt.status].length > 0 && (
+                  <div className="space-y-2">
+                    <span className="text-xs text-muted-foreground font-medium">İşlemler</span>
+                    <div className="flex flex-wrap gap-2">
+                      {NEXT_ACTIONS[detailApt.status].map((nextStatus) => (
+                        <Button
+                          key={nextStatus}
+                          size="sm"
+                          variant={ACTION_VARIANT[nextStatus]}
+                          disabled={updateStatus.isPending}
+                          onClick={async () => {
+                            try {
+                              const updated = await updateStatus.mutateAsync({
+                                appointmentId: detailApt.id,
+                                status: nextStatus,
+                              });
+                              // Merge: keep nested relations from current view, update status fields
+                              setDetailApt({
+                                ...detailApt,
+                                status: updated.status,
+                                updatedAt: updated.updatedAt,
+                                cancelledAt: updated.cancelledAt ?? detailApt.cancelledAt,
+                                cancellationReason: updated.cancellationReason ?? detailApt.cancellationReason,
+                              });
+                              toast({
+                                title: 'Durum güncellendi',
+                                description: `${STATUS_LABEL[nextStatus]} olarak değiştirildi.`,
+                              });
+                            } catch (err: unknown) {
+                              const msg = err && typeof err === 'object' && 'response' in err
+                                ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
+                                : 'Durum güncellenemedi.';
+                              toast({
+                                variant: 'destructive',
+                                title: 'Hata',
+                                description: msg ?? 'Durum güncellenemedi.',
+                              });
+                            }
+                          }}
+                        >
+                          {updateStatus.isPending ? (
+                            <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                          ) : null}
+                          {ACTION_LABEL[nextStatus]}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {NEXT_ACTIONS[detailApt.status].length === 0 && (
+                  <p className="text-xs text-muted-foreground text-center py-2">
+                    Bu randevu için başka işlem yapılamaz.
+                  </p>
+                )}
+              </div>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
-
-// Re-export appointment row rendering with nested data
 
