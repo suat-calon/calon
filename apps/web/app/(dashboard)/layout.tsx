@@ -3,23 +3,24 @@
 import { useEffect, useState } from 'react';
 import { useRouter }           from 'next/navigation';
 
-import apiClient from '@/lib/api-client';
+import apiClient      from '@/lib/api-client';
+import { Sidebar }    from '@/components/dashboard/sidebar';
+import { Topbar }     from '@/components/dashboard/topbar';
 
 /**
- * Dashboard route grubu layout — kimlik doğrulama kapısı.
+ * Dashboard route grubu layout — auth guard + shell.
  *
  * Güvenlik (v2):
- *   - localStorage token kontrolü YOKTUR (XSS saldırısına kapalı)
  *   - GET /auth/me endpoint'i HttpOnly cookie üzerinden oturumu doğrular
- *   - 401 gelirse /login'e yönlendirir, silent refresh apiClient interceptor'u üstlenir
+ *   - 401 gelirse /login'e yönlendirir
  */
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const router              = useRouter();
-  const [ready, setReady]   = useState(false);
+  const router            = useRouter();
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     apiClient
@@ -33,11 +34,21 @@ export default function DashboardLayout({
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="flex flex-col items-center gap-3 text-muted-foreground">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-          <p className="text-sm">Yükleniyor…</p>
+          <p className="text-sm">Yükleniyor...</p>
         </div>
       </div>
     );
   }
 
-  return <>{children}</>;
+  return (
+    <div className="min-h-screen flex bg-slate-50">
+      <Sidebar />
+      <div className="flex-1 flex flex-col min-w-0">
+        <Topbar />
+        <main className="flex-1 overflow-y-auto p-4 lg:p-6">
+          {children}
+        </main>
+      </div>
+    </div>
+  );
 }

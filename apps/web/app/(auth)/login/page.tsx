@@ -53,7 +53,7 @@ export default function LoginPage() {
       // withCredentials: true → HttpOnly calon_access / calon_refresh cookie'leri alır
       await axios.post('/api/v1/auth/login', values, { withCredentials: true });
 
-      router.push('/dashboard');
+      router.push('/calendar');
     } catch (err: unknown) {
       const message =
         axios.isAxiosError(err)

@@ -38,8 +38,14 @@ export interface Appointment {
   internalNotes?: string | null;
   totalPrice?:    string | null; // Prisma Decimal → JSON string
   depositPaid?:   string | null;
-  createdAt:      string;
-  updatedAt:      string;
+  createdAt:          string;
+  updatedAt:          string;
+  cancelledAt?:       string | null;
+  cancellationReason?: string | null;
+  // Nested relations (populated by API)
+  customer?: { id: string; firstName: string; lastName: string; phone?: string };
+  service?:  { id: string; name: string; durationMin: number; price?: string };
+  staff?:    { id: string; firstName: string; lastName: string };
 }
 
 export interface CreateAppointmentPayload {
@@ -75,6 +81,51 @@ export function useCreateAppointment() {
   return useMutation<Appointment, Error, CreateAppointmentPayload>({
     mutationFn: (payload) =>
       apiClient.post<Appointment>('/appointments', payload).then((r) => r.data),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['appointments'] });
+    },
+  });
+}
+
+// ── Lifecycle ──────────────────────────────────────────────────────────────────
+
+export interface UpdateStatusPayload {
+  appointmentId:      string;
+  status:             AppointmentStatus;
+  cancellationReason?: string;
+}
+
+/**
+ * Valid transitions enforced by backend state machine:
+ *   PENDING    → CONFIRMED | CANCELLED | NO_SHOW
+ *   CONFIRMED  → CHECKED_IN | CANCELLED | NO_SHOW
+ *   CHECKED_IN → IN_SERVICE | CANCELLED | NO_SHOW
+ *   IN_SERVICE → COMPLETED
+ *   COMPLETED  → (terminal)
+ *   CANCELLED  → (terminal)
+ *   NO_SHOW    → (terminal)
+ */
+export const NEXT_ACTIONS: Record<AppointmentStatus, AppointmentStatus[]> = {
+  PENDING:    ['CONFIRMED', 'CANCELLED', 'NO_SHOW'],
+  CONFIRMED:  ['CHECKED_IN', 'CANCELLED', 'NO_SHOW'],
+  CHECKED_IN: ['IN_SERVICE', 'CANCELLED', 'NO_SHOW'],
+  IN_SERVICE: ['COMPLETED'],
+  COMPLETED:  [],
+  CANCELLED:  [],
+  NO_SHOW:    [],
+};
+
+export function useUpdateAppointmentStatus() {
+  const qc = useQueryClient();
+
+  return useMutation<Appointment, Error, UpdateStatusPayload>({
+    mutationFn: ({ appointmentId, status, cancellationReason }) =>
+      apiClient
+        .patch<Appointment>(`/appointments/${appointmentId}/status`, {
+          status,
+          ...(cancellationReason ? { cancellationReason } : {}),
+        })
+        .then((r) => r.data),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['appointments'] });
     },

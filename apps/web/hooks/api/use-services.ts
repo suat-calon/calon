@@ -16,6 +16,7 @@ export interface Service {
   currency:     string;
   depositRate:  string; // Prisma Decimal → JSON string
   isActive:     boolean;
+  isDeleted:    boolean;
   createdAt:    string;
   updatedAt:    string;
 }
@@ -28,6 +29,15 @@ export interface CreateServicePayload {
   price:        number;
   currency?:    string;
   depositRate?: number;
+}
+
+export interface UpdateServicePayload {
+  name?:         string;
+  description?:  string;
+  durationMin?:  number;
+  price?:        number;
+  isActive?:     boolean;
+  depositRate?:  number;
 }
 
 // ── Sorgular ──────────────────────────────────────────────────────────────────
@@ -44,12 +54,26 @@ export function useServices() {
 
 export function useCreateService() {
   const qc = useQueryClient();
-
   return useMutation<Service, Error, CreateServicePayload>({
     mutationFn: (payload) =>
       apiClient.post<Service>('/services', payload).then((r) => r.data),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ['services'] });
-    },
+    onSuccess: () => { void qc.invalidateQueries({ queryKey: ['services'] }); },
+  });
+}
+
+export function useUpdateService() {
+  const qc = useQueryClient();
+  return useMutation<Service, Error, { id: string } & UpdateServicePayload>({
+    mutationFn: ({ id, ...payload }) =>
+      apiClient.patch<Service>(`/services/${id}`, payload).then((r) => r.data),
+    onSuccess: () => { void qc.invalidateQueries({ queryKey: ['services'] }); },
+  });
+}
+
+export function useDeleteService() {
+  const qc = useQueryClient();
+  return useMutation<void, Error, string>({
+    mutationFn: (id) => apiClient.delete(`/services/${id}`).then(() => {}),
+    onSuccess: () => { void qc.invalidateQueries({ queryKey: ['services'] }); },
   });
 }
