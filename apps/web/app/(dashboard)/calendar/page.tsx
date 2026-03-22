@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { useRouter }   from 'next/navigation';
 import { useForm }     from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z }           from 'zod';
@@ -105,6 +106,7 @@ type AppointmentForm = z.infer<typeof appointmentSchema>;
 // ── Main Component ─────────────────────────────────────────────────────────────
 
 export default function CalendarPage() {
+  const router = useRouter();
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [dialogOpen, setDialogOpen]     = useState(false);
   const [calPopoverOpen, setCalPopoverOpen] = useState(false);
@@ -480,17 +482,29 @@ export default function CalendarPage() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  className="flex items-center gap-3 w-full text-left rounded-lg px-2 py-1.5 -mx-2 hover:bg-primary/5 transition-colors group/cust"
+                  onClick={() => {
+                    if (detailApt.customer) {
+                      setDetailApt(null);
+                      router.push(`/customers?highlight=${detailApt.customer.id}`);
+                    }
+                  }}
+                >
                   <User className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <span className="text-sm font-medium">
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm font-medium group-hover/cust:text-primary transition-colors">
                       {detailApt.customer ? `${detailApt.customer.firstName} ${detailApt.customer.lastName}` : detailApt.customerId.slice(0, 8) + '...'}
                     </span>
                     {detailApt.customer?.phone && (
                       <span className="text-xs text-muted-foreground ml-2">{detailApt.customer.phone}</span>
                     )}
                   </div>
-                </div>
+                  {detailApt.customer && (
+                    <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/40 group-hover/cust:text-primary transition-colors" />
+                  )}
+                </button>
 
                 <div className="flex items-center gap-3">
                   <MapPin className="h-4 w-4 text-muted-foreground" />

@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
   Search, Loader2, AlertCircle, Users, Phone, Mail, Calendar,
   ChevronRight, Clock, Star,
@@ -44,6 +45,9 @@ const statusColor: Record<string, string> = {
 // ── Main ───────────────────────────────────────────────────────────────────────
 
 export default function CustomersPage() {
+  const searchParams = useSearchParams();
+  const highlightId  = searchParams.get('highlight');
+
   const [search, setSearch]           = useState('');
   const [debouncedSearch, setDebSearch] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
@@ -63,6 +67,14 @@ export default function CustomersPage() {
   const customers = useMemo(() =>
     (data?.data ?? []).filter((c) => !c.isDeleted),
   [data]);
+
+  // Auto-open profile when navigated from calendar with ?highlight=<id>
+  useEffect(() => {
+    if (highlightId && customers.length > 0 && !selectedCustomer) {
+      const target = customers.find((c) => c.id === highlightId);
+      if (target) setSelectedCustomer(target);
+    }
+  }, [highlightId, customers, selectedCustomer]);
 
   // Customer → appointments map
   const customerAppointments = useMemo(() => {
