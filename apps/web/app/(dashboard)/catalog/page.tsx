@@ -12,9 +12,7 @@ import {
 import { Button }  from '@/components/ui/button';
 import { Input }   from '@/components/ui/input';
 import { Badge }   from '@/components/ui/badge';
-import {
-  Tabs, TabsContent, TabsList, TabsTrigger,
-} from '@/components/ui/tabs';
+// Tabs UI implemented as plain buttons for reliable state control
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
 } from '@/components/ui/sheet';
@@ -39,7 +37,6 @@ import {
 // ── Schemas ────────────────────────────────────────────────────────────────────
 
 const serviceSchema = z.object({
-  categoryId:  z.string().uuid('Kategori UUID gerekli'),
   name:        z.string().min(1, 'Ad gerekli').max(200),
   description: z.string().max(1000).optional(),
   durationMin: z.coerce.number().int().min(1, 'En az 1 dk'),
@@ -98,19 +95,19 @@ export default function CatalogPage() {
   // ── Service form ───────────────────────────────────────────────────────────
   const svcForm = useForm<ServiceForm>({
     resolver: zodResolver(serviceSchema),
-    defaultValues: { categoryId: '', name: '', description: '', durationMin: 30, price: 0, currency: 'TRY', depositRate: 0 },
+    defaultValues: { name: '', description: '', durationMin: 30, price: 0, currency: 'TRY', depositRate: 0 },
   });
 
   function openCreateService() {
     setEditingSvc(null);
-    svcForm.reset({ categoryId: '00000000-0000-4000-a000-000000000020', name: '', description: '', durationMin: 30, price: 0, currency: 'TRY', depositRate: 0 });
+    svcForm.reset({ name: '', description: '', durationMin: 30, price: 0, currency: 'TRY', depositRate: 0 });
     setSvcSheetOpen(true);
   }
 
   function openEditService(svc: Service) {
     setEditingSvc(svc);
     svcForm.reset({
-      categoryId: svc.categoryId, name: svc.name, description: svc.description ?? '',
+      name: svc.name, description: svc.description ?? '',
       durationMin: svc.durationMin, price: Number(svc.price), currency: svc.currency, depositRate: Number(svc.depositRate),
     });
     setSvcSheetOpen(true);
@@ -122,7 +119,10 @@ export default function CatalogPage() {
         await updateService.mutateAsync({ id: editingSvc.id, name: values.name, description: values.description, durationMin: values.durationMin, price: values.price, depositRate: values.depositRate });
         toast({ title: 'Hizmet güncellendi', description: `${values.name} kaydedildi.` });
       } else {
-        await createService.mutateAsync(values);
+        // Derive categoryId from existing services or use first known category
+        const existingCatId = (services ?? []).find((s) => s.categoryId)?.categoryId;
+        const categoryId = existingCatId ?? '00000000-0000-4000-a000-000000000020';
+        await createService.mutateAsync({ ...values, categoryId });
         toast({ title: 'Hizmet oluşturuldu', description: `${values.name} eklendi.` });
       }
       setSvcSheetOpen(false);
@@ -229,16 +229,22 @@ export default function CatalogPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input placeholder="Ara..." className="pl-9 h-9" value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
-        <Tabs value={tab} onValueChange={setTab}>
-          <TabsList className="h-9">
-            <TabsTrigger value="services" className="text-xs px-3">
-              <Scissors className="mr-1 h-3.5 w-3.5" />Hizmetler
-            </TabsTrigger>
-            <TabsTrigger value="products" className="text-xs px-3">
-              <Package className="mr-1 h-3.5 w-3.5" />Ürünler
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+        <div className="flex rounded-lg border bg-muted p-0.5 h-9">
+          <button
+            type="button"
+            className={`flex items-center gap-1 rounded-md px-3 text-xs font-medium transition-colors ${tab === 'services' ? 'bg-white text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+            onClick={() => setTab('services')}
+          >
+            <Scissors className="h-3.5 w-3.5" />Hizmetler
+          </button>
+          <button
+            type="button"
+            className={`flex items-center gap-1 rounded-md px-3 text-xs font-medium transition-colors ${tab === 'products' ? 'bg-white text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+            onClick={() => setTab('products')}
+          >
+            <Package className="h-3.5 w-3.5" />Ürünler
+          </button>
+        </div>
       </div>
 
       {/* List */}
@@ -357,11 +363,7 @@ export default function CatalogPage() {
               <FormField control={svcForm.control} name="description" render={({ field }) => (
                 <FormItem><FormLabel>Açıklama (opsiyonel)</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
               )} />
-              {!editingSvc && (
-                <FormField control={svcForm.control} name="categoryId" render={({ field }) => (
-                  <FormItem><FormLabel>Kategori UUID</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                )} />
-              )}
+              {/* categoryId auto-derived from existing services — no UUID input needed */}
               <Button type="submit" className="w-full" disabled={createService.isPending || updateService.isPending}>
                 {(createService.isPending || updateService.isPending) ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 {editingSvc ? 'Kaydet' : 'Hizmet Ekle'}
