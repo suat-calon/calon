@@ -675,7 +675,7 @@ export class AppointmentService {
             tenantId,
             appointmentId: id,
             type:        TransactionType.ADJUSTMENT,
-            amount:      totalAmount,
+            amount:      totalAmount.toString(),
             description: `XState tamamlama kaydı — Randevu: ${id}`,
           },
           tx,
@@ -687,7 +687,7 @@ export class AppointmentService {
               tenantId,
               staffId:       appt.staffId,
               appointmentId: id,
-              serviceAmount: totalAmount,
+              serviceAmount: totalAmount.toString(),
             },
             tx,
           );
