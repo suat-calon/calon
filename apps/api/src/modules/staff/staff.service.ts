@@ -19,11 +19,10 @@
 
 import { Injectable, NotFoundException } from '@nestjs/common';
 import {
-  Prisma,
   StaffProfile,
   StaffWorkingHour,
   StaffShift,
-} from '@prisma/client';
+} from '@calon/database';
 
 import { PrismaService }       from '../../common/prisma.service';
 import { CreateStaffDto }      from './dto/create-staff.dto';
@@ -68,15 +67,15 @@ export class StaffService {
     const take = query.take ?? 20;
     const skip = query.skip ?? 0;
 
-    const where: Prisma.StaffProfileWhereInput = {
+    const where = {
       tenantId,
       isDeleted: false,
       ...(query.locationId ? { locationId: query.locationId } : {}),
       ...(query.search ? {
         OR: [
-          { firstName: { contains: query.search, mode: 'insensitive' } },
-          { lastName:  { contains: query.search, mode: 'insensitive' } },
-          { title:     { contains: query.search, mode: 'insensitive' } },
+          { firstName: { contains: query.search, mode: 'insensitive' as const } },
+          { lastName:  { contains: query.search, mode: 'insensitive' as const } },
+          { title:     { contains: query.search, mode: 'insensitive' as const } },
         ],
       } : {}),
     };
@@ -201,7 +200,7 @@ export class StaffService {
       throw new NotFoundException('Personel bulunamadı');
     }
 
-    const dateFilter: Prisma.StaffShiftWhereInput = {
+    const dateFilter = {
       staffId,
       ...(query.from || query.to ? {
         date: {

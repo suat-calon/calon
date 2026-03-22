@@ -22,10 +22,10 @@ export interface AppointmentFilters {
 
 export interface AppointmentCreateInput {
   tenantId:      string;
-  customerId?:   string | null;
-  staffId?:      string | null;
-  serviceId?:    string | null;
-  locationId?:   string | null;
+  customerId:    string;
+  staffId:       string;
+  serviceId:     string;
+  locationId:    string;
   roomId?:       string | null;
   startTime:     Date;
   endTime:       Date;

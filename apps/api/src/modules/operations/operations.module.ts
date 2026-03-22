@@ -8,6 +8,8 @@ import { SchedulingAvailabilityService }  from './appointment/scheduling-availab
 import { SchedulingCron }                 from './appointment/scheduling.cron';
 import { FinanceModule }                  from '../finance/finance.module';
 import { StaffModule }                    from '../staff/staff.module';
+import { PrismaAppointmentRepository }   from './appointment/appointment.repository';
+import { APPOINTMENT_REPO }              from './appointment/appointment.repository.interface';
 
 /**
  * OPERATIONS MODULE
@@ -43,6 +45,10 @@ import { StaffModule }                    from '../staff/staff.module';
     AppointmentHoldService,         // Faz 23
     SchedulingAvailabilityService,  // Faz 23
     SchedulingCron,                 // Faz 23 — cron is module-internal, not exported
+    {
+      provide:  APPOINTMENT_REPO,
+      useClass: PrismaAppointmentRepository,
+    },
   ],
   // PublicModule tarafından kullanılır (Faz 16 + Faz 20 + Faz 23)
   exports: [

@@ -92,10 +92,10 @@ export class PrismaAppointmentRepository implements IAppointmentRepository {
       return await this.db.appointment.create({
         data: {
           tenantId:      data.tenantId,
-          customerId:    data.customerId ?? null,
-          staffId:       data.staffId    ?? null,
-          serviceId:     data.serviceId  ?? null,
-          locationId:    data.locationId ?? null,
+          customerId:    data.customerId,
+          staffId:       data.staffId,
+          serviceId:     data.serviceId,
+          locationId:    data.locationId,
           roomId:        data.roomId     ?? null,
           startTime:     data.startTime,
           endTime:       data.endTime,

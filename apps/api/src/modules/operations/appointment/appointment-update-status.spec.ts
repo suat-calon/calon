@@ -185,10 +185,13 @@ async function buildModule(txAppointmentUpdate: jest.Mock) {
 
 describe('AppointmentService — create: Redis releaseSlot failure (Bug #2)', () => {
   const BASE_DTO = {
-    staffId:   STAFF_ID,
-    startTime: '2026-03-15T10:00:00.000Z',
-    endTime:   '2026-03-15T11:00:00.000Z',
-    source:    'RECEPTIONIST' as const,
+    customerId: 'dddddddd-0000-0000-0000-000000000001',
+    staffId:    STAFF_ID,
+    serviceId:  'eeeeeeee-0000-0000-0000-000000000001',
+    locationId: 'ffffffff-0000-0000-0000-000000000001',
+    startTime:  '2026-03-15T10:00:00.000Z',
+    endTime:    '2026-03-15T11:00:00.000Z',
+    source:     'RECEPTIONIST' as const,
   };
 
   it('releaseSlot Redis hatası fırlatırsa → create() yine de appointment döner', async () => {

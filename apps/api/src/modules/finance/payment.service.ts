@@ -81,7 +81,7 @@ export class PaymentService {
     dto:           TakeDepositDto,
     actorId?:      string,
   ): Promise<PaymentResult> {
-    return this.prisma.withTenantTransaction(async () => {
+    return this.prisma.$tenantTransaction(async () => {
 
       // ── 1. Randevuyu bul — findFirst + tenantId filtresi enjekte edilir ────
       const appt = await this.paymentRepo.findAppointmentById(appointmentId, tenantId);
@@ -164,7 +164,7 @@ export class PaymentService {
     actorRole?:    string,
   ): Promise<PaymentResult> {
 
-    const result = await this.prisma.withTenantTransaction(async () => {
+    const result = await this.prisma.$tenantTransaction(async () => {
 
       // ── 1. Randevuyu bul — findFirst + tenantId filtresi enjekte edilir ────
       const appt = await this.paymentRepo.findAppointmentById(appointmentId, tenantId);

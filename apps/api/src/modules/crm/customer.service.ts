@@ -82,9 +82,9 @@ export class CustomerService {
       ...(query.search
         ? {
             OR: [
-              { firstName: { contains: query.search, mode: 'insensitive' } },
-              { lastName:  { contains: query.search, mode: 'insensitive' } },
-              { email:     { contains: query.search, mode: 'insensitive' } },
+              { firstName: { contains: query.search, mode: 'insensitive' as const } },
+              { lastName:  { contains: query.search, mode: 'insensitive' as const } },
+              { email:     { contains: query.search, mode: 'insensitive' as const } },
               { phone:     { contains: query.search } },
             ],
           }

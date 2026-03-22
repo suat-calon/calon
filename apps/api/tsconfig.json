@@ -5,9 +5,8 @@
     "outDir":   "dist",
     "baseUrl":  ".",
     "paths": {
-      "@common/*":    ["src/common/*"],
-      "@modules/*":   ["src/modules/*"],
-      "@prisma/client": ["../../packages/database/generated/client"]
+      "@common/*":  ["src/common/*"],
+      "@modules/*": ["src/modules/*"]
     }
   },
   "include": ["src/**/*"]
