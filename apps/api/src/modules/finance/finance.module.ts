@@ -16,14 +16,23 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-import { Module }            from '@nestjs/common';
-import { LedgerService }     from './ledger.service';
-import { PaymentService }    from './payment.service';
-import { PaymentController } from './payment.controller';
+import { Module }                from '@nestjs/common';
+import { LedgerService }        from './ledger.service';
+import { PaymentService }       from './payment.service';
+import { PaymentController }    from './payment.controller';
+import { PrismaPaymentRepository } from './payment.repository';
+import { PAYMENT_REPO }         from './payment.repository.interface';
 
 @Module({
   controllers: [PaymentController],
-  providers:   [LedgerService, PaymentService],
+  providers:   [
+    LedgerService,
+    PaymentService,
+    {
+      provide:  PAYMENT_REPO,
+      useClass: PrismaPaymentRepository,
+    },
+  ],
   exports:     [LedgerService],   // AppointmentService (OperationsModule) tarafından kullanılır
 })
 export class FinanceModule {}
