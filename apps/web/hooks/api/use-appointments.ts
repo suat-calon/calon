@@ -40,6 +40,10 @@ export interface Appointment {
   depositPaid?:   string | null;
   createdAt:      string;
   updatedAt:      string;
+  // Nested relations (populated by API)
+  customer?: { id: string; firstName: string; lastName: string; phone?: string };
+  service?:  { id: string; name: string; durationMin: number; price?: string };
+  staff?:    { id: string; firstName: string; lastName: string };
 }
 
 export interface CreateAppointmentPayload {

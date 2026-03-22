@@ -145,16 +145,9 @@ export default function CalendarPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      {/* Üst nav */}
-      <header className="border-b bg-white px-6 py-4 flex items-center gap-2 shadow-sm">
-        <span className="text-xl font-bold text-primary">Calon</span>
-        <span className="text-sm text-muted-foreground">/ Randevular</span>
-      </header>
-
-      <main className="container mx-auto max-w-6xl p-6 space-y-6">
+    <div className="space-y-6 max-w-6xl">
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold tracking-tight">Randevu Takvimi</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Randevu Takvimi</h1>
           <Button onClick={() => setDialogOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
             Yeni Randevu
@@ -214,7 +207,7 @@ export default function CalendarPage() {
                         </Badge>
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">
-                        Müşteri: {apt.customerId.slice(0, 8)}… · Personel: {apt.staffId.slice(0, 8)}…
+                        {apt.customer ? `${apt.customer.firstName} ${apt.customer.lastName}` : apt.customerId.slice(0, 8) + '...'} · {apt.staff ? `${apt.staff.firstName} ${apt.staff.lastName}` : apt.staffId.slice(0, 8) + '...'}
                       </p>
                       {apt.notes && (
                         <p className="text-xs text-slate-500 mt-1 italic line-clamp-1">{apt.notes}</p>
@@ -234,7 +227,6 @@ export default function CalendarPage() {
             )}
           </div>
         </div>
-      </main>
 
       {/* ── RANDEVU OLUŞTUR DIALOG ────────────────────────────────────────── */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -442,3 +434,6 @@ export default function CalendarPage() {
     </div>
   );
 }
+
+// Re-export appointment row rendering with nested data
+

@@ -111,15 +111,8 @@ export default function CatalogPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      {/* Üst nav */}
-      <header className="border-b bg-white px-6 py-4 flex items-center gap-2 shadow-sm">
-        <span className="text-xl font-bold text-primary">Calon</span>
-        <span className="text-sm text-muted-foreground">/ Katalog</span>
-      </header>
-
-      <main className="container mx-auto max-w-6xl p-6 space-y-6">
-        <h1 className="text-3xl font-bold tracking-tight">Katalog Yönetimi</h1>
+    <div className="space-y-6 max-w-6xl">
+        <h1 className="text-2xl font-bold tracking-tight">Katalog Yönetimi</h1>
 
         <Tabs defaultValue="services">
           <TabsList>
@@ -246,7 +239,6 @@ export default function CatalogPage() {
             )}
           </TabsContent>
         </Tabs>
-      </main>
 
       {/* ── HİZMET SHEET ────────────────────────────────────────────────────── */}
       <Sheet open={serviceSheetOpen} onOpenChange={setServiceSheetOpen}>
