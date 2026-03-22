@@ -15,6 +15,7 @@ export interface Product {
   minStock:     string; // Prisma Decimal → JSON string
   costPrice:    string; // Prisma Decimal → JSON string
   isActive:     boolean;
+  isDeleted:    boolean;
   createdAt:    string;
   updatedAt:    string;
 }
@@ -26,6 +27,16 @@ export interface CreateProductPayload {
   stockAmount?: number;
   minStock?:    number;
   costPrice?:   number;
+}
+
+export interface UpdateProductPayload {
+  name?:        string;
+  sku?:         string;
+  unit?:        string;
+  stockAmount?: number;
+  minStock?:    number;
+  costPrice?:   number;
+  isActive?:    boolean;
 }
 
 // ── Sorgular ──────────────────────────────────────────────────────────────────
@@ -42,12 +53,26 @@ export function useProducts() {
 
 export function useCreateProduct() {
   const qc = useQueryClient();
-
   return useMutation<Product, Error, CreateProductPayload>({
     mutationFn: (payload) =>
       apiClient.post<Product>('/products', payload).then((r) => r.data),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ['products'] });
-    },
+    onSuccess: () => { void qc.invalidateQueries({ queryKey: ['products'] }); },
+  });
+}
+
+export function useUpdateProduct() {
+  const qc = useQueryClient();
+  return useMutation<Product, Error, { id: string } & UpdateProductPayload>({
+    mutationFn: ({ id, ...payload }) =>
+      apiClient.patch<Product>(`/products/${id}`, payload).then((r) => r.data),
+    onSuccess: () => { void qc.invalidateQueries({ queryKey: ['products'] }); },
+  });
+}
+
+export function useDeleteProduct() {
+  const qc = useQueryClient();
+  return useMutation<void, Error, string>({
+    mutationFn: (id) => apiClient.delete(`/products/${id}`).then(() => {}),
+    onSuccess: () => { void qc.invalidateQueries({ queryKey: ['products'] }); },
   });
 }
