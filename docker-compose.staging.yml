@@ -6,7 +6,7 @@
 #   docker compose -f docker-compose.yml -f docker-compose.staging.yml up -d
 #
 # Bu dosya docker-compose.yml'i override eder:
-#   - Postgres ve Redis servisleri CIKARILIR (Neon + Cloud Redis)
+#   - Postgres ve Redis servisleri CIKARILIR (Neon + Upstash)
 #   - Container adlari stage prefix'i alir (prod ile carpisma yok)
 #   - env_file ile stage ortam degiskenleri yuklenir
 #   - depends_on kaldirilir (external DB/Redis)
@@ -28,9 +28,11 @@ services:
 
   # ---------------------------------------------------------------------------
   api:
-    container_name: calon_stage_api
+    container_name: calon_api_stage
     depends_on: {}
     env_file: .env.staging
+    ports:
+      - "4001:4000"
     restart: unless-stopped
     logging:
       driver: json-file
@@ -40,7 +42,7 @@ services:
 
   # ---------------------------------------------------------------------------
   worker:
-    container_name: calon_stage_worker
+    container_name: calon_worker_stage
     depends_on: {}
     env_file: .env.staging
     restart: unless-stopped
