@@ -25,12 +25,16 @@ COPY packages/database/prisma/         packages/database/prisma/
 COPY packages/database/src/            packages/database/src/
 COPY packages/database/tsconfig.json   packages/database/
 
-# Generate Prisma client
+# Generate Prisma client to custom output (packages/database/generated/client)
 # binaryTarget linux-musl-openssl-3.0.x is declared in schema.prisma for Alpine
 RUN yarn workspace @calon/database prisma generate
 
-# Note: prisma generate with custom output also populates node_modules/.prisma/client
-# No manual sync needed — Prisma v6 writes to both locations automatically
+# Also generate into standard .prisma/client for @prisma/client import resolution.
+# Custom output does NOT auto-populate .prisma/client in Prisma v6.
+# Create temp schema without custom output to generate into default location.
+RUN sed '/output/d' packages/database/prisma/schema.prisma > /tmp/schema_std.prisma \
+    && npx prisma generate --schema /tmp/schema_std.prisma \
+    && rm /tmp/schema_std.prisma
 
 # Build @calon/database — produces packages/database/dist/ (ORM boundary layer)
 RUN yarn workspace @calon/database build
@@ -80,9 +84,13 @@ COPY --from=builder /app/packages/database/dist/ packages/database/dist/
 # Copy Prisma schema — required for prisma migrate deploy at startup
 COPY --from=builder /app/packages/database/prisma/ packages/database/prisma/
 
-# Copy Prisma generated client — contains linux-musl-openssl-3.0.x query engine
+# Copy Prisma generated client (custom output) — used by @calon/database
 COPY --from=builder /app/packages/database/generated/client \
                         packages/database/generated/client/
+
+# Copy standard Prisma client — used by @prisma/client import resolution chain
+COPY --from=builder /app/node_modules/.prisma/client \
+                        node_modules/.prisma/client/
 
 # Switch to non-root user — root is forbidden in production containers
 USER calon
