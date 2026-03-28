@@ -29,6 +29,9 @@ COPY packages/database/tsconfig.json   packages/database/
 # binaryTarget linux-musl-openssl-3.0.x is declared in schema.prisma for Alpine
 RUN yarn workspace @calon/database prisma generate
 
+# Sync custom output into standard resolution path so @prisma/client imports work
+RUN cp -r packages/database/generated/client/* node_modules/.prisma/client/
+
 # Build @calon/database — produces packages/database/dist/ (ORM boundary layer)
 RUN yarn workspace @calon/database build
 
