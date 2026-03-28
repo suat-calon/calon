@@ -32,9 +32,9 @@ RUN yarn workspace @calon/database prisma generate
 # Also generate into standard .prisma/client for @prisma/client import resolution.
 # Custom output does NOT auto-populate .prisma/client in Prisma v6.
 # Create temp schema without custom output to generate into default location.
-RUN sed '/output/d' packages/database/prisma/schema.prisma > /tmp/schema_std.prisma \
-    && npx prisma generate --schema /tmp/schema_std.prisma \
-    && rm /tmp/schema_std.prisma
+RUN sed '/output/d' packages/database/prisma/schema.prisma > packages/database/prisma/schema_std.prisma \
+    && npx prisma generate --schema packages/database/prisma/schema_std.prisma \
+    && rm packages/database/prisma/schema_std.prisma
 
 # Build @calon/database — produces packages/database/dist/ (ORM boundary layer)
 RUN yarn workspace @calon/database build
