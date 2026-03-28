@@ -30,7 +30,7 @@ services:
   api:
     container_name: calon_api_stage
     depends_on: !reset {}
-    env_file: .env.staging
+    env_file: apps/api/.env.staging
     ports:
       - "4001:4000"
     restart: unless-stopped
@@ -44,7 +44,7 @@ services:
   worker:
     container_name: calon_worker_stage
     depends_on: !reset {}
-    env_file: .env.staging
+    env_file: apps/api/.env.staging
     restart: unless-stopped
     logging:
       driver: json-file
