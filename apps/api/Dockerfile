@@ -22,10 +22,15 @@ RUN yarn install --frozen-lockfile
 COPY tsconfig.base.json                ./
 COPY apps/api/                         apps/api/
 COPY packages/database/prisma/         packages/database/prisma/
+COPY packages/database/src/            packages/database/src/
+COPY packages/database/tsconfig.json   packages/database/
 
 # Generate Prisma client
 # binaryTarget linux-musl-openssl-3.0.x is declared in schema.prisma for Alpine
 RUN yarn workspace @calon/database prisma generate
+
+# Build @calon/database — produces packages/database/dist/ (ORM boundary layer)
+RUN yarn workspace @calon/database build
 
 # Compile TypeScript → apps/api/dist/
 RUN yarn workspace @calon/api build
@@ -65,6 +70,9 @@ COPY --from=builder /app/apps/api/dist          apps/api/dist/
 # tsconfig-paths resolves @prisma/client → packages/database/generated/client
 COPY --from=builder /app/apps/api/tsconfig.json apps/api/tsconfig.json
 COPY --from=builder /app/tsconfig.base.json     tsconfig.base.json
+
+# Copy @calon/database compiled output — ORM boundary layer (Money, errors, types)
+COPY --from=builder /app/packages/database/dist/ packages/database/dist/
 
 # Copy Prisma generated client — contains linux-musl-openssl-3.0.x query engine
 COPY --from=builder /app/packages/database/generated/client \
