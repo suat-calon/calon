@@ -6,7 +6,7 @@ set -euo pipefail
 COMPOSE_FILE="docker-compose.yml"
 COMPOSE_OVERRIDE="docker-compose.staging.yml"
 ENV_FILE="apps/api/.env.staging"
-HEALTH_URL="http://localhost:4000/api/v1/health"
+HEALTH_URL="http://localhost:4001/api/v1/health"
 MAX_WAIT=60
 
 echo "═══════════════════════════════════════════════"

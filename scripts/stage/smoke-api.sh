@@ -4,7 +4,7 @@
 # Example: ./scripts/stage/smoke-api.sh https://stage-api.calon.com.tr
 set -euo pipefail
 
-BASE_URL="${1:-http://localhost:4000}"
+BASE_URL="${1:-http://localhost:4001}"
 API="${BASE_URL}/api/v1"
 COOKIE_JAR=$(mktemp)
 PASS=0
