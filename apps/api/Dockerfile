@@ -77,6 +77,9 @@ COPY --from=builder /app/tsconfig.base.json     tsconfig.base.json
 # Copy @calon/database compiled output — ORM boundary layer (Money, errors, types)
 COPY --from=builder /app/packages/database/dist/ packages/database/dist/
 
+# Copy Prisma schema — required for prisma migrate deploy at startup
+COPY --from=builder /app/packages/database/prisma/ packages/database/prisma/
+
 # Copy Prisma generated client — contains linux-musl-openssl-3.0.x query engine
 COPY --from=builder /app/packages/database/generated/client \
                         packages/database/generated/client/

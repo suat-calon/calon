@@ -39,13 +39,13 @@ echo "  ✓ Build complete"
 # ── 3. Migration ─────────────────────────────────────────────────────────────
 echo "[3/6] Running database migration..."
 docker compose -f "$COMPOSE_FILE" -f "$COMPOSE_OVERRIDE" \
-  run --rm api npx prisma migrate deploy
+  run --rm api npx prisma migrate deploy --schema /app/packages/database/prisma/schema.prisma
 echo "  ✓ Migration complete"
 
 # ── 4. Generate Prisma client ────────────────────────────────────────────────
 echo "[4/6] Generating Prisma client..."
 docker compose -f "$COMPOSE_FILE" -f "$COMPOSE_OVERRIDE" \
-  run --rm api npx prisma generate
+  run --rm api npx prisma generate --schema /app/packages/database/prisma/schema.prisma
 echo "  ✓ Prisma client generated"
 
 # ── 5. Start API ─────────────────────────────────────────────────────────────
