@@ -14,7 +14,7 @@ echo "  Calon Stage API Deploy"
 echo "═══════════════════════════════════════════════"
 
 # ── 1. Env guard ─────────────────────────────────────────────────────────────
-echo "[1/6] Checking environment..."
+echo "[1/5] Checking environment..."
 
 if [ ! -f "$ENV_FILE" ]; then
   echo "FAIL: $ENV_FILE not found. Copy from .env.staging.example and fill secrets."
@@ -32,29 +32,25 @@ done
 echo "  ✓ Environment file validated"
 
 # ── 2. Build ─────────────────────────────────────────────────────────────────
-echo "[2/6] Building API image..."
+echo "[2/5] Building API image..."
 docker compose -f "$COMPOSE_FILE" -f "$COMPOSE_OVERRIDE" build api
 echo "  ✓ Build complete"
 
 # ── 3. Migration ─────────────────────────────────────────────────────────────
-echo "[3/6] Running database migration..."
+echo "[3/5] Running database migration..."
 docker compose -f "$COMPOSE_FILE" -f "$COMPOSE_OVERRIDE" \
   run --rm api npx prisma migrate deploy --schema /app/packages/database/prisma/schema.prisma
 echo "  ✓ Migration complete"
 
-# ── 4. Generate Prisma client ────────────────────────────────────────────────
-echo "[4/6] Generating Prisma client..."
-docker compose -f "$COMPOSE_FILE" -f "$COMPOSE_OVERRIDE" \
-  run --rm api npx prisma generate --schema /app/packages/database/prisma/schema.prisma
-echo "  ✓ Prisma client generated"
-
-# ── 5. Start API ─────────────────────────────────────────────────────────────
-echo "[5/6] Starting API container..."
+# ── 4. Start API ─────────────────────────────────────────────────────────────
+# Note: prisma generate runs at build time inside the Docker image.
+# No runtime generate needed — generated client is baked into the image.
+echo "[4/5] Starting API container..."
 docker compose -f "$COMPOSE_FILE" -f "$COMPOSE_OVERRIDE" up -d api
 echo "  ✓ API container started"
 
-# ── 6. Health check ──────────────────────────────────────────────────────────
-echo "[6/6] Waiting for API health (max ${MAX_WAIT}s)..."
+# ── 5. Health check ──────────────────────────────────────────────────────────
+echo "[5/5] Waiting for API health (max ${MAX_WAIT}s)..."
 elapsed=0
 while [ $elapsed -lt $MAX_WAIT ]; do
   status=$(curl -s -o /dev/null -w "%{http_code}" "$HEALTH_URL" 2>/dev/null || echo "000")
