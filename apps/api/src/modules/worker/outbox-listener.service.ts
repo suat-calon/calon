@@ -83,7 +83,11 @@ export class OutboxListenerService implements OnModuleInit, OnModuleDestroy {
       return;
     }
 
-    this.client = new Client({ connectionString });
+    this.client = new Client({
+      connectionString,
+      keepAlive:             true,
+      keepAliveInitialDelayMillis: 10_000, // Neon idle ECONNRESET koruması
+    });
 
     this.client.on('error', (err: Error) => {
       this.logger.error(`[OutboxListener] pg hatası: ${err.message}`);

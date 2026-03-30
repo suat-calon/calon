@@ -96,7 +96,7 @@ export class ArchiveService {
       // 1. Arşivlenecek ID'leri kilitle (BATCH_SIZE sınırı + SKIP LOCKED)
       const locked = await tx.$queryRaw<{ id: string }[]>`
         SELECT id FROM "event_outbox"
-        WHERE  status      IN (${OUTBOX_TERMINAL_STATUSES[0]}, ${OUTBOX_TERMINAL_STATUSES[1]}, ${OUTBOX_TERMINAL_STATUSES[2]})
+        WHERE  status::text IN (${OUTBOX_TERMINAL_STATUSES[0]}, ${OUTBOX_TERMINAL_STATUSES[1]}, ${OUTBOX_TERMINAL_STATUSES[2]})
         AND    "completedAt" <= ${cutoff}
         ORDER  BY "completedAt"
         LIMIT  ${BATCH_SIZE}
@@ -155,7 +155,7 @@ export class ArchiveService {
       // 1. ID'leri kilitle
       const locked = await tx.$queryRaw<{ id: string }[]>`
         SELECT id FROM "event_delivery"
-        WHERE  status     IN (${DELIVERY_TERMINAL_STATUSES[0]}, ${DELIVERY_TERMINAL_STATUSES[1]})
+        WHERE  status::text IN (${DELIVERY_TERMINAL_STATUSES[0]}, ${DELIVERY_TERMINAL_STATUSES[1]})
         AND    "updatedAt" <= ${cutoff}
         ORDER  BY "updatedAt"
         LIMIT  ${BATCH_SIZE}
