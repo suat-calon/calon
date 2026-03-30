@@ -36,8 +36,9 @@ const redisClientProvider = {
       lazyConnect:         true,  // İlk komutta bağlan
       maxRetriesPerRequest: 3,
       enableReadyCheck:    true,
-      // Hold kilidi için ayrı DB index (Bull: db=0, Lock: db=1)
-      db:                  1,
+      // Upstash sadece DB 0 destekler. Namespace prefixleri ile çakışma önlenmiştir.
+      db:                  0,
+      keepAlive:           10000, // ECONNRESET kopmalarını önlemek için TCP keep-alive
       ...(config.get('REDIS_TLS') === 'true' ? { tls: {} } : {}),
     });
   },
@@ -56,7 +57,8 @@ const redisClientProvider = {
           host:     config.get<string>('REDIS_HOST', 'localhost'),
           port,
           password: config.get<string>('REDIS_PASSWORD'),
-          // Bull varsayılan db=0
+          db:       0, // Upstash DB:0 zorunluluğu
+          keepAlive: 10000, // Worker ECONNRESET kopmalarını önler
           ...(config.get('REDIS_TLS') === 'true' ? { tls: {} } : {}),
         },
         defaultJobOptions: {
