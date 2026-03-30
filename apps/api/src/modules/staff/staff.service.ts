@@ -44,20 +44,44 @@ export class StaffService {
   // ── create ──────────────────────────────────────────────────────────────────
 
   async create(tenantId: string, dto: CreateStaffDto): Promise<StaffProfile> {
-    return this.prisma.staffProfile.create({
-      data: {
-        tenantId,
-        locationId:     dto.locationId,
-        userId:         dto.userId ?? null,
-        firstName:      dto.firstName,
-        lastName:       dto.lastName,
-        phone:          dto.phone ?? null,
-        avatarUrl:      dto.avatarUrl ?? null,
-        title:          dto.title ?? null,
-        colorHex:       dto.colorHex ?? '#6366f1',
-        commissionRate: dto.commissionRate ?? 0,
-        isActive:       dto.isActive ?? true,
-      },
+    const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'] as const;
+
+    return this.prisma.$transaction(async (tx) => {
+      const staff = await tx.staffProfile.create({
+        data: {
+          tenantId,
+          locationId:     dto.locationId,
+          userId:         dto.userId ?? null,
+          firstName:      dto.firstName,
+          lastName:       dto.lastName,
+          phone:          dto.phone ?? null,
+          avatarUrl:      dto.avatarUrl ?? null,
+          title:          dto.title ?? null,
+          colorHex:       dto.colorHex ?? '#6366f1',
+          commissionRate: dto.commissionRate ?? 0,
+          isActive:       dto.isActive ?? true,
+        },
+      });
+
+      // Booking-ready default: Mon–Sat 09:00–18:00, Sun off.
+      // Without working hours, availability returns [] and booking is impossible.
+      for (const day of DAYS) {
+        const isWorkingDay = day !== 'SUN';
+        await tx.staffWorkingHour.create({
+          data: {
+            tenantId,
+            staffId:     staff.id,
+            dayOfWeek:   day,
+            startTime:   '09:00',
+            endTime:     '18:00',
+            isWorkingDay,
+            breakStart:  isWorkingDay ? '12:00' : null,
+            breakEnd:    isWorkingDay ? '13:00' : null,
+          },
+        });
+      }
+
+      return staff;
     });
   }
 

@@ -230,26 +230,55 @@ export class OnboardingService {
         }
 
         // ── 2e. Çalışma saatleri ────────────────────────────────────────────────
-        for (const wh of (dto.workingHours ?? [])) {
-          const staffId = staffIds[wh.staffIndex];
-          if (!staffId) continue; // geçersiz index — sessizce atla
-          await tx.staffWorkingHour.upsert({
-            where: {
-              staffId_dayOfWeek: {
-                staffId,
-                dayOfWeek: DAY_MAP[wh.dayOfWeek],
+        // Wizard'dan explicit çalışma saatleri geldiyse onları kullan.
+        // Gelmediyse her staff'a booking-ready default ata (Pzt–Cmt 09:00–18:00).
+        // Bu guard olmadan staff workingHours boş kalır → availability [] → booking imkansız.
+        const hasExplicitHours = (dto.workingHours ?? []).length > 0;
+
+        if (hasExplicitHours) {
+          for (const wh of dto.workingHours!) {
+            const staffId = staffIds[wh.staffIndex];
+            if (!staffId) continue;
+            await tx.staffWorkingHour.upsert({
+              where: {
+                staffId_dayOfWeek: {
+                  staffId,
+                  dayOfWeek: DAY_MAP[wh.dayOfWeek],
+                },
               },
-            },
-            update: { startTime: wh.startTime, endTime: wh.endTime },
-            create: {
-              tenantId,
-              staffId,
-              dayOfWeek:   DAY_MAP[wh.dayOfWeek],
-              startTime:   wh.startTime,
-              endTime:     wh.endTime,
-              isWorkingDay: true,
-            },
-          });
+              update: { startTime: wh.startTime, endTime: wh.endTime },
+              create: {
+                tenantId,
+                staffId,
+                dayOfWeek:   DAY_MAP[wh.dayOfWeek],
+                startTime:   wh.startTime,
+                endTime:     wh.endTime,
+                isWorkingDay: true,
+              },
+            });
+          }
+        } else {
+          // Default booking-ready hours: Mon–Sat 09:00–18:00, Sun off
+          for (const staffId of staffIds) {
+            for (let d = 0; d < DAY_MAP.length; d++) {
+              const day = DAY_MAP[d]!;
+              const isWorkingDay = day !== 'SUN';
+              await tx.staffWorkingHour.upsert({
+                where: { staffId_dayOfWeek: { staffId, dayOfWeek: day } },
+                update: {},
+                create: {
+                  tenantId,
+                  staffId,
+                  dayOfWeek:   day,
+                  startTime:   '09:00',
+                  endTime:     '18:00',
+                  isWorkingDay,
+                  breakStart:  isWorkingDay ? '12:00' : null,
+                  breakEnd:    isWorkingDay ? '13:00' : null,
+                },
+              });
+            }
+          }
         }
 
         // ── 2f. Personel ↔ Hizmet bağlantıları ─────────────────────────────────
