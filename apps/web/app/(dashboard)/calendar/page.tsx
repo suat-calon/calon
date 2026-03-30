@@ -114,6 +114,8 @@ export default function CalendarPage() {
   const [dialogOpen, setDialogOpen]     = useState(false);
   const [calPopoverOpen, setCalPopoverOpen] = useState(false);
   const [detailApt, setDetailApt]       = useState<Appointment | null>(null);
+  const [staffFilter, setStaffFilter]   = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
 
   const { data: appointments, isLoading, error } = useAppointments();
   const { data: services }                       = useServices();
@@ -134,7 +136,7 @@ export default function CalendarPage() {
     Array.from({ length: HOUR_END - HOUR_START }, (_, i) => HOUR_START + i),
   []);
 
-  // Group appointments by day
+  // Group appointments by day with filters
   const appointmentsByDay = useMemo(() => {
     const map = new Map<string, Appointment[]>();
     for (const day of weekDays) {
@@ -143,6 +145,8 @@ export default function CalendarPage() {
     }
     for (const apt of appointments ?? []) {
       try {
+        if (staffFilter !== 'all' && apt.staffId !== staffFilter) continue;
+        if (statusFilter !== 'all' && apt.status !== statusFilter) continue;
         const d = parseISO(apt.startTime);
         const key = format(d, 'yyyy-MM-dd');
         if (map.has(key)) {
@@ -151,7 +155,7 @@ export default function CalendarPage() {
       } catch { /* skip invalid */ }
     }
     return map;
-  }, [appointments, weekDays]);
+  }, [appointments, weekDays, staffFilter, statusFilter]);
 
   function prevWeek() { setWeekStart(addDays(weekStart, -7)); }
   function nextWeek() { setWeekStart(addDays(weekStart, 7)); }
@@ -213,10 +217,35 @@ export default function CalendarPage() {
             {format(weekDays[0], 'd MMM', { locale: tr })} — {format(weekDays[6], 'd MMM yyyy', { locale: tr })}
           </span>
         </div>
-        <Button size="sm" onClick={() => setDialogOpen(true)}>
-          <Plus className="mr-1 h-4 w-4" />
-          <span className="hidden sm:inline">Yeni Randevu</span>
-        </Button>
+        <div className="flex items-center gap-2">
+          {/* Staff filter */}
+          <Select value={staffFilter} onValueChange={setStaffFilter}>
+            <SelectTrigger className="h-8 w-[140px] text-xs hidden md:flex">
+              <SelectValue placeholder="Personel" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tüm Personel</SelectItem>
+              {staffList.map((s) => <SelectItem key={s.id} value={s.id}>{s.firstName} {s.lastName}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          {/* Status filter */}
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="h-8 w-[120px] text-xs hidden md:flex">
+              <SelectValue placeholder="Durum" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tüm Durum</SelectItem>
+              <SelectItem value="PENDING">Bekliyor</SelectItem>
+              <SelectItem value="CONFIRMED">Onaylı</SelectItem>
+              <SelectItem value="COMPLETED">Tamamlandı</SelectItem>
+              <SelectItem value="CANCELLED">İptal</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button size="sm" onClick={() => setDialogOpen(true)}>
+            <Plus className="mr-1 h-4 w-4" />
+            <span className="hidden sm:inline">Yeni Randevu</span>
+          </Button>
+        </div>
       </div>
 
       {/* ── Weekly Grid ───────────────────────────────────────────────────── */}
