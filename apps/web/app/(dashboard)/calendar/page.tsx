@@ -47,6 +47,9 @@ import {
 } from '@/components/ui/sheet';
 import { Separator } from '@/components/ui/separator';
 import { useServices } from '@/hooks/api/use-services';
+import { useCustomers } from '@/hooks/api/use-customers';
+import { useStaff } from '@/hooks/api/use-staff';
+import { useTenant } from '@/hooks/api/use-auth';
 import { cn } from '@/lib/utils';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
@@ -88,10 +91,10 @@ const ACTION_VARIANT: Record<AppointmentStatus, 'default' | 'destructive' | 'out
 // ── Form Schema ────────────────────────────────────────────────────────────────
 
 const appointmentSchema = z.object({
-  customerId:  z.string().uuid('Geçerli bir Müşteri UUID girin'),
-  staffId:     z.string().uuid('Geçerli bir Personel UUID girin'),
-  serviceId:   z.string().uuid('Hizmet seçin'),
-  locationId:  z.string().uuid('Geçerli bir Lokasyon UUID girin'),
+  customerId:  z.string().min(1, 'Müşteri seçin'),
+  staffId:     z.string().min(1, 'Personel seçin'),
+  serviceId:   z.string().min(1, 'Hizmet seçin'),
+  locationId:  z.string().min(1, 'Lokasyon gerekli'),
   date:        z.string().min(1, 'Tarih seçin'),
   startTime:   z.string().regex(/^\d{2}:\d{2}$/, 'SS:DD formatında girin'),
   endTime:     z.string().regex(/^\d{2}:\d{2}$/, 'SS:DD formatında girin'),
@@ -114,8 +117,14 @@ export default function CalendarPage() {
 
   const { data: appointments, isLoading, error } = useAppointments();
   const { data: services }                       = useServices();
+  const { data: customersData }                  = useCustomers();
+  const { data: staffData }                      = useStaff();
+  const { data: tenant }                         = useTenant();
   const createAppointment                        = useCreateAppointment();
   const updateStatus                             = useUpdateAppointmentStatus();
+
+  const customers = customersData?.data ?? [];
+  const staffList = staffData?.data ?? [];
 
   const weekDays = useMemo(() =>
     Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)),
@@ -354,7 +363,7 @@ export default function CalendarPage() {
           <DialogHeader>
             <DialogTitle>Yeni Randevu Oluştur</DialogTitle>
             <DialogDescription>
-              Tüm UUID alanları backend&apos;den alınır. Hizmet listeden seçilir.
+              Müşteri, personel ve hizmeti listeden seçin.
             </DialogDescription>
           </DialogHeader>
 
@@ -394,19 +403,33 @@ export default function CalendarPage() {
               </div>
               <FormField control={form.control} name="serviceId" render={({ field }) => (
                 <FormItem><FormLabel>Hizmet</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Hizmet seçin" /></SelectTrigger></FormControl>
-                    <SelectContent>{!services || services.length === 0 ? <SelectItem value="_none" disabled>Yükleniyor...</SelectItem> : services.map((s) => <SelectItem key={s.id} value={s.id}>{s.name} ({s.durationMin} dk)</SelectItem>)}</SelectContent>
+                  <Select onValueChange={(val) => { field.onChange(val); const svc = (services ?? []).find((s) => s.id === val); if (svc) { form.setValue('totalPrice', Number(svc.price)); const st = form.getValues('startTime'); if (st) { const [h, m] = st.split(':').map(Number); const endMin = h * 60 + m + svc.durationMin; form.setValue('endTime', `${String(Math.floor(endMin / 60)).padStart(2, '0')}:${String(endMin % 60).padStart(2, '0')}`); } } }} value={field.value}>
+                    <FormControl><SelectTrigger><SelectValue placeholder="Hizmet seçin" /></SelectTrigger></FormControl>
+                    <SelectContent>{!services || services.length === 0 ? <SelectItem value="_none" disabled>Yükleniyor...</SelectItem> : services.filter((s) => !s.isDeleted).map((s) => <SelectItem key={s.id} value={s.id}>{s.name} ({s.durationMin} dk — {Number(s.price).toLocaleString('tr-TR')} ₺)</SelectItem>)}</SelectContent>
                   </Select><FormMessage />
                 </FormItem>
               )} />
               <FormField control={form.control} name="customerId" render={({ field }) => (
-                <FormItem><FormLabel>Müşteri UUID</FormLabel><FormControl><Input placeholder="UUID..." {...field} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>Müşteri</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl><SelectTrigger><SelectValue placeholder="Müşteri seçin" /></SelectTrigger></FormControl>
+                    <SelectContent>{customers.length === 0
+                      ? <SelectItem value="_none" disabled>Müşteri yok</SelectItem>
+                      : customers.map((c) => <SelectItem key={c.id} value={c.id}>{c.firstName} {c.lastName}{c.phone ? ` — ${c.phone}` : ''}</SelectItem>)
+                    }</SelectContent>
+                  </Select><FormMessage />
+                </FormItem>
               )} />
               <FormField control={form.control} name="staffId" render={({ field }) => (
-                <FormItem><FormLabel>Personel UUID</FormLabel><FormControl><Input placeholder="UUID..." {...field} /></FormControl><FormMessage /></FormItem>
-              )} />
-              <FormField control={form.control} name="locationId" render={({ field }) => (
-                <FormItem><FormLabel>Lokasyon UUID</FormLabel><FormControl><Input placeholder="UUID..." {...field} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>Personel</FormLabel>
+                  <Select onValueChange={(val) => { field.onChange(val); const s = staffList.find((st) => st.id === val); if (s?.locationId) form.setValue('locationId', s.locationId); }} value={field.value}>
+                    <FormControl><SelectTrigger><SelectValue placeholder="Personel seçin" /></SelectTrigger></FormControl>
+                    <SelectContent>{staffList.length === 0
+                      ? <SelectItem value="_none" disabled>Personel yok</SelectItem>
+                      : staffList.map((st) => <SelectItem key={st.id} value={st.id}>{st.firstName} {st.lastName}{st.title ? ` — ${st.title}` : ''}</SelectItem>)
+                    }</SelectContent>
+                  </Select><FormMessage />
+                </FormItem>
               )} />
               <FormField control={form.control} name="source" render={({ field }) => (
                 <FormItem><FormLabel>Kaynak</FormLabel>
