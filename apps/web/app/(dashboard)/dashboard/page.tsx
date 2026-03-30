@@ -1,13 +1,14 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { format, isToday, parseISO, isAfter } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import {
   CalendarDays, Clock, CheckCircle2, AlertCircle,
   XCircle, ArrowRight, Plus, Users, Scissors,
-  AlertTriangle,
+  AlertTriangle, Link2, Copy, ExternalLink, Check,
+  Settings,
 } from 'lucide-react';
 
 import { Badge }  from '@/components/ui/badge';
@@ -138,6 +139,9 @@ export default function DashboardPage() {
         />
       </div>
 
+      {/* ── Booking Link ───────────────────────────────────────────────────── */}
+      {tenant?.slug && <BookingLinkCard slug={tenant.slug} />}
+
       {/* ── Two-Column: Upcoming + Quick Actions ──────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-5">
         {/* Upcoming */}
@@ -185,6 +189,7 @@ export default function DashboardPage() {
           <QuickAction href="/customers" icon={Users} label="Müşteriler" description="Müşteri listesi" />
           <QuickAction href="/services" icon={Scissors} label="Hizmetler" description="Hizmet yönetimi" />
           <QuickAction href="/catalog" icon={Plus} label="Katalog" description="Hizmet & ürün ekle" />
+          <QuickAction href="/settings" icon={Settings} label="Ayarlar" description="Salon profili" />
         </div>
       </div>
 
@@ -301,6 +306,48 @@ function AppointmentRow({ appointment: apt }: { appointment: Appointment }) {
           {Number(apt.totalPrice).toLocaleString('tr-TR')} ₺
         </span>
       )}
+    </div>
+  );
+}
+
+/* ── BookingLinkCard ───────────────────────────────────────────────────────── */
+
+function BookingLinkCard({ slug }: { slug: string }) {
+  const [copied, setCopied] = useState(false);
+  const bookingUrl = `${process.env.NEXT_PUBLIC_BOOKING_URL ?? 'https://book.calon.com.tr'}/${slug}`;
+
+  const handleCopy = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(bookingUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch { /* clipboard API might fail in non-HTTPS */ }
+  }, [bookingUrl]);
+
+  return (
+    <div className="bg-gradient-to-r from-primary/5 to-primary/10 rounded-xl border border-primary/20 shadow-sm p-4">
+      <div className="flex items-start gap-3">
+        <div className="p-2 rounded-lg bg-primary/15 shrink-0">
+          <Link2 className="h-4 w-4 text-primary" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold">Online Randevu Linki</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Bu linki müşterilerinizle paylaşarak online randevu almalarını sağlayın.</p>
+          <div className="flex items-center gap-2 mt-2.5">
+            <code className="flex-1 text-xs bg-white/80 border rounded-md px-3 py-1.5 truncate font-mono text-foreground/80">
+              {bookingUrl}
+            </code>
+            <Button variant="outline" size="sm" className="shrink-0 h-8 px-2.5 border-primary/30 text-primary hover:bg-primary/10" onClick={handleCopy}>
+              {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+            </Button>
+            <Button variant="outline" size="sm" className="shrink-0 h-8 px-2.5" asChild>
+              <a href={bookingUrl} target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="h-3.5 w-3.5" />
+              </a>
+            </Button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

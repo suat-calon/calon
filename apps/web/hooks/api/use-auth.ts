@@ -1,12 +1,20 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import apiClient from '@/lib/api-client';
 
 export interface AuthUser {
   userId:   string;
   tenantId: string;
   role:     string;
+}
+
+export interface TenantLocation {
+  id:       string;
+  name:     string;
+  address?: string | null;
+  city?:    string | null;
+  phone?:   string | null;
 }
 
 export interface Tenant {
@@ -20,6 +28,15 @@ export interface Tenant {
   locale:     string;
   currency:   string;
   createdAt:  string;
+  location?:  TenantLocation | null;
+}
+
+export interface UpdateTenantProfilePayload {
+  name?:       string;
+  brandColor?: string;
+  phone?:      string;
+  address?:    string;
+  city?:       string;
 }
 
 export function useAuth() {
@@ -36,5 +53,14 @@ export function useTenant() {
     queryKey: ['tenant', 'me'],
     queryFn:  () => apiClient.get<Tenant>('/tenants/me').then((r) => r.data),
     staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useUpdateTenantProfile() {
+  const qc = useQueryClient();
+  return useMutation<Tenant, Error, UpdateTenantProfilePayload>({
+    mutationFn: (payload) =>
+      apiClient.patch<Tenant>('/tenants/me', payload).then((r) => r.data),
+    onSuccess: () => { void qc.invalidateQueries({ queryKey: ['tenant', 'me'] }); },
   });
 }

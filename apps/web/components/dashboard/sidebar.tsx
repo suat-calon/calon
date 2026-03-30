@@ -9,6 +9,7 @@ import {
   Users,
   Scissors,
   UserCog,
+  Settings,
 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
@@ -20,6 +21,7 @@ const NAV_ITEMS = [
   { href: '/customers',  label: 'Müşteriler', icon: Users },
   { href: '/staff',      label: 'Personel',   icon: UserCog },
   { href: '/services',   label: 'Hizmetler',  icon: Scissors },
+  { href: '/settings',   label: 'Ayarlar',    icon: Settings },
 ] as const;
 
 export function Sidebar() {
