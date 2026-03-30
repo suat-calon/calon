@@ -77,11 +77,19 @@ export class OutboxListenerService implements OnModuleInit, OnModuleDestroy {
   private async connect(): Promise<void> {
     if (this.destroyed) return;
 
-    const connectionString = process.env['DATABASE_URL'];
-    if (!connectionString) {
+    const rawUrl = process.env['DATABASE_URL'];
+    if (!rawUrl) {
       this.logger.error('[OutboxListener] DATABASE_URL tanımlı değil, LISTEN başlatılamadı');
       return;
     }
+
+    // Normalize sslmode=require → sslmode=verify-full to suppress pg-connection-string
+    // deprecation warning. This does NOT change behavior — pg already treats 'require'
+    // as 'verify-full'. Making it explicit silences the warning.
+    const connectionString = rawUrl.replace(
+      /([?&])sslmode=require(?=&|$)/,
+      '$1sslmode=verify-full',
+    );
 
     this.client = new Client({
       connectionString,
