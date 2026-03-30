@@ -31,7 +31,7 @@ services:
     container_name: calon_api_stage
     depends_on: !reset {}
     env_file: apps/api/.env.staging
-    ports:
+    ports: !reset
       - "4001:4000"
     restart: unless-stopped
     logging:
