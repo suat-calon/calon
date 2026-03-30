@@ -10,6 +10,9 @@ ENV_FILE="apps/api/.env.staging"
 HEALTH_URL="http://localhost:4001/api/v1/health"
 MAX_WAIT=60
 
+# Canonical compose command — always uses stage env file to prevent root .env poisoning
+COMPOSE="docker compose --env-file $ENV_FILE -f $COMPOSE_FILE -f $COMPOSE_OVERRIDE -f $COMPOSE_PORTS"
+
 echo "═══════════════════════════════════════════════"
 echo "  Calon Stage API Deploy"
 echo "═══════════════════════════════════════════════"
@@ -34,12 +37,12 @@ echo "  ✓ Environment file validated"
 
 # ── 2. Build ─────────────────────────────────────────────────────────────────
 echo "[2/5] Building API image..."
-docker compose -f "$COMPOSE_FILE" -f "$COMPOSE_OVERRIDE" -f "$COMPOSE_PORTS" build api
+$COMPOSE build api
 echo "  ✓ Build complete"
 
 # ── 3. Migration ─────────────────────────────────────────────────────────────
 echo "[3/5] Running database migration..."
-docker compose -f "$COMPOSE_FILE" -f "$COMPOSE_OVERRIDE" -f "$COMPOSE_PORTS" \
+$COMPOSE \
   run --rm api npx prisma migrate deploy --schema /app/packages/database/prisma/schema.prisma
 echo "  ✓ Migration complete"
 
@@ -47,7 +50,7 @@ echo "  ✓ Migration complete"
 # Note: prisma generate runs at build time inside the Docker image.
 # No runtime generate needed — generated client is baked into the image.
 echo "[4/5] Starting API container..."
-docker compose -f "$COMPOSE_FILE" -f "$COMPOSE_OVERRIDE" -f "$COMPOSE_PORTS" up -d api
+$COMPOSE up -d api
 echo "  ✓ API container started"
 
 # ── 5. Health check ──────────────────────────────────────────────────────────
@@ -70,5 +73,5 @@ while [ $elapsed -lt $MAX_WAIT ]; do
 done
 
 echo "FAIL: API did not become healthy within ${MAX_WAIT}s"
-echo "  Check logs: docker compose -f $COMPOSE_FILE -f $COMPOSE_OVERRIDE -f $COMPOSE_PORTS logs api --tail=50"
+echo "  Check logs: $COMPOSE logs api --tail=50"
 exit 1
