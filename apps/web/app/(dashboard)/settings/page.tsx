@@ -1,18 +1,37 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   Building2, MapPin, Phone, Globe, Copy, Check,
-  ExternalLink, Link2, AlertCircle, Loader2,
+  ExternalLink, Link2, AlertCircle, Loader2, Save,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { Input }  from '@/components/ui/input';
 import { Badge }  from '@/components/ui/badge';
-import { useTenant } from '@/hooks/api/use-auth';
+import { toast }  from '@/hooks/use-toast';
+import { useTenant, useUpdateTenantProfile } from '@/hooks/api/use-auth';
 
 export default function SettingsPage() {
   const { data: tenant, isLoading, error } = useTenant();
+  const updateProfile = useUpdateTenantProfile();
   const [copied, setCopied] = useState(false);
+
+  // Editable fields
+  const [name, setName]       = useState('');
+  const [phone, setPhone]     = useState('');
+  const [address, setAddress] = useState('');
+  const [city, setCity]       = useState('');
+
+  // Sync form when tenant loads
+  useEffect(() => {
+    if (tenant) {
+      setName(tenant.name ?? '');
+      setPhone(tenant.location?.phone ?? '');
+      setAddress(tenant.location?.address ?? '');
+      setCity(tenant.location?.city ?? '');
+    }
+  }, [tenant]);
 
   const bookingUrl = tenant?.slug
     ? `${process.env.NEXT_PUBLIC_BOOKING_URL ?? 'https://book.calon.com.tr'}/${tenant.slug}`
@@ -26,6 +45,15 @@ export default function SettingsPage() {
       setTimeout(() => setCopied(false), 2000);
     } catch { /* clipboard API might fail */ }
   }, [bookingUrl]);
+
+  const handleSave = useCallback(async () => {
+    try {
+      await updateProfile.mutateAsync({ name, phone, address, city });
+      toast({ title: 'Kaydedildi', description: 'Salon bilgileri güncellendi.' });
+    } catch {
+      toast({ variant: 'destructive', title: 'Hata', description: 'Kaydetme başarısız.' });
+    }
+  }, [name, phone, address, city, updateProfile]);
 
   if (error) {
     return (
@@ -49,12 +77,12 @@ export default function SettingsPage() {
 
       {/* ── Profile Card ──────────────────────────────────────────────────── */}
       <div className="bg-white rounded-xl border shadow-sm p-6">
-        <div className="flex items-start gap-4">
+        <div className="flex items-start gap-4 mb-5">
           <div className="p-3 rounded-xl bg-primary/10 shrink-0">
             <Building2 className="h-6 w-6 text-primary" />
           </div>
           <div className="flex-1 min-w-0">
-            <h2 className="text-lg font-semibold">{tenant.name}</h2>
+            <h2 className="text-lg font-semibold">İşletme Profili</h2>
             <div className="flex items-center gap-2 mt-1">
               <Badge variant="secondary" className="text-xs">{tenant.plan}</Badge>
               <span className="text-xs text-muted-foreground">{tenant.currency}</span>
@@ -63,14 +91,37 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <InfoRow icon={Globe} label="Slug" value={tenant.slug} />
-          <InfoRow icon={MapPin} label="Bölge" value={`${tenant.locale} / ${tenant.timezone}`} />
-        </div>
+        <div className="space-y-4">
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Salon Adı</label>
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Salon adı" />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Telefon</label>
+              <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="05XX XXX XX XX" />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Şehir</label>
+              <Input value={city} onChange={(e) => setCity(e.target.value)} placeholder="İstanbul" />
+            </div>
+          </div>
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Adres</label>
+            <Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Adres" />
+          </div>
 
-        <p className="text-xs text-muted-foreground mt-4 italic">
-          Salon adı ve diğer temel bilgileri değiştirmek için destek ile iletişime geçin.
-        </p>
+          <div className="flex items-center gap-3 pt-2">
+            <Button onClick={handleSave} disabled={updateProfile.isPending} className="shadow-sm">
+              {updateProfile.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+              Kaydet
+            </Button>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Globe className="h-3.5 w-3.5" />
+              <span>Slug: {tenant.slug}</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* ── Booking Link ──────────────────────────────────────────────────── */}
@@ -102,16 +153,6 @@ export default function SettingsPage() {
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-function InfoRow({ icon: Icon, label, value }: { icon: React.ComponentType<{ className?: string }>; label: string; value: string }) {
-  return (
-    <div className="flex items-center gap-2">
-      <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
-      <span className="text-xs text-muted-foreground">{label}:</span>
-      <span className="text-sm font-medium truncate">{value}</span>
     </div>
   );
 }
