@@ -5,6 +5,7 @@ set -euo pipefail
 
 COMPOSE_FILE="docker-compose.yml"
 COMPOSE_OVERRIDE="docker-compose.staging.yml"
+COMPOSE_PORTS="docker-compose.staging-ports.yml"
 ENV_FILE="apps/api/.env.staging"
 
 echo "═══════════════════════════════════════════════"
@@ -36,21 +37,21 @@ echo "  ✓ Environment validated (BULL_PREFIX=$BULL_PREFIX)"
 
 # ── 2. Build ─────────────────────────────────────────────────────────────────
 echo "[2/4] Building worker image..."
-docker compose -f "$COMPOSE_FILE" -f "$COMPOSE_OVERRIDE" build worker
+docker compose -f "$COMPOSE_FILE" -f "$COMPOSE_OVERRIDE" -f "$COMPOSE_PORTS" build worker
 echo "  ✓ Build complete"
 
 # ── 3. Start worker ──────────────────────────────────────────────────────────
 echo "[3/4] Starting worker container..."
-docker compose -f "$COMPOSE_FILE" -f "$COMPOSE_OVERRIDE" up -d worker
+docker compose -f "$COMPOSE_FILE" -f "$COMPOSE_OVERRIDE" -f "$COMPOSE_PORTS" up -d worker
 echo "  ✓ Worker container started"
 
 # ── 4. Quick log check ───────────────────────────────────────────────────────
 echo "[4/4] Checking worker startup (5s)..."
 sleep 5
-docker compose -f "$COMPOSE_FILE" -f "$COMPOSE_OVERRIDE" logs worker --tail=10 2>&1 | head -15
+docker compose -f "$COMPOSE_FILE" -f "$COMPOSE_OVERRIDE" -f "$COMPOSE_PORTS" logs worker --tail=10 2>&1 | head -15
 
 echo ""
 echo "═══════════════════════════════════════════════"
 echo "  Stage Worker deploy: SUCCESS"
-echo "  Monitor: docker compose -f $COMPOSE_FILE -f $COMPOSE_OVERRIDE logs -f worker"
+echo "  Monitor: docker compose -f $COMPOSE_FILE -f $COMPOSE_OVERRIDE -f $COMPOSE_PORTS logs -f worker"
 echo "═══════════════════════════════════════════════"
