@@ -1,0 +1,22 @@
+# =============================================================================
+# CALON — STAGE PORT OVERRIDE
+# =============================================================================
+#
+# Bu dosya docker-compose.staging.yml ile BIRLIKTE kullanilir.
+# Compose v5 !reset tag'i sequence replacement'i desteklemediğinden,
+# ports override iki aşamada yapılır:
+#   1. staging.yml: ports: !reset []   → base 4000:4000 mirası kaldırılır
+#   2. staging-ports.yml: ports: 4001:4000 → stage portu eklenir
+#
+# Kullanım:
+#   docker compose \
+#     -f docker-compose.yml \
+#     -f docker-compose.staging.yml \
+#     -f docker-compose.staging-ports.yml \
+#     up -d
+# =============================================================================
+
+services:
+  api:
+    ports:
+      - "4001:4000"
