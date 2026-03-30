@@ -89,9 +89,16 @@ export class OutboxListenerService implements OnModuleInit, OnModuleDestroy {
       keepAliveInitialDelayMillis: 10_000, // Neon idle ECONNRESET koruması
     });
 
+    // Handle client-level errors — transient resets are expected with Neon serverless.
+    // Log as warn (not error) for ECONNRESET/ETIMEDOUT since reconnect handles recovery.
+    // The 'end' event fires after 'error' and triggers reconnect.
     this.client.on('error', (err: Error) => {
-      this.logger.error(`[OutboxListener] pg hatası: ${err.message}`);
-      // 'end' event'i de tetiklenecek; orada reconnect başlatılır
+      const code = (err as NodeJS.ErrnoException).code;
+      if (code === 'ECONNRESET' || code === 'ETIMEDOUT') {
+        this.logger.warn(`[OutboxListener] Bağlantı koptu (${code}), reconnect bekliyor`);
+      } else {
+        this.logger.error(`[OutboxListener] pg hatası: ${err.message}`);
+      }
     });
 
     this.client.on('end', () => {
@@ -102,6 +109,14 @@ export class OutboxListenerService implements OnModuleInit, OnModuleDestroy {
 
     try {
       await this.client.connect();
+
+      // Suppress unhandled socket-level errors that bypass the client 'error' event.
+      // Without this, Node.js prints raw ECONNRESET stack traces to stderr.
+      const stream = (this.client as unknown as { connection?: { stream?: NodeJS.EventEmitter } }).connection?.stream;
+      if (stream && typeof stream.on === 'function') {
+        stream.on('error', () => { /* handled by client 'error' event above */ });
+      }
+
       await this.client.query('LISTEN outbox_pending_event');
 
       // Başarılı bağlantıda backoff sıfırla
