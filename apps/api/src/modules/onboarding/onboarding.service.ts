@@ -434,7 +434,28 @@ export class OnboardingService {
       },
     });
 
-    this.logger.log(`[Wizard] Staff oluşturuldu: ${staff.id} (tenant=${tenantId})`);
+    // Booking-ready guard: workingHours yoksa default ata (Mon–Sat 09:00–18:00, Sun off).
+    // Bu guard olmadan staff workingHours boş kalır → availability [] → booking imkansız.
+    for (let d = 0; d < DAY_MAP.length; d++) {
+      const day = DAY_MAP[d]!;
+      const isWorkingDay = day !== 'SUN';
+      await this.prisma.staffWorkingHour.upsert({
+        where: { staffId_dayOfWeek: { staffId: staff.id, dayOfWeek: day } },
+        update: {},
+        create: {
+          tenantId,
+          staffId:    staff.id,
+          dayOfWeek:  day,
+          startTime:  '09:00',
+          endTime:    '18:00',
+          isWorkingDay,
+          breakStart: isWorkingDay ? '12:00' : null,
+          breakEnd:   isWorkingDay ? '13:00' : null,
+        },
+      });
+    }
+
+    this.logger.log(`[Wizard] Staff oluşturuldu: ${staff.id} (tenant=${tenantId}) — booking-ready hours atandı`);
     return { staffId: staff.id };
   }
 
