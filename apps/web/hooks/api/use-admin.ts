@@ -1,29 +1,11 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import axios from 'axios';
+import apiClient from '@/lib/api-client';
 
-// ── Admin API client — uses x-admin-api-key header ──────────────────────────
-
-const ADMIN_API_KEY = typeof window !== 'undefined'
-  ? (window as unknown as Record<string, string>).__ADMIN_KEY__ ?? ''
-  : '';
-
-function getAdminKey(): string {
-  if (typeof window === 'undefined') return '';
-  return sessionStorage.getItem('calon_admin_key') ?? '';
-}
-
-const adminClient = axios.create({
-  baseURL: '/api/v1',
-  withCredentials: true,
-});
-
-adminClient.interceptors.request.use((config) => {
-  const key = getAdminKey();
-  if (key) config.headers['x-admin-api-key'] = key;
-  return config;
-});
+// ── Admin API client — uses same JWT/cookie session as main app ─────────────
+// No separate admin key needed. Access is controlled by SUPER_ADMIN role in JWT.
+// TenantGuard parses JWT → AdminGuard checks role === SUPER_ADMIN.
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -104,7 +86,7 @@ export interface VersionInfo {
 export function useAdminOverview() {
   return useQuery<AdminOverview, Error>({
     queryKey: ['admin', 'overview'],
-    queryFn: () => adminClient.get('/admin/tenants/overview').then(r => r.data),
+    queryFn: () => apiClient.get('/admin/tenants/overview').then(r => r.data),
     retry: false,
   });
 }
@@ -112,7 +94,7 @@ export function useAdminOverview() {
 export function useAdminTenants() {
   return useQuery<AdminTenant[], Error>({
     queryKey: ['admin', 'tenants'],
-    queryFn: () => adminClient.get('/admin/tenants').then(r => r.data),
+    queryFn: () => apiClient.get('/admin/tenants').then(r => r.data),
     retry: false,
   });
 }
@@ -120,7 +102,7 @@ export function useAdminTenants() {
 export function useAdminTenantDetail(tenantId: string | null) {
   return useQuery<AdminTenantDetail, Error>({
     queryKey: ['admin', 'tenant', tenantId],
-    queryFn: () => adminClient.get(`/admin/tenants/${tenantId}`).then(r => r.data),
+    queryFn: () => apiClient.get(`/admin/tenants/${tenantId}`).then(r => r.data),
     enabled: !!tenantId,
     retry: false,
   });
@@ -129,7 +111,7 @@ export function useAdminTenantDetail(tenantId: string | null) {
 export function useGrowthMetrics() {
   return useQuery<GrowthMetrics, Error>({
     queryKey: ['admin', 'growth'],
-    queryFn: () => adminClient.get('/admin/dashboard/metrics').then(r => r.data),
+    queryFn: () => apiClient.get('/admin/dashboard/metrics').then(r => r.data),
     retry: false,
   });
 }
@@ -137,7 +119,7 @@ export function useGrowthMetrics() {
 export function useBillingTenants() {
   return useQuery<BillingTenant[], Error>({
     queryKey: ['admin', 'billing', 'tenants'],
-    queryFn: () => adminClient.get('/admin/billing/tenants').then(r => r.data),
+    queryFn: () => apiClient.get('/admin/billing/tenants').then(r => r.data),
     retry: false,
   });
 }
@@ -145,7 +127,7 @@ export function useBillingTenants() {
 export function useBillingMetrics() {
   return useQuery<BillingMetrics, Error>({
     queryKey: ['admin', 'billing', 'metrics'],
-    queryFn: () => adminClient.get('/admin/billing/metrics').then(r => r.data),
+    queryFn: () => apiClient.get('/admin/billing/metrics').then(r => r.data),
     retry: false,
   });
 }
@@ -153,7 +135,7 @@ export function useBillingMetrics() {
 export function useHealthStatus() {
   return useQuery<HealthStatus, Error>({
     queryKey: ['admin', 'health'],
-    queryFn: () => adminClient.get('/health/ready').then(r => r.data),
+    queryFn: () => apiClient.get('/health/ready').then(r => r.data),
     refetchInterval: 30_000,
   });
 }
@@ -161,6 +143,6 @@ export function useHealthStatus() {
 export function useVersionInfo() {
   return useQuery<VersionInfo, Error>({
     queryKey: ['admin', 'version'],
-    queryFn: () => adminClient.get('/health/version').then(r => r.data),
+    queryFn: () => apiClient.get('/health/version').then(r => r.data),
   });
 }
