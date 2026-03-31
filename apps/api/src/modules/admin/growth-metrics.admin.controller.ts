@@ -17,11 +17,13 @@ import {
   Controller,
   Get,
   Req,
+  UseGuards,
   ForbiddenException,
 } from '@nestjs/common';
 
 import { AllowPastDue }  from '../billing/decorators/allow-past-due.decorator';
 import { PrismaService } from '../../common/prisma.service';
+import { AdminGuard }    from './admin.guard';
 
 // ── Plan fiyatları (TRY/ay, hardcoded) ───────────────────────────────────────
 const PLAN_MONTHLY_PRICE: Record<string, number> = {
@@ -33,6 +35,7 @@ const PLAN_MONTHLY_PRICE: Record<string, number> = {
 // ── Controller ────────────────────────────────────────────────────────────────
 
 @AllowPastDue()
+@UseGuards(AdminGuard)
 @Controller('admin/dashboard')
 export class GrowthMetricsAdminController {
   constructor(private readonly prisma: PrismaService) {}

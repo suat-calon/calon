@@ -28,7 +28,7 @@ import {
 import { IsEnum, IsOptional, IsIn } from 'class-validator';
 import { BillingStatus, TenantPlan }   from '@prisma/client';
 
-import { Public }       from '../iam/guards/tenant.guard';
+// Public import removed — admin routes now go through TenantGuard JWT + AdminGuard role check
 import { AdminGuard }   from './admin.guard';
 import { AdminService } from './admin.service';
 
@@ -53,7 +53,6 @@ function ok<T>(data: T): { success: true; data: T } {
 
 // ── Controller ────────────────────────────────────────────────────────────────
 
-@Public()
 @UseGuards(AdminGuard)
 @Controller('admin/tenants')
 export class AdminController {

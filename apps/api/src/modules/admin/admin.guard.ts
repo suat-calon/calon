@@ -1,14 +1,18 @@
 /**
- * ADMIN GUARD — x-admin-api-key header doğrulama
+ * ADMIN GUARD — JWT role-based super admin access control
  * ──────────────────────────────────────────────────────────────────────────────
- * Super Admin API'ye erişim için gelen istek, `x-admin-api-key` header'ında
- * ADMIN_API_KEY ortam değişkeniyle eşleşen bir değer taşımalıdır.
+ * Super Admin endpoint'lerine erişim yalnızca JWT'de role=SUPER_ADMIN olan
+ * oturumlara açıktır.
  *
  * Tasarım kararı:
- *   • AdminController, global TenantGuard'ı @Public() ile atlar.
- *   • AdminGuard yalnızca controller seviyesinde uygulanır —
- *     JWT tabanlı kimlik doğrulamanın yerini almaz, kendi katmanını kurar.
- *   • ADMIN_API_KEY ortamda yoksa tüm erişim reddedilir (fail-closed).
+ *   • TenantGuard JWT'yi parse edip request'e userId/tenantId/role atar.
+ *   • AdminGuard, TenantGuard'dan SONRA çalışır ve role kontrolü yapar.
+ *   • SUPER_ADMIN kullanıcıları tenantId olmadan platform-level erişim alır.
+ *   • Diğer roller (TENANT_OWNER, STAFF vb.) reddedilir.
+ *
+ * Migrasyon notu:
+ *   Önceki model x-admin-api-key header'ına dayanıyordu.
+ *   Bu model JWT session tabanlı gerçek auth'a taşınmıştır (2026-03-31).
  * ──────────────────────────────────────────────────────────────────────────────
  */
 
@@ -16,27 +20,28 @@ import {
   Injectable,
   CanActivate,
   ExecutionContext,
+  ForbiddenException,
   UnauthorizedException,
 } from '@nestjs/common';
-import type { Request } from 'express';
 
 @Injectable()
 export class AdminGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
-    const request  = context.switchToHttp().getRequest<Request>();
-    const provided = request.headers['x-admin-api-key'];
-    const expected = process.env['ADMIN_API_KEY'];
+    const request = context.switchToHttp().getRequest<{
+      userId?: string;
+      userRole?: string;
+    }>();
 
-    // Fail-closed: ortam değişkeni yoksa erişim kapalı
-    if (!expected) {
+    // TenantGuard should have already parsed JWT and set userId/userRole
+    if (!request.userId) {
       throw new UnauthorizedException(
-        'Admin API anahtarı sunucu tarafında yapılandırılmamış.',
+        'Oturum bulunamadı. Lütfen giriş yapın.',
       );
     }
 
-    if (!provided || provided !== expected) {
-      throw new UnauthorizedException(
-        "Geçersiz veya eksik x-admin-api-key header'ı.",
+    if (request.userRole !== 'SUPER_ADMIN') {
+      throw new ForbiddenException(
+        'Bu alan yalnızca platform yöneticilerine açıktır.',
       );
     }
 

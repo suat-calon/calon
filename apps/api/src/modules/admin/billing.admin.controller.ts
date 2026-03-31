@@ -13,6 +13,7 @@ import {
   Get,
   Post,
   Param,
+  UseGuards,
   Query,
   Body,
   ForbiddenException,
@@ -28,6 +29,7 @@ import { BillingService }        from '../billing/billing.service';
 import { BillingCron }           from '../billing/billing.cron';
 import { EntitlementsService }   from '../billing/entitlements.service';
 import { AllowPastDue }          from '../billing/decorators/allow-past-due.decorator';
+import { AdminGuard }            from './admin.guard';
 import { MetricsService }        from '../../common/logging/metrics.service';
 import { BackpressureService }   from '../../common/queue/backpressure.service';
 
@@ -51,6 +53,7 @@ class ActivateDto {
 // ── Controller ────────────────────────────────────────────────────────────────
 
 @AllowPastDue()
+@UseGuards(AdminGuard)
 @Controller('admin/billing')
 export class BillingAdminController {
   constructor(
