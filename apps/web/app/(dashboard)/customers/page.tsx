@@ -2,9 +2,10 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import {
   Search, Loader2, AlertCircle, Users, Phone, Mail, Calendar,
-  ChevronRight, Clock, Star,
+  ChevronRight, Clock, Star, ExternalLink,
 } from 'lucide-react';
 
 import { Badge }   from '@/components/ui/badge';
@@ -254,16 +255,21 @@ function CustomerProfile({ customer: c, appointments: appts }: { customer: Custo
 }
 
 function ApptRow({ a }: { a: Appointment }) {
+  // Navigate to calendar week containing this appointment
+  const apptDate = a.startTime.split('T')[0];
   return (
-    <div className="flex items-center gap-3 bg-white border rounded-lg px-3 py-2">
-      <Clock className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
-      <div className="flex-1 min-w-0">
-        <p className="text-xs font-medium truncate">{a.service?.name ?? 'Hizmet'} — {a.staff?.firstName ?? ''}</p>
-        <p className="text-[10px] text-muted-foreground">{fmtDateTime(a.startTime)}</p>
+    <Link href={`/calendar?date=${apptDate}`} className="block">
+      <div className="flex items-center gap-3 bg-white border rounded-lg px-3 py-2 hover:bg-muted/30 transition-colors cursor-pointer group">
+        <Clock className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-medium truncate">{a.service?.name ?? 'Hizmet'} — {a.staff?.firstName ?? ''}</p>
+          <p className="text-[10px] text-muted-foreground">{fmtDateTime(a.startTime)}</p>
+        </div>
+        <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${statusColor[a.status] ?? 'bg-gray-100 text-gray-800'}`}>
+          {statusLabel[a.status] ?? a.status}
+        </span>
+        <ExternalLink className="h-3 w-3 text-muted-foreground/30 group-hover:text-muted-foreground transition-colors" />
       </div>
-      <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${statusColor[a.status] ?? 'bg-gray-100 text-gray-800'}`}>
-        {statusLabel[a.status] ?? a.status}
-      </span>
-    </div>
+    </Link>
   );
 }
