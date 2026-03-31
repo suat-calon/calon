@@ -67,15 +67,37 @@
 - [ ] REDIS_HOST stage Upstash'e isaret ediyor
 - [ ] DATABASE_URL stage Neon branch'e isaret ediyor
 
+## Vercel Binding ve Preview Env Kontrolu
+
+- [ ] `stage.calon.com.tr` dogru web preview deployment'a bagli (dev branch)
+- [ ] `stage-book.calon.com.tr` dogru booking preview deployment'a bagli (dev branch)
+- [ ] Web preview env: `NEXT_PUBLIC_API_URL=https://stage-api.calon.com.tr`
+- [ ] Web preview env: `NEXT_PUBLIC_SITE_URL=https://stage.calon.com.tr`
+- [ ] Web preview env: `NEXT_PUBLIC_BOOKING_URL=https://stage-book.calon.com.tr`
+- [ ] Booking preview env: `NEXT_PUBLIC_API_URL=https://stage-api.calon.com.tr`
+- [ ] Booking preview env: `NEXT_PUBLIC_BOOKING_URL=https://stage-book.calon.com.tr`
+- [ ] `NEXT_PUBLIC_*` env degisikligi varsa yeni preview build tetiklenmis
+- [ ] Aktif deployment yeni build (eski cache degil)
+- [ ] Preview protection / Vercel Authentication stage smoke'u bloklamiyor
+
 ## Browser Smoke (Manuel)
 
 - [ ] `stage.calon.com.tr/login` aciliyor
-- [ ] Login basarili, calendar/dashboard yukleniyor
+- [ ] Login submit 502 vermiyor — 200 donuyor
+- [ ] Dashboard tenant verisiyle yukleniyor
+- [ ] Calendar/appointments gercek veriyle aciliyor
 - [ ] `stage-book.calon.com.tr/booking/<slug>` aciliyor
-- [ ] Booking akisi tamamlanabiliyor
+- [ ] Booking yüzeyi stage API'den gercek veri cekiyor
+- [ ] Stage web yanlistikla production API'ye gitmiyor
+- [ ] Stage booking localhost fallback kullanmiyor
 
 ## Post-Deploy
 
 - [ ] 10-15 dk worker log temiz
 - [ ] Health/ready hala 200
 - [ ] RestartCount hala 0
+
+---
+
+**KURAL: Stage Vercel env degisikligi, yeni Preview build alinmadan uygulanmis sayilmaz.**
+**KURAL: Browser smoke (login + dashboard + booking) yapilmadan stage sağlikli sayilmaz.**
