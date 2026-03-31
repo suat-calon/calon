@@ -58,19 +58,29 @@ async function bootstrap(): Promise<void> {
   // Cookie parser — HttpOnly cookie auth için
   app.use(cookieParser());
 
-  // CORS — function-based validation (array form NestJS'te güvenilir değil)
+  // CORS — env-driven allowlist (CORS_ORIGIN comma-separated) + localhost dev fallback
+  const corsRaw = config.get<string>('CORS_ORIGIN', '');
+  const envOrigins = corsRaw
+    .split(',')
+    .map((o) => o.trim())
+    .filter(Boolean);
+  // Always include production defaults so they survive even if env is minimal
+  const allowedOrigins = new Set([
+    'https://calon.com.tr',
+    'https://www.calon.com.tr',
+    'https://book.calon.com.tr',
+    ...envOrigins,
+  ]);
+
   app.enableCors({
     origin: (origin, callback) => {
-      const allowedOrigins = [
-        'https://calon.com.tr',
-        'https://www.calon.com.tr',
-        'https://book.calon.com.tr',
-      ];
-      // Development: localhost'a izin ver; production: allowedOrigins listesi
-      if (!origin || allowedOrigins.includes(origin) || origin.includes('localhost')) {
+      // No origin (server-to-server, curl, healthcheck) → allow
+      // Localhost → allow (development)
+      // allowedOrigins set → allow
+      if (!origin || origin.includes('localhost') || allowedOrigins.has(origin)) {
         callback(null, true);
       } else {
-        callback(new Error('Not allowed by CORS'));
+        callback(new Error(`CORS: origin ${origin} not allowed`));
       }
     },
     credentials: true,
