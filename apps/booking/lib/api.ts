@@ -22,12 +22,20 @@ export interface SalonDto {
   brandColor: string | null;
   timezone:   string;
   currency:   string;
+  // Storefront content (A-MVP)
+  description:       string | null;
+  announcementTitle: string | null;
+  announcementText:  string | null;
+  announcementCta:   string | null;
+  galleryImages:     string[] | null;
   location: {
-    id:      string;
-    name:    string;
-    address: string | null;
-    city:    string | null;
-    phone:   string | null;
+    id:        string;
+    name:      string;
+    address:   string | null;
+    city:      string | null;
+    phone:     string | null;
+    latitude:  number | null;
+    longitude: number | null;
   } | null;
 }
 

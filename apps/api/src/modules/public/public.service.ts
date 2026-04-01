@@ -78,12 +78,20 @@ export interface SalonPublicDto {
   brandColor: string | null;
   timezone:   string;
   currency:   string;
+  // Storefront content (A-MVP)
+  description:       string | null;
+  announcementTitle: string | null;
+  announcementText:  string | null;
+  announcementCta:   string | null;
+  galleryImages:     string[] | null;
   location: {
-    id:      string;
-    name:    string;
-    address: string | null;
-    city:    string | null;
-    phone:   string | null;
+    id:        string;
+    name:      string;
+    address:   string | null;
+    city:      string | null;
+    phone:     string | null;
+    latitude:  number | null;
+    longitude: number | null;
   } | null;
 }
 
@@ -168,9 +176,17 @@ export class PublicService {
     const location = await this.runInContext(tenant.id, () =>
       this.prisma.location.findFirst({
         where: { isActive: true },
-        select: { id: true, name: true, address: true, city: true, phone: true },
+        select: {
+          id: true, name: true, address: true, city: true, phone: true,
+          latitude: true, longitude: true,
+        },
       }),
     );
+
+    // galleryImages: JSONB → string[] contract
+    const gallery = Array.isArray(tenant.galleryImages)
+      ? (tenant.galleryImages as string[])
+      : null;
 
     return {
       id:         tenant.id,
@@ -180,13 +196,21 @@ export class PublicService {
       brandColor: tenant.brandColor,
       timezone:   tenant.timezone,
       currency:   tenant.currency,
+      // Storefront content
+      description:       tenant.description,
+      announcementTitle: tenant.announcementTitle,
+      announcementText:  tenant.announcementText,
+      announcementCta:   tenant.announcementCta,
+      galleryImages:     gallery,
       location: location
         ? {
-            id:      location.id,
-            name:    location.name,
-            address: location.address,
-            city:    location.city,
-            phone:   location.phone,
+            id:        location.id,
+            name:      location.name,
+            address:   location.address,
+            city:      location.city,
+            phone:     location.phone,
+            latitude:  location.latitude,
+            longitude: location.longitude,
           }
         : null,
     };

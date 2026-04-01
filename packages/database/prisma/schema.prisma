@@ -70,6 +70,13 @@ model Tenant {
   brandColor String? // UI özelleştirme
   logoUrl    String?
   timezone   String       @default("Europe/Istanbul")
+
+  // Storefront content (A-MVP)
+  description       String?  // Salon bio / kısa tanıtım
+  announcementTitle String?  // Kampanya/duyuru başlığı
+  announcementText  String?  // Kampanya/duyuru metni
+  announcementCta   String?  // Opsiyonel CTA linki
+  galleryImages     Json?    // String[] — görsel URL listesi
   locale     String       @default("tr-TR")
   currency   String       @default("TRY") // Para birimi (Faz 15)
 
@@ -204,6 +211,8 @@ model Location {
   city     String?
   country  String  @default("TR")
   phone    String?
+  latitude  Float?  // Harita pin noktası
+  longitude Float?  // Harita pin noktası
   isActive Boolean @default(true)
 
   createdAt DateTime  @default(now())

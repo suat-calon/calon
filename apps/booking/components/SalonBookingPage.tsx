@@ -10,7 +10,7 @@
  * ──────────────────────────────────────────────────────────────────────────────
  */
 
-import { MapPin, Phone, Star, Clock, CheckCircle } from 'lucide-react';
+import { MapPin, Phone, Star, Clock, CheckCircle, Megaphone, ExternalLink } from 'lucide-react';
 
 import { type SalonDto, type ServiceDto, type StaffDto } from '@lib/api';
 import { formatPrice, formatDuration }                   from '@lib/utils';
@@ -93,6 +93,47 @@ export function SalonBookingPage({ salon, services, staff, canonicalUrl, initial
 
       <div className="max-w-5xl mx-auto px-6">
 
+        {/* ── 1b. SALON BIO ─────────────────────────────────────────────── */}
+        {salon.description && (
+          <section className="py-10">
+            <p className="text-gray-600 text-base leading-relaxed max-w-3xl">
+              {salon.description}
+            </p>
+          </section>
+        )}
+
+        {/* ── 1c. KAMPANYA / DUYURU ─────────────────────────────────────── */}
+        {salon.announcementTitle && (
+          <section className="py-4">
+            <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-5">
+              <div className="flex items-start gap-3">
+                <Megaphone className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-gray-900 text-sm">
+                    {salon.announcementTitle}
+                  </h3>
+                  {salon.announcementText && (
+                    <p className="text-gray-600 text-sm mt-1">
+                      {salon.announcementText}
+                    </p>
+                  )}
+                  {salon.announcementCta && (
+                    <a
+                      href={salon.announcementCta}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-amber-700 font-medium text-sm mt-2 hover:text-amber-900 transition-colors"
+                    >
+                      Detaylar
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
+                  )}
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+
         {/* ── 2. HİZMETLER ──────────────────────────────────────────────── */}
         {services.length > 0 && (
           <section className="py-16">
@@ -166,6 +207,29 @@ export function SalonBookingPage({ salon, services, staff, canonicalUrl, initial
           </section>
         )}
 
+        {/* ── 3b. GALERİ ──────────────────────────────────────────────── */}
+        {salon.galleryImages && salon.galleryImages.length > 0 && (
+          <section className="py-8 border-t border-gray-100">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">Galeri</h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {salon.galleryImages.slice(0, 6).map((url, i) => (
+                <div
+                  key={i}
+                  className="aspect-[4/3] rounded-2xl overflow-hidden bg-gray-100 shadow-sm"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={url}
+                    alt={`${salon.name} galeri ${i + 1}`}
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                  />
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* ── 4. BOOKING WIDGET ─────────────────────────────────────────── */}
         <section id="booking" className="py-16 border-t border-gray-100">
           <h2 className="text-2xl font-bold text-gray-900 mb-2">
@@ -198,8 +262,18 @@ export function SalonBookingPage({ salon, services, staff, canonicalUrl, initial
                 )}
               </div>
             </div>
-            {/* Google Maps embed (adres bazlı) */}
-            {salon.location.address && (
+            {/* Google Maps embed — lat/lng varsa pin-point, yoksa adres-bazlı */}
+            {(salon.location.latitude && salon.location.longitude) ? (
+              <div className="rounded-2xl overflow-hidden shadow-sm border border-gray-100 h-64">
+                <iframe
+                  className="w-full h-full"
+                  loading="lazy"
+                  allowFullScreen
+                  referrerPolicy="no-referrer-when-downgrade"
+                  src={`https://maps.google.com/maps?q=${salon.location.latitude},${salon.location.longitude}&z=16&output=embed`}
+                />
+              </div>
+            ) : salon.location.address ? (
               <div className="rounded-2xl overflow-hidden shadow-sm border border-gray-100 h-64">
                 <iframe
                   className="w-full h-full"
@@ -211,7 +285,7 @@ export function SalonBookingPage({ salon, services, staff, canonicalUrl, initial
                   )}&output=embed`}
                 />
               </div>
-            )}
+            ) : null}
           </section>
         )}
       </div>
