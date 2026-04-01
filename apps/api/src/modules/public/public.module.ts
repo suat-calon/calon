@@ -23,10 +23,13 @@ import { WebhookAuditService }   from './webhook-audit.service';
 import { OperationsModule }       from '../operations/operations.module';
 import { LoyaltyModule }          from '../loyalty/loyalty.module';
 import { AvailabilityAbuseGuard } from './guards/availability-abuse.guard';
+import { CustomerPortalController } from './customer-portal.controller';
+import { CustomerAuthService }      from './customer-auth.service';
+import { CustomerAuthGuard }        from './customer-auth.guard';
 
 @Module({
   imports:     [OperationsModule, LoyaltyModule],
-  controllers: [PublicController, DiscoveryController, WebhookController],
+  controllers: [PublicController, DiscoveryController, WebhookController, CustomerPortalController],
   providers:   [
     PublicService,
     DiscoveryService,
@@ -34,6 +37,8 @@ import { AvailabilityAbuseGuard } from './guards/availability-abuse.guard';
     PaymentService,
     WebhookAuditService,
     AvailabilityAbuseGuard,   // §8: per-IP/staff distinct-date probe abuse protection
+    CustomerAuthService,
+    CustomerAuthGuard,
   ],
 })
 export class PublicModule {}
