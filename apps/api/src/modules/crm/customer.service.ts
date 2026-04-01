@@ -25,8 +25,27 @@ import { PrismaService }          from '../../common/prisma.service';
 import { CreateCustomerDto }      from './dto/create-customer.dto';
 import { ListCustomersQueryDto }  from './dto/list-customers-query.dto';
 
+/**
+ * Customer response select — OTP/auth alanları HARIÇ.
+ * otpCode, otpExpiresAt hiçbir API response'unda dönmez.
+ */
+const CUSTOMER_PUBLIC_SELECT = {
+  id: true, tenantId: true,
+  firstName: true, lastName: true, email: true, phone: true,
+  dateOfBirth: true, gender: true, avatarUrl: true, notes: true,
+  loyaltyTier: true, loyaltyPoints: true, referralCode: true,
+  consentGiven: true, consentDate: true, anonymizedAt: true,
+  lastLoginAt: true,
+  createdAt: true, updatedAt: true, deletedAt: true, isDeleted: true,
+  // otpCode: EXCLUDED
+  // otpExpiresAt: EXCLUDED
+} as const;
+
+/** Customer without OTP auth fields — safe for API responses */
+type SafeCustomer = Omit<Customer, 'otpCode' | 'otpExpiresAt'>;
+
 export interface PaginatedCustomers {
-  data:  Customer[];
+  data:  SafeCustomer[];
   total: number;
   take:  number;
   skip:  number;
@@ -97,6 +116,7 @@ export class CustomerService {
         take,
         skip,
         orderBy: { createdAt: 'desc' },
+        select: CUSTOMER_PUBLIC_SELECT,
       }),
       this.prisma.customer.count({ where }),
     ]);
@@ -110,8 +130,11 @@ export class CustomerService {
    * Tek müşteri kaydı.
    * findFirst + tenantId: WHERE tenantId filtresi otomatik enjekte edilir.
    */
-  async findOne(tenantId: string, id: string): Promise<Customer> {
-    const customer = await this.prisma.customer.findFirst({ where: { id, tenantId } });
+  async findOne(tenantId: string, id: string) {
+    const customer = await this.prisma.customer.findFirst({
+      where: { id, tenantId },
+      select: CUSTOMER_PUBLIC_SELECT,
+    });
 
     if (!customer || customer.isDeleted) {
       throw new NotFoundException('Müşteri bulunamadı');
