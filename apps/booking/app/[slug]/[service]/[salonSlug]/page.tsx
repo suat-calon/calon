@@ -107,8 +107,8 @@ export default async function CanonicalSalonPage({
   if (!salon) notFound();
 
   const [servicesData, staffData] = await Promise.all([
-    fetchServices(salon.id),
-    fetchStaff(salon.id),
+    fetchServices(salon.slug),
+    fetchStaff(salon.slug),
   ]);
 
   const canonicalUrl = `${SITE_URL}/${slug}/${service}/${salonSlug}`;

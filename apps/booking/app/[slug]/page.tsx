@@ -98,8 +98,8 @@ export default async function SlugPage({
   const salon = await fetchSalon(slug);
   if (salon) {
     const [servicesData, staffData] = await Promise.all([
-      fetchServices(salon.id),
-      fetchStaff(salon.id),
+      fetchServices(salon.slug),
+      fetchStaff(salon.slug),
     ]);
     return (
       <SalonBookingPage

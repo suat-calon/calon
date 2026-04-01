@@ -57,7 +57,7 @@ export interface SlotDto {
 }
 
 export interface BookingPayload {
-  tenantId:     string;
+  slug:         string;
   locationId:   string;
   staffId:      string;
   serviceId:    string;
@@ -130,16 +130,16 @@ export async function fetchSalon(slug: string): Promise<SalonDto | null> {
   }
 }
 
-export async function fetchServices(tenantId: string): Promise<ServiceDto[]> {
-  const res = await fetch(`${API_BASE}/public/services?tenantId=${tenantId}`, {
+export async function fetchServices(slug: string): Promise<ServiceDto[]> {
+  const res = await fetch(`${API_BASE}/public/services?slug=${slug}`, {
     next: { revalidate: 60 },
   });
   if (!res.ok) return [];
   return res.json() as Promise<ServiceDto[]>;
 }
 
-export async function fetchStaff(tenantId: string): Promise<StaffDto[]> {
-  const res = await fetch(`${API_BASE}/public/staff?tenantId=${tenantId}`, {
+export async function fetchStaff(slug: string): Promise<StaffDto[]> {
+  const res = await fetch(`${API_BASE}/public/staff?slug=${slug}`, {
     next: { revalidate: 60 },
   });
   if (!res.ok) return [];
@@ -147,14 +147,14 @@ export async function fetchStaff(tenantId: string): Promise<StaffDto[]> {
 }
 
 export async function fetchAvailability(
-  tenantId:          string,
+  slug:              string,
   staffId:           string,
   date:              string,
   serviceDurationMin: number,
 ): Promise<SlotDto[]> {
   const url =
     `${API_BASE}/public/availability` +
-    `?tenantId=${tenantId}&staffId=${staffId}&date=${date}&serviceDurationMin=${serviceDurationMin}`;
+    `?slug=${slug}&staffId=${staffId}&date=${date}&serviceDurationMin=${serviceDurationMin}`;
   const res = await fetch(url, { cache: 'no-store' }); // Slot'lar gerçek zamanlı
   if (!res.ok) return [];
   return res.json() as Promise<SlotDto[]>;

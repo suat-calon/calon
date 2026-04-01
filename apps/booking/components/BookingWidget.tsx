@@ -117,7 +117,7 @@ export function BookingWidget({ salon, services, staff, initialReferralCode }: B
     setState((s) => ({ ...s, slot: null }));
     try {
       const data = await fetchAvailability(
-        salon.id,
+        salon.slug,
         state.staff.id,
         state.date,
         state.service.durationMin,
@@ -128,7 +128,7 @@ export function BookingWidget({ salon, services, staff, initialReferralCode }: B
     } finally {
       setLoading(false);
     }
-  }, [salon.id, state.staff, state.date, state.service]);
+  }, [salon.slug, state.staff, state.date, state.service]);
 
   useEffect(() => {
     if (step === 'slot') loadSlots();
@@ -156,7 +156,7 @@ export function BookingWidget({ salon, services, staff, initialReferralCode }: B
     setError(null);
     try {
       const res = await createBooking({
-        tenantId:     salon.id,
+        slug:         salon.slug,
         locationId:   salon.location.id,
         staffId:      state.staff.id,
         serviceId:    state.service.id,
