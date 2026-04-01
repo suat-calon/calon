@@ -10,11 +10,13 @@ export interface AuthUser {
 }
 
 export interface TenantLocation {
-  id:       string;
-  name:     string;
-  address?: string | null;
-  city?:    string | null;
-  phone?:   string | null;
+  id:         string;
+  name:       string;
+  address?:   string | null;
+  city?:      string | null;
+  phone?:     string | null;
+  latitude?:  number | null;
+  longitude?: number | null;
 }
 
 export interface Tenant {
@@ -28,15 +30,29 @@ export interface Tenant {
   locale:     string;
   currency:   string;
   createdAt:  string;
+  // Storefront content
+  description?:       string | null;
+  announcementTitle?: string | null;
+  announcementText?:  string | null;
+  announcementCta?:   string | null;
+  galleryImages?:     string[] | null;
   location?:  TenantLocation | null;
 }
 
 export interface UpdateTenantProfilePayload {
-  name?:       string;
-  brandColor?: string;
-  phone?:      string;
-  address?:    string;
-  city?:       string;
+  name?:               string;
+  brandColor?:         string;
+  phone?:              string;
+  address?:            string;
+  city?:               string;
+  // Storefront content
+  description?:        string;
+  announcementTitle?:  string;
+  announcementText?:   string;
+  announcementCta?:    string;
+  galleryImages?:      string[];
+  latitude?:           number;
+  longitude?:          number;
 }
 
 export function useAuth() {

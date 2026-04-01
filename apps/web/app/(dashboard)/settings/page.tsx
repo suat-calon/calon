@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect } from 'react';
 import {
   Building2, MapPin, Phone, Globe, Copy, Check,
   ExternalLink, Link2, AlertCircle, Loader2, Save,
+  Megaphone, ImageIcon, FileText,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -17,11 +18,18 @@ export default function SettingsPage() {
   const updateProfile = useUpdateTenantProfile();
   const [copied, setCopied] = useState(false);
 
-  // Editable fields
+  // Editable fields — profile
   const [name, setName]       = useState('');
   const [phone, setPhone]     = useState('');
   const [address, setAddress] = useState('');
   const [city, setCity]       = useState('');
+
+  // Editable fields — storefront
+  const [description, setDescription]             = useState('');
+  const [announcementTitle, setAnnouncementTitle] = useState('');
+  const [announcementText, setAnnouncementText]   = useState('');
+  const [announcementCta, setAnnouncementCta]     = useState('');
+  const [galleryImagesRaw, setGalleryImagesRaw]   = useState('');
 
   // Sync form when tenant loads
   useEffect(() => {
@@ -30,6 +38,12 @@ export default function SettingsPage() {
       setPhone(tenant.location?.phone ?? '');
       setAddress(tenant.location?.address ?? '');
       setCity(tenant.location?.city ?? '');
+      // Storefront
+      setDescription(tenant.description ?? '');
+      setAnnouncementTitle(tenant.announcementTitle ?? '');
+      setAnnouncementText(tenant.announcementText ?? '');
+      setAnnouncementCta(tenant.announcementCta ?? '');
+      setGalleryImagesRaw((tenant.galleryImages ?? []).join('\n'));
     }
   }, [tenant]);
 
@@ -46,14 +60,26 @@ export default function SettingsPage() {
     } catch { /* clipboard API might fail */ }
   }, [bookingUrl]);
 
+  // Parse gallery URLs from newline-separated text
+  const parseGalleryImages = (raw: string): string[] =>
+    raw.split('\n').map((s) => s.trim()).filter(Boolean);
+
   const handleSave = useCallback(async () => {
     try {
-      await updateProfile.mutateAsync({ name, phone, address, city });
+      const galleryImages = parseGalleryImages(galleryImagesRaw);
+      await updateProfile.mutateAsync({
+        name, phone, address, city,
+        description:       description || undefined,
+        announcementTitle: announcementTitle || undefined,
+        announcementText:  announcementText || undefined,
+        announcementCta:   announcementCta || undefined,
+        galleryImages:     galleryImages.length > 0 ? galleryImages : undefined,
+      });
       toast({ title: 'Kaydedildi', description: 'Salon bilgileri güncellendi.' });
     } catch {
       toast({ variant: 'destructive', title: 'Hata', description: 'Kaydetme başarısız.' });
     }
-  }, [name, phone, address, city, updateProfile]);
+  }, [name, phone, address, city, description, announcementTitle, announcementText, announcementCta, galleryImagesRaw, updateProfile]);
 
   if (error) {
     return (
@@ -153,6 +179,114 @@ export default function SettingsPage() {
           </div>
         </div>
       )}
+
+      {/* ── Storefront Content ──────────────────────────────────────────── */}
+      <div className="bg-white rounded-xl border shadow-sm p-6">
+        <div className="flex items-start gap-4 mb-5">
+          <div className="p-3 rounded-xl bg-purple-100 shrink-0">
+            <FileText className="h-6 w-6 text-purple-600" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h2 className="text-lg font-semibold">Vitrin İçeriği</h2>
+            <p className="text-xs text-muted-foreground mt-1">
+              Online randevu sayfanızda müşterilerinize gösterilecek içerikler.
+            </p>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Salon Açıklaması</label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Salonunuzu kısaca tanıtın..."
+              rows={3}
+              maxLength={1000}
+              className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-none"
+            />
+            <p className="text-xs text-muted-foreground mt-1">{description.length}/1000</p>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Announcement ─────────────────────────────────────────────────── */}
+      <div className="bg-white rounded-xl border shadow-sm p-6">
+        <div className="flex items-start gap-4 mb-5">
+          <div className="p-3 rounded-xl bg-amber-100 shrink-0">
+            <Megaphone className="h-6 w-6 text-amber-600" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h2 className="text-lg font-semibold">Kampanya / Duyuru</h2>
+            <p className="text-xs text-muted-foreground mt-1">
+              Vitrin sayfanızda gösterilecek kampanya veya duyuru banner&apos;ı.
+            </p>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Başlık</label>
+            <Input
+              value={announcementTitle}
+              onChange={(e) => setAnnouncementTitle(e.target.value)}
+              placeholder="Yaz kampanyası başladı!"
+              maxLength={200}
+            />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Metin</label>
+            <textarea
+              value={announcementText}
+              onChange={(e) => setAnnouncementText(e.target.value)}
+              placeholder="Kampanya detaylarını yazın..."
+              rows={2}
+              maxLength={1000}
+              className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-none"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">CTA Linki (opsiyonel)</label>
+            <Input
+              value={announcementCta}
+              onChange={(e) => setAnnouncementCta(e.target.value)}
+              placeholder="https://..."
+              maxLength={500}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* ── Gallery ──────────────────────────────────────────────────────── */}
+      <div className="bg-white rounded-xl border shadow-sm p-6">
+        <div className="flex items-start gap-4 mb-5">
+          <div className="p-3 rounded-xl bg-emerald-100 shrink-0">
+            <ImageIcon className="h-6 w-6 text-emerald-600" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h2 className="text-lg font-semibold">Galeri</h2>
+            <p className="text-xs text-muted-foreground mt-1">
+              Her satıra bir görsel URL&apos;si yapıştırın. Vitrin sayfanızda gösterilecektir.
+            </p>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Görsel URL&apos;leri (satır başı bir URL)</label>
+            <textarea
+              value={galleryImagesRaw}
+              onChange={(e) => setGalleryImagesRaw(e.target.value)}
+              placeholder={"https://example.com/photo1.jpg\nhttps://example.com/photo2.jpg"}
+              rows={4}
+              className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-none font-mono text-xs"
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              {parseGalleryImages(galleryImagesRaw).length} görsel
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
