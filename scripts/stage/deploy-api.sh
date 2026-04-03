@@ -47,10 +47,10 @@ $COMPOSE \
 echo "  ✓ Migration complete"
 
 # ── 4. Start API ─────────────────────────────────────────────────────────────
-# Note: prisma generate runs at build time inside the Docker image.
-# No runtime generate needed — generated client is baked into the image.
+# --force-recreate: eski container reuse edilmez — her deploy yeni container garanti eder.
+# Not: prisma generate build time'da Dockerfile icinde calisir. Runtime generate gerekmez.
 echo "[4/5] Starting API container..."
-$COMPOSE up -d api
+$COMPOSE up -d --force-recreate api
 echo "  ✓ API container started"
 
 # ── 5. Health check ──────────────────────────────────────────────────────────
