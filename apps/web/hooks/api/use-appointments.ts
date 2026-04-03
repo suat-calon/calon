@@ -186,3 +186,65 @@ export function useUpdateAppointmentStatus() {
     },
   });
 }
+
+// ── Checkout / Tahsilat ───────────────────────────────────────────────────────
+
+export type CheckoutPaymentMethod = 'PAYMENT_CASH' | 'PAYMENT_CARD' | 'PAYMENT_ONLINE';
+
+export interface CheckoutPayload {
+  appointmentId:  string;
+  amount:         number;
+  paymentMethod:  CheckoutPaymentMethod;
+  reference?:     string;
+  notes?:         string;
+}
+
+/**
+ * Randevu tahsilat kapanışı — POST /payments/:appointmentId/checkout
+ * IN_SERVICE statüsünden COMPLETED'a geçirir + TransactionLedger kaydı yazar.
+ * Backend: amount server-side doğrulanır, paymentMethod ledger'a yazılır.
+ */
+export function useCheckoutAppointment() {
+  const qc = useQueryClient();
+
+  return useMutation<Appointment, Error, CheckoutPayload>({
+    mutationFn: ({ appointmentId, amount, paymentMethod, reference, notes }) =>
+      apiClient
+        .post<Appointment>(`/payments/${appointmentId}/checkout`, {
+          amount,
+          paymentMethod,
+          ...(reference ? { reference } : {}),
+          ...(notes ? { notes } : {}),
+        })
+        .then((r) => r.data),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['appointments'] });
+    },
+  });
+}
+
+// ── Ledger Sorgusu ────────────────────────────────────────────────────────────
+
+export interface LedgerEntry {
+  id:            string;
+  type:          string; // TransactionType enum
+  amount:        string; // Decimal → string
+  currency:      string;
+  description?:  string | null;
+  reference?:    string | null;
+  processedAt:   string;
+}
+
+/**
+ * Randevu işlem geçmişi — GET /payments/ledger/:appointmentId
+ */
+export function useLedger(appointmentId: string | null) {
+  return useQuery<LedgerEntry[], Error>({
+    queryKey: ['ledger', appointmentId],
+    queryFn: () =>
+      apiClient
+        .get<LedgerEntry[]>(`/payments/ledger/${appointmentId}`)
+        .then((r) => r.data),
+    enabled: !!appointmentId,
+  });
+}
