@@ -5,16 +5,21 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
   Search, Loader2, AlertCircle, Users, Phone, Mail, Calendar,
-  ChevronRight, Clock, Star, ExternalLink,
+  ChevronRight, Clock, Star, ExternalLink, Plus,
 } from 'lucide-react';
 
 import { Badge }   from '@/components/ui/badge';
+import { Button }  from '@/components/ui/button';
 import { Input }   from '@/components/ui/input';
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
 } from '@/components/ui/sheet';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+} from '@/components/ui/dialog';
+import { toast } from '@/hooks/use-toast';
 
-import { useCustomers, type Customer } from '@/hooks/api/use-customers';
+import { useCustomers, useCreateCustomer, type Customer } from '@/hooks/api/use-customers';
 import { useAppointments, type Appointment } from '@/hooks/api/use-appointments';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -52,6 +57,12 @@ export default function CustomersPage() {
   const [search, setSearch]           = useState('');
   const [debouncedSearch, setDebSearch] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [newFirst, setNewFirst]     = useState('');
+  const [newLast, setNewLast]       = useState('');
+  const [newPhone, setNewPhone]     = useState('');
+  const [newEmail, setNewEmail]     = useState('');
+  const [newNotes, setNewNotes]     = useState('');
 
   // Debounce
   const [timer, setTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
@@ -64,6 +75,7 @@ export default function CustomersPage() {
 
   const { data, isLoading, error } = useCustomers(debouncedSearch || undefined);
   const { data: appointments } = useAppointments();
+  const createCustomer = useCreateCustomer();
 
   const customers = useMemo(() =>
     (data?.data ?? []).filter((c) => !c.isDeleted),
@@ -106,8 +118,76 @@ export default function CustomersPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold tracking-tight">Müşteriler</h1>
-        <span className="text-sm text-muted-foreground">{data ? `${data.total} müşteri` : ''}</span>
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-muted-foreground">{data ? `${data.total} müşteri` : ''}</span>
+          <Button size="sm" onClick={() => { setNewFirst(''); setNewLast(''); setNewPhone(''); setNewEmail(''); setNewNotes(''); setCreateOpen(true); }}>
+            <Plus className="mr-1 h-4 w-4" /> Yeni Müşteri
+          </Button>
+        </div>
       </div>
+
+      {/* Create Customer Dialog */}
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Yeni Müşteri</DialogTitle>
+            <DialogDescription>Panelden yeni müşteri kaydı oluşturun.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 mt-2">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Ad *</label>
+                <Input value={newFirst} onChange={(e) => setNewFirst(e.target.value)} placeholder="Ad" className="h-9" />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Soyad *</label>
+                <Input value={newLast} onChange={(e) => setNewLast(e.target.value)} placeholder="Soyad" className="h-9" />
+              </div>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Telefon</label>
+              <Input value={newPhone} onChange={(e) => setNewPhone(e.target.value)} placeholder="+90 5XX XXX XX XX" className="h-9" />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">E-posta</label>
+              <Input type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} placeholder="ornek@mail.com" className="h-9" />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Not</label>
+              <Input value={newNotes} onChange={(e) => setNewNotes(e.target.value)} placeholder="Opsiyonel not..." className="h-9" />
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" size="sm" onClick={() => setCreateOpen(false)}>Vazgeç</Button>
+              <Button
+                size="sm"
+                disabled={createCustomer.isPending || !newFirst.trim() || !newLast.trim()}
+                onClick={async () => {
+                  try {
+                    await createCustomer.mutateAsync({
+                      firstName: newFirst.trim(),
+                      lastName: newLast.trim(),
+                      ...(newPhone.trim() ? { phone: newPhone.trim() } : {}),
+                      ...(newEmail.trim() ? { email: newEmail.trim() } : {}),
+                      ...(newNotes.trim() ? { notes: newNotes.trim() } : {}),
+                      consentGiven: true,
+                    });
+                    setCreateOpen(false);
+                    toast({ title: 'Müşteri oluşturuldu', description: `${newFirst} ${newLast} başarıyla eklendi.` });
+                  } catch (err: unknown) {
+                    const msg = err && typeof err === 'object' && 'response' in err
+                      ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
+                      : 'Müşteri oluşturulamadı.';
+                    toast({ variant: 'destructive', title: 'Hata', description: typeof msg === 'string' ? msg : 'Müşteri oluşturulamadı.' });
+                  }
+                }}
+              >
+                {createCustomer.isPending ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : null}
+                Oluştur
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Search */}
       <div className="relative max-w-sm">

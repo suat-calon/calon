@@ -65,11 +65,35 @@ export interface CreateAppointmentPayload {
 
 // ── Sorgular ──────────────────────────────────────────────────────────────────
 
-export function useAppointments() {
+/** Server-side filtre parametreleri — backend GET /appointments kontratı */
+export interface AppointmentFilters {
+  startDate?:  string; // ISO8601
+  endDate?:    string; // ISO8601
+  status?:     AppointmentStatus;
+  staffId?:    string;
+  customerId?: string;
+}
+
+/**
+ * Randevu listesi — server-side filtering.
+ * Filtre parametreleri backend'e query param olarak gönderilir.
+ * Query key filtre state'ini içerir → filtre değişince otomatik refetch.
+ */
+export function useAppointments(filters: AppointmentFilters = {}) {
   return useQuery<Appointment[], Error>({
-    queryKey: ['appointments'],
-    queryFn:  () =>
-      apiClient.get<Appointment[]>('/appointments').then((r) => r.data),
+    queryKey: ['appointments', filters],
+    queryFn:  () => {
+      const params = new URLSearchParams();
+      if (filters.startDate)  params.set('startDate',  filters.startDate);
+      if (filters.endDate)    params.set('endDate',    filters.endDate);
+      if (filters.status)     params.set('status',     filters.status);
+      if (filters.staffId)    params.set('staffId',    filters.staffId);
+      if (filters.customerId) params.set('customerId', filters.customerId);
+      const qs = params.toString();
+      return apiClient
+        .get<Appointment[]>(`/appointments${qs ? `?${qs}` : ''}`)
+        .then((r) => r.data);
+    },
   });
 }
 
@@ -81,6 +105,37 @@ export function useCreateAppointment() {
   return useMutation<Appointment, Error, CreateAppointmentPayload>({
     mutationFn: (payload) =>
       apiClient.post<Appointment>('/appointments', payload).then((r) => r.data),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['appointments'] });
+    },
+  });
+}
+
+// ── Reschedule ────────────────────────────────────────────────────────────────
+
+export interface ReschedulePayload {
+  appointmentId: string;
+  newStartTime:  string; // ISO8601
+  newEndTime:    string; // ISO8601
+  reason?:       string;
+}
+
+/**
+ * Randevu yeniden planlama — PATCH /appointments/:id/reschedule
+ * Sadece PENDING ve CONFIRMED statülerinde izin verilir.
+ */
+export function useRescheduleAppointment() {
+  const qc = useQueryClient();
+
+  return useMutation<Appointment, Error, ReschedulePayload>({
+    mutationFn: ({ appointmentId, newStartTime, newEndTime, reason }) =>
+      apiClient
+        .patch<Appointment>(`/appointments/${appointmentId}/reschedule`, {
+          newStartTime,
+          newEndTime,
+          ...(reason ? { reason } : {}),
+        })
+        .then((r) => r.data),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['appointments'] });
     },

@@ -37,10 +37,12 @@ import {
   useAppointments,
   useCreateAppointment,
   useUpdateAppointmentStatus,
+  useRescheduleAppointment,
   NEXT_ACTIONS,
   type Appointment,
   type AppointmentStatus,
   type AppointmentSource,
+  type AppointmentFilters,
 } from '@/hooks/api/use-appointments';
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
@@ -116,14 +118,31 @@ export default function CalendarPage() {
   const [detailApt, setDetailApt]       = useState<Appointment | null>(null);
   const [staffFilter, setStaffFilter]   = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [rescheduleOpen, setRescheduleOpen] = useState(false);
+  const [rescheduleDate, setRescheduleDate] = useState('');
+  const [rescheduleStart, setRescheduleStart] = useState('09:00');
+  const [rescheduleEnd, setRescheduleEnd]     = useState('10:00');
+  const [rescheduleReason, setRescheduleReason] = useState('');
 
-  const { data: appointments, isLoading, error } = useAppointments();
+  // Server-side filtering — haftalık pencere + opsiyonel staff/status
+  const filters = useMemo<AppointmentFilters>(() => {
+    const f: AppointmentFilters = {
+      startDate: format(weekStart, "yyyy-MM-dd'T'00:00:00.000'Z'"),
+      endDate:   format(addDays(weekStart, 6), "yyyy-MM-dd'T'23:59:59.999'Z'"),
+    };
+    if (staffFilter !== 'all')  f.staffId = staffFilter;
+    if (statusFilter !== 'all') f.status  = statusFilter as AppointmentStatus;
+    return f;
+  }, [weekStart, staffFilter, statusFilter]);
+
+  const { data: appointments, isLoading, error } = useAppointments(filters);
   const { data: services }                       = useServices();
   const { data: customersData }                  = useCustomers();
   const { data: staffData }                      = useStaff();
   const { data: tenant }                         = useTenant();
   const createAppointment                        = useCreateAppointment();
   const updateStatus                             = useUpdateAppointmentStatus();
+  const rescheduleAppointment                    = useRescheduleAppointment();
 
   const customers = customersData?.data ?? [];
   const staffList = staffData?.data ?? [];
@@ -136,7 +155,7 @@ export default function CalendarPage() {
     Array.from({ length: HOUR_END - HOUR_START }, (_, i) => HOUR_START + i),
   []);
 
-  // Group appointments by day with filters
+  // Group appointments by day — filtering is now server-side
   const appointmentsByDay = useMemo(() => {
     const map = new Map<string, Appointment[]>();
     for (const day of weekDays) {
@@ -145,8 +164,6 @@ export default function CalendarPage() {
     }
     for (const apt of appointments ?? []) {
       try {
-        if (staffFilter !== 'all' && apt.staffId !== staffFilter) continue;
-        if (statusFilter !== 'all' && apt.status !== statusFilter) continue;
         const d = parseISO(apt.startTime);
         const key = format(d, 'yyyy-MM-dd');
         if (map.has(key)) {
@@ -155,7 +172,7 @@ export default function CalendarPage() {
       } catch { /* skip invalid */ }
     }
     return map;
-  }, [appointments, weekDays, staffFilter, statusFilter]);
+  }, [appointments, weekDays]);
 
   function prevWeek() { setWeekStart(addDays(weekStart, -7)); }
   function nextWeek() { setWeekStart(addDays(weekStart, 7)); }
@@ -583,6 +600,107 @@ export default function CalendarPage() {
                   <div className="bg-destructive/10 rounded-lg p-3">
                     <span className="text-xs text-destructive">İptal sebebi:</span>
                     <p className="text-sm mt-1">{detailApt.cancellationReason}</p>
+                  </div>
+                )}
+
+                <Separator />
+
+                {/* Reschedule — sadece PENDING ve CONFIRMED */}
+                {(detailApt.status === 'PENDING' || detailApt.status === 'CONFIRMED') && (
+                  <div className="space-y-2">
+                    <span className="text-xs text-muted-foreground font-medium">Yeniden Planla</span>
+                    {!rescheduleOpen ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="w-full"
+                        onClick={() => {
+                          setRescheduleDate(format(parseISO(detailApt.startTime), 'yyyy-MM-dd'));
+                          setRescheduleStart(format(parseISO(detailApt.startTime), 'HH:mm'));
+                          setRescheduleEnd(format(parseISO(detailApt.endTime), 'HH:mm'));
+                          setRescheduleReason('');
+                          setRescheduleOpen(true);
+                        }}
+                      >
+                        <Clock className="mr-1 h-3 w-3" /> Saati Değiştir
+                      </Button>
+                    ) : (
+                      <div className="space-y-2 bg-muted/50 rounded-lg p-3">
+                        <div className="grid grid-cols-3 gap-2">
+                          <div>
+                            <label className="text-xs text-muted-foreground">Tarih</label>
+                            <Input
+                              type="date"
+                              value={rescheduleDate}
+                              onChange={(e) => setRescheduleDate(e.target.value)}
+                              className="h-8 text-xs"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs text-muted-foreground">Başlangıç</label>
+                            <Input
+                              type="time"
+                              value={rescheduleStart}
+                              onChange={(e) => setRescheduleStart(e.target.value)}
+                              className="h-8 text-xs"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs text-muted-foreground">Bitiş</label>
+                            <Input
+                              type="time"
+                              value={rescheduleEnd}
+                              onChange={(e) => setRescheduleEnd(e.target.value)}
+                              className="h-8 text-xs"
+                            />
+                          </div>
+                        </div>
+                        <Input
+                          placeholder="Neden (opsiyonel)"
+                          value={rescheduleReason}
+                          onChange={(e) => setRescheduleReason(e.target.value)}
+                          className="h-8 text-xs"
+                        />
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="flex-1"
+                            onClick={() => setRescheduleOpen(false)}
+                          >
+                            Vazgeç
+                          </Button>
+                          <Button
+                            size="sm"
+                            className="flex-1"
+                            disabled={rescheduleAppointment.isPending || !rescheduleDate || !rescheduleStart || !rescheduleEnd}
+                            onClick={async () => {
+                              try {
+                                const newStart = `${rescheduleDate}T${rescheduleStart}:00.000Z`;
+                                const newEnd   = `${rescheduleDate}T${rescheduleEnd}:00.000Z`;
+                                const updated = await rescheduleAppointment.mutateAsync({
+                                  appointmentId: detailApt.id,
+                                  newStartTime: newStart,
+                                  newEndTime: newEnd,
+                                  ...(rescheduleReason ? { reason: rescheduleReason } : {}),
+                                });
+                                setDetailApt({ ...detailApt, startTime: updated.startTime, endTime: updated.endTime, updatedAt: updated.updatedAt });
+                                setRescheduleOpen(false);
+                                toast({ title: 'Randevu kaydırıldı', description: `Yeni saat: ${rescheduleStart} - ${rescheduleEnd}` });
+                              } catch (err: unknown) {
+                                const msg = err && typeof err === 'object' && 'response' in err
+                                  ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
+                                  : 'Kaydırma başarısız.';
+                                toast({ variant: 'destructive', title: 'Hata', description: msg ?? 'Kaydırma başarısız.' });
+                              }
+                            }}
+                          >
+                            {rescheduleAppointment.isPending ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : null}
+                            Kaydet
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import apiClient from '@/lib/api-client';
 
 export interface Customer {
@@ -46,5 +46,34 @@ export function useCustomer(id: string | null) {
     queryKey: ['customer', id],
     queryFn: () => apiClient.get<Customer>(`/customers/${id}`).then((r) => r.data),
     enabled: !!id,
+  });
+}
+
+// ── Mutasyonlar ───────────────────────────────────────────────────────────────
+
+export interface CreateCustomerPayload {
+  firstName:    string;
+  lastName:     string;
+  email?:       string;
+  phone?:       string;
+  dateOfBirth?: string;
+  gender?:      string;
+  notes?:       string;
+  consentGiven?: boolean;
+}
+
+/**
+ * Yeni müşteri oluştur — POST /customers
+ * Tenant bağlama server-side @CurrentTenant() ile otomatik yapılır.
+ */
+export function useCreateCustomer() {
+  const qc = useQueryClient();
+
+  return useMutation<Customer, Error, CreateCustomerPayload>({
+    mutationFn: (payload) =>
+      apiClient.post<Customer>('/customers', payload).then((r) => r.data),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['customers'] });
+    },
   });
 }
