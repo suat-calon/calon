@@ -63,6 +63,7 @@ export default function CustomersPage() {
   const [newPhone, setNewPhone]     = useState('');
   const [newEmail, setNewEmail]     = useState('');
   const [newNotes, setNewNotes]     = useState('');
+  const [newConsent, setNewConsent] = useState(false);
 
   // Debounce
   const [timer, setTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
@@ -120,7 +121,7 @@ export default function CustomersPage() {
         <h1 className="text-2xl font-bold tracking-tight">Müşteriler</h1>
         <div className="flex items-center gap-3">
           <span className="text-sm text-muted-foreground">{data ? `${data.total} müşteri` : ''}</span>
-          <Button size="sm" onClick={() => { setNewFirst(''); setNewLast(''); setNewPhone(''); setNewEmail(''); setNewNotes(''); setCreateOpen(true); }}>
+          <Button size="sm" onClick={() => { setNewFirst(''); setNewLast(''); setNewPhone(''); setNewEmail(''); setNewNotes(''); setNewConsent(false); setCreateOpen(true); }}>
             <Plus className="mr-1 h-4 w-4" /> Yeni Müşteri
           </Button>
         </div>
@@ -156,6 +157,17 @@ export default function CustomersPage() {
               <label className="text-xs font-medium text-muted-foreground">Not</label>
               <Input value={newNotes} onChange={(e) => setNewNotes(e.target.value)} placeholder="Opsiyonel not..." className="h-9" />
             </div>
+            <label className="flex items-start gap-2 cursor-pointer py-1">
+              <input
+                type="checkbox"
+                checked={newConsent}
+                onChange={(e) => setNewConsent(e.target.checked)}
+                className="mt-0.5 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+              />
+              <span className="text-xs text-muted-foreground leading-tight">
+                Müşterinin kişisel verilerinin işlenmesine ilişkin bilgilendirme yapıldı ve onayı alındı.
+              </span>
+            </label>
             <div className="flex justify-end gap-2 pt-2">
               <Button variant="outline" size="sm" onClick={() => setCreateOpen(false)}>Vazgeç</Button>
               <Button
@@ -169,7 +181,7 @@ export default function CustomersPage() {
                       ...(newPhone.trim() ? { phone: newPhone.trim() } : {}),
                       ...(newEmail.trim() ? { email: newEmail.trim() } : {}),
                       ...(newNotes.trim() ? { notes: newNotes.trim() } : {}),
-                      consentGiven: true,
+                      ...(newConsent ? { consentGiven: true } : {}),
                     });
                     setCreateOpen(false);
                     toast({ title: 'Müşteri oluşturuldu', description: `${newFirst} ${newLast} başarıyla eklendi.` });
