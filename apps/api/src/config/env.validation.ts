@@ -13,6 +13,11 @@ export const envValidationSchema = Joi.object({
   DATABASE_URL: Joi.string()
     .uri()
     .required(),
+  // Neon direct (non-pooler) endpoint — LISTEN/NOTIFY için gerekli.
+  // Tanımlı değilse OutboxListenerService DATABASE_URL'den -pooler suffix'ini çıkarır.
+  DATABASE_DIRECT_URL: Joi.string()
+    .uri()
+    .optional(),
 
   // ── Redis ─────────────────────────────────────────────────────────────────
   REDIS_HOST: Joi.string()

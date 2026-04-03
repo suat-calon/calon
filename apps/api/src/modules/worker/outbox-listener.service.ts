@@ -14,6 +14,13 @@
  *   Prisma PostgreSQL LISTEN/NOTIFY'ı desteklemez.
  *   LISTEN komutu kalıcı bir bağlantı gerektirir; connection pool ile uyumsuz.
  *
+ * Neden DATABASE_DIRECT_URL?
+ *   LISTEN/NOTIFY, PgBouncer transaction-mode pooler ile UYUMSUZDUR.
+ *   Neon pooler (`-pooler` host) bağlantıları multipleks eder ve LISTEN
+ *   subscription'larını sessizce kaybeder → periyodik ECONNRESET.
+ *   Bu servis Neon direct endpoint'e bağlanır (session-aware, persistent).
+ *   Yoksa DATABASE_URL'den `-pooler` suffix'ini otomatik çıkarır.
+ *
  * Reconnect politikası:
  *   Bağlantı koptuğunda exponential backoff ile yeniden bağlan.
  *   Max backoff: 30 saniye. Her başarılı bağlantıda sıfırla.
@@ -47,6 +54,9 @@ const RECONNECT_INITIAL_MS = 500;
 const RECONNECT_MAX_MS      = 30_000;
 const RECONNECT_MULTIPLIER  = 2;
 
+/** ConnTrace log prefix — tüm bağlantı olaylarında kaynak tespiti için */
+const TAG = '[ConnTrace][OutboxListener]';
+
 @Injectable()
 export class OutboxListenerService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(OutboxListenerService.name);
@@ -71,15 +81,54 @@ export class OutboxListenerService implements OnModuleInit, OnModuleDestroy {
   }
 
   // ──────────────────────────────────────────────────────────────────────────
+  // Private: bağlantı URL çözümleme
+  // ──────────────────────────────────────────────────────────────────────────
+
+  /**
+   * LISTEN/NOTIFY için direct (non-pooler) connection string döndürür.
+   *
+   * Öncelik:
+   *   1. DATABASE_DIRECT_URL (açıkça tanımlı direct endpoint)
+   *   2. DATABASE_URL'den `-pooler` suffix'ini otomatik çıkar
+   *   3. DATABASE_URL olduğu gibi (pooler değilse)
+   *
+   * Neon pooler hostname pattern: `ep-xxx-pooler.region.neon.tech`
+   * Neon direct hostname pattern: `ep-xxx.region.neon.tech`
+   */
+  private resolveDirectUrl(): string | null {
+    // Tercih 1: Açıkça tanımlı direct URL
+    const directUrl = process.env['DATABASE_DIRECT_URL'];
+    if (directUrl) {
+      this.logger.log(`${TAG} DATABASE_DIRECT_URL kullanılıyor (direct endpoint)`);
+      return directUrl;
+    }
+
+    const rawUrl = process.env['DATABASE_URL'];
+    if (!rawUrl) return null;
+
+    // Tercih 2: Pooler hostname'den `-pooler` suffix'ini çıkar
+    if (rawUrl.includes('-pooler')) {
+      const derived = rawUrl.replace(/-pooler(?=\.)/, '');
+      this.logger.warn(
+        `${TAG} DATABASE_DIRECT_URL tanımlı değil — DATABASE_URL'den pooler suffix çıkarıldı (auto-derive)`,
+      );
+      return derived;
+    }
+
+    // Tercih 3: URL zaten direct endpoint
+    return rawUrl;
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
   // Private: bağlantı yönetimi
   // ──────────────────────────────────────────────────────────────────────────
 
   private async connect(): Promise<void> {
     if (this.destroyed) return;
 
-    const rawUrl = process.env['DATABASE_URL'];
+    const rawUrl = this.resolveDirectUrl();
     if (!rawUrl) {
-      this.logger.error('[OutboxListener] DATABASE_URL tanımlı değil, LISTEN başlatılamadı');
+      this.logger.error(`${TAG} DATABASE_URL tanımlı değil, LISTEN başlatılamadı`);
       return;
     }
 
@@ -97,32 +146,45 @@ export class OutboxListenerService implements OnModuleInit, OnModuleDestroy {
       keepAliveInitialDelayMillis: 10_000, // Neon idle ECONNRESET koruması
     });
 
-    // Handle client-level errors — transient resets are expected with Neon serverless.
-    // Log as warn (not error) for ECONNRESET/ETIMEDOUT since reconnect handles recovery.
-    // The 'end' event fires after 'error' and triggers reconnect.
+    // ── Lifecycle event logging (ConnTrace) ────────────────────────────────
+    // Tüm bağlantı olaylarını prefix ile logla → ECONNRESET kaynağı görünür olsun.
     this.client.on('error', (err: Error) => {
       const code = (err as NodeJS.ErrnoException).code;
       if (code === 'ECONNRESET' || code === 'ETIMEDOUT') {
-        this.logger.warn(`[OutboxListener] Bağlantı koptu (${code}), reconnect bekliyor`);
+        this.logger.warn(`${TAG} error: ${code} — reconnect bekliyor`);
       } else {
-        this.logger.error(`[OutboxListener] pg hatası: ${err.message}`);
+        this.logger.error(`${TAG} error: ${err.message}`);
       }
     });
 
     this.client.on('end', () => {
+      this.logger.warn(`${TAG} end — bağlantı kapandı`);
       if (this.destroyed) return;
-      this.logger.warn('[OutboxListener] Bağlantı kapandı, yeniden bağlanılıyor…');
       this.scheduleReconnect();
     });
 
     try {
       await this.client.connect();
 
-      // Suppress unhandled socket-level errors that bypass the client 'error' event.
-      // Without this, Node.js prints raw ECONNRESET stack traces to stderr.
-      const stream = (this.client as unknown as { connection?: { stream?: NodeJS.EventEmitter } }).connection?.stream;
+      // ── Socket-level error suppression ──────────────────────────────────
+      // pg.Client iç yapısında `connection.stream` raw TCP socket'tir.
+      // Bu socket'e error handler eklenmezse Node.js unhandled error olarak
+      // stderr'e yazar (prefix'siz `Error: read ECONNRESET` çıktısı).
+      // Client 'error' event'i zaten yukarıda handle edildiği için burada
+      // sadece log prefix ile gösterip asıl handling'i client event'e bırakıyoruz.
+      //
+      // pg 8.x iç yapı: Client → Connection → stream (net.Socket)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const pgAny = this.client as any;
+      const conn   = pgAny?.connection;
+      const stream = conn?.stream as NodeJS.EventEmitter | undefined;
       if (stream && typeof stream.on === 'function') {
-        stream.on('error', () => { /* handled by client 'error' event above */ });
+        stream.on('error', (err: Error) => {
+          const code = (err as NodeJS.ErrnoException).code ?? 'UNKNOWN';
+          this.logger.warn(`${TAG} stream-error: ${code} (client handler'a delege edildi)`);
+        });
+      } else {
+        this.logger.warn(`${TAG} stream referansı bulunamadı — raw socket errors stderr'e düşebilir`);
       }
 
       await this.client.query('LISTEN outbox_pending_event');
@@ -133,15 +195,15 @@ export class OutboxListenerService implements OnModuleInit, OnModuleDestroy {
       this.client.on('notification', (msg) => {
         if (msg.channel === 'outbox_pending_event' && msg.payload) {
           this.handleNotification(msg.payload).catch((err: Error) =>
-            this.logger.error(`[OutboxListener] handleNotification hatası: ${err.message}`),
+            this.logger.error(`${TAG} handleNotification hatası: ${err.message}`),
           );
         }
       });
 
-      this.logger.log('[OutboxListener] LISTEN outbox_pending_event — hazır');
+      this.logger.log(`${TAG} LISTEN outbox_pending_event — hazır (direct endpoint)`);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
-      this.logger.error(`[OutboxListener] Bağlantı kurulamadı: ${message}`);
+      this.logger.error(`${TAG} Bağlantı kurulamadı: ${message}`);
       this.scheduleReconnect();
     }
   }
@@ -166,7 +228,7 @@ export class OutboxListenerService implements OnModuleInit, OnModuleDestroy {
       RECONNECT_MAX_MS,
     );
 
-    this.logger.log(`[OutboxListener] ${delay}ms sonra yeniden bağlanılacak`);
+    this.logger.log(`${TAG} reconnect: ${delay}ms sonra yeniden bağlanılacak`);
     this.client = null; // eski referansı temizle
 
     setTimeout(() => {
@@ -184,13 +246,13 @@ export class OutboxListenerService implements OnModuleInit, OnModuleDestroy {
     try {
       payload = JSON.parse(raw) as OutboxNotifyPayload;
     } catch {
-      this.logger.warn(`[OutboxListener] Geçersiz payload, atlandı: ${raw}`);
+      this.logger.warn(`${TAG} Geçersiz payload, atlandı: ${raw}`);
       return;
     }
 
     const { eventId, tenantId } = payload;
     if (!eventId || !tenantId) {
-      this.logger.warn(`[OutboxListener] Eksik alan: ${raw}`);
+      this.logger.warn(`${TAG} Eksik alan: ${raw}`);
       return;
     }
 
