@@ -6,7 +6,7 @@ import Link from 'next/link';
 import {
   Search, Loader2, AlertCircle, Users, Phone, Mail, Calendar,
   ChevronRight, Clock, Star, ExternalLink, Plus, Copy, CalendarPlus,
-  TrendingUp, AlertTriangle, FileText, Banknote,
+  TrendingUp, AlertTriangle, FileText,
 } from 'lucide-react';
 
 import { Badge }   from '@/components/ui/badge';
@@ -279,11 +279,17 @@ function CustomerProfile({ customer: c, appointments: appts }: { customer: Custo
   const visitCount   = completedApts.length;
   const noShowCount  = appts.filter((a) => a.status === 'NO_SHOW').length;
   const cancelCount  = appts.filter((a) => a.status === 'CANCELLED').length;
-  const totalSpend   = completedApts.reduce((sum, a) => sum + Number(a.totalPrice ?? 0), 0);
+  // Hizmet toplamı — appointment.totalPrice toplamı.
+  // NOT: Bu gerçek tahsilat tutarı değil, hizmet değeri toplamıdır.
+  // Checkout yapılmışsa totalPrice = tahsilat, yapılmamışsa = hizmet fiyatı.
+  // Customer-level ledger aggregation olmadığından kesin tahsilat buradan türetilemez.
+  const serviceTotal = completedApts.reduce((sum, a) => sum + Number(a.totalPrice ?? 0), 0);
   const lastVisit    = completedApts.length > 0
     ? completedApts.sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime())[0]
     : null;
-  const unpaidCompleted = completedApts.filter((a) => !a.totalPrice || Number(a.totalPrice) === 0);
+  // Hizmet tutarı girilmemiş completed randevular — dikkat sinyali.
+  // NOT: Bu "ödenmemiş" değil, "tutar kaydedilmemiş" demektir.
+  const missingPrice = completedApts.filter((a) => !a.totalPrice || Number(a.totalPrice) === 0);
 
   // Favori hizmet
   const svcCounts: Record<string, { name: string; count: number }> = {};
@@ -320,11 +326,11 @@ function CustomerProfile({ customer: c, appointments: appts }: { customer: Custo
       <div className="mt-5 space-y-5">
 
         {/* ── Attention Flags ───────────────────────────────────────────── */}
-        {unpaidCompleted.length > 0 && (
+        {missingPrice.length > 0 && (
           <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg p-2.5">
             <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
             <span className="text-xs text-amber-800 font-medium">
-              {unpaidCompleted.length} tamamlanmış randevuda tahsilat bekliyor
+              {missingPrice.length} tamamlanmış randevuda hizmet tutarı girilmemiş
             </span>
           </div>
         )}
@@ -370,8 +376,8 @@ function CustomerProfile({ customer: c, appointments: appts }: { customer: Custo
             <p className="text-[9px] text-muted-foreground mt-0.5">Ziyaret</p>
           </div>
           <div className="bg-muted/50 rounded-lg p-2.5 text-center">
-            <p className="text-lg font-bold">{totalSpend > 0 ? `${totalSpend.toLocaleString('tr-TR')}` : '0'}</p>
-            <p className="text-[9px] text-muted-foreground mt-0.5">₺ Toplam</p>
+            <p className="text-lg font-bold">{serviceTotal > 0 ? `${serviceTotal.toLocaleString('tr-TR')}` : '0'}</p>
+            <p className="text-[9px] text-muted-foreground mt-0.5">₺ Hizmet</p>
           </div>
           <div className="bg-muted/50 rounded-lg p-2.5 text-center">
             <p className="text-lg font-bold">{c.loyaltyPoints}</p>
@@ -469,7 +475,8 @@ function CustomerProfile({ customer: c, appointments: appts }: { customer: Custo
 
 function ApptRow({ a }: { a: Appointment }) {
   const apptDate = a.startTime.split('T')[0];
-  const hasPaid = a.status === 'COMPLETED' && a.totalPrice && Number(a.totalPrice) > 0;
+  // Hizmet tutarı — totalPrice > 0 ise göster. Bu "ödendi" değil, "tutar kaydedilmiş" demektir.
+  const hasAmount = a.status === 'COMPLETED' && a.totalPrice && Number(a.totalPrice) > 0;
   return (
     <Link href={`/calendar?date=${apptDate}`} className="block">
       <div className="flex items-center gap-2.5 bg-white border rounded-lg px-3 py-2 hover:bg-muted/30 transition-colors cursor-pointer group">
@@ -478,9 +485,9 @@ function ApptRow({ a }: { a: Appointment }) {
           <p className="text-xs font-medium truncate">{a.service?.name ?? 'Hizmet'} — {a.staff?.firstName ?? ''}</p>
           <p className="text-[10px] text-muted-foreground">{fmtDateTime(a.startTime)}</p>
         </div>
-        {hasPaid && (
-          <span className="text-[9px] px-1 py-0.5 rounded bg-emerald-50 text-emerald-700 font-medium flex items-center gap-0.5">
-            <Banknote className="h-2.5 w-2.5" />{Number(a.totalPrice).toLocaleString('tr-TR')}₺
+        {hasAmount && (
+          <span className="text-[9px] px-1 py-0.5 rounded bg-gray-100 text-gray-600 font-medium flex items-center gap-0.5">
+            {Number(a.totalPrice).toLocaleString('tr-TR')}₺
           </span>
         )}
         <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${statusColor[a.status] ?? 'bg-gray-100 text-gray-800'}`}>
