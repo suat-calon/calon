@@ -64,20 +64,33 @@ export default function DashboardPage() {
 
   const now = useMemo(() => new Date(), []);
 
-  // ── Priority Engine — deterministic customer ranking ─────────────────
+  // ── Priority Engine v2 — hierarchical gate model ──────────────────────
+  //
+  // NOT linear score. Urgency is the primary GATE.
+  // Value/risk are MODIFIERS within the same urgency tier.
+  //
+  // Gate 1: Suppress (hasUpcoming, isNew, onTrack)
+  // Gate 2: Urgency tier (critical > overdue > slightOverdue > dormant > dueSoon)
+  // Modifier: value (VIP/returning), risk (noShow), confidence (low penalty)
+  //
+  // Priority levels: Kritik / Yüksek / Takip Et
+  // "Düşük" = not shown (excluded from list)
+  //
+  type PriorityLevel = 'critical' | 'high' | 'follow';
   interface PriorityCustomer {
     id: string;
     name: string;
-    score: number;
-    level: 'critical' | 'high' | 'medium' | 'low';
+    sortKey: number; // internal sort, not shown
+    level: PriorityLevel;
     reason: string;
+    actionLabel: string;
+    actionHref: string;
   }
 
   const priorityCustomers = useMemo<PriorityCustomer[]>(() => {
     const customers = (customersData?.data ?? []).filter((c) => !c.isDeleted);
     if (!customers.length || !appointments) return [];
 
-    // Build customer appointment map
     const custAppts: Record<string, Appointment[]> = {};
     for (const a of appointments) {
       if (!a.customer) continue;
@@ -87,7 +100,6 @@ export default function DashboardPage() {
 
     const nowMs = now.getTime();
     const DAY = 1000 * 60 * 60 * 24;
-
     const ranked: PriorityCustomer[] = [];
 
     for (const c of customers) {
@@ -97,20 +109,22 @@ export default function DashboardPage() {
       const noShowCount = appts.filter((a) => a.status === 'NO_SHOW').length;
       const hasUpcoming = appts.some((a) => new Date(a.startTime).getTime() >= nowMs && a.status !== 'CANCELLED' && a.status !== 'NO_SHOW');
 
-      // Skip: has upcoming (already managed) or brand new (no history)
-      if (hasUpcoming) continue;
-      if (visitCount === 0) continue;
+      // ── Gate 1: Hard suppress ──────────────────────────────────────
+      if (hasUpcoming) continue;  // Already managed
+      if (visitCount === 0) continue;  // No history
 
       const isVip = visitCount >= 5;
       const isRisk = noShowCount >= 2;
-      const lastVisitMs = completed.length > 0
-        ? Math.max(...completed.map((a) => new Date(a.startTime).getTime()))
-        : null;
-      const daysSince = lastVisitMs ? Math.floor((nowMs - lastVisitMs) / DAY) : null;
+      const lastVisitMs = Math.max(...completed.map((a) => new Date(a.startTime).getTime()));
+      const daysSince = Math.floor((nowMs - lastVisitMs) / DAY);
 
-      // Cycle (median, same as customer detail)
+      // Cycle (median, variance-aware confidence)
       let cycleDays: number | null = null;
       let confidence: 'low' | 'medium' | 'high' = 'low';
+      let overdueDays = 0;
+      type UrgencyTier = 'critical' | 'overdue' | 'slight' | 'dormant' | 'dueSoon' | 'none';
+      let urgency: UrgencyTier = 'none';
+
       if (visitCount >= 2) {
         const sorted = completed.map((a) => new Date(a.startTime).getTime()).sort((a, b) => a - b);
         const intervals: number[] = [];
@@ -125,66 +139,92 @@ export default function DashboardPage() {
         }
       }
 
-      // Priority score (0-100)
-      let score = 0;
-
-      // Urgency component (0-50)
-      if (cycleDays && daysSince !== null && cycleDays > 0) {
+      // ── Gate 2: Urgency tier ───────────────────────────────────────
+      if (cycleDays && cycleDays > 0) {
         const ratio = daysSince / cycleDays;
-        const overdue = daysSince - cycleDays;
-        if (ratio >= 1.8 && overdue >= 14)      score += 50;
-        else if (ratio >= 1.3 && overdue >= 7)  score += 40;
-        else if (ratio >= 1.0 && overdue >= 3)  score += 30;
-        else if (ratio >= 0.8)                  score += 15;
-      } else if (daysSince !== null && daysSince > 90) {
-        score += 35; // Fallback dormant
-      } else if (daysSince !== null && daysSince > 60) {
-        score += 20;
+        overdueDays = daysSince - cycleDays;
+        if      (ratio >= 1.8 && overdueDays >= 14) urgency = 'critical';
+        else if (ratio >= 1.3 && overdueDays >= 7)  urgency = 'overdue';
+        else if (ratio >= 1.0 && overdueDays >= 3)  urgency = 'slight';
+        else if (ratio >= 0.8)                      urgency = 'dueSoon';
+        else                                        urgency = 'none';
+      } else if (daysSince > 90) {
+        urgency = 'dormant';
+        overdueDays = daysSince - 90;
+      } else if (daysSince > 60) {
+        urgency = 'dueSoon'; // approaching dormant
       }
 
-      // Value component (0-25)
-      if (isVip) score += 25;
-      else if (visitCount >= 3) score += 15;
-      else if (visitCount >= 1) score += 5;
+      // ── Gate 3: Must be actionable to enter list ───────────────────
+      // none/onTrack → excluded
+      if (urgency === 'none') continue;
+      // dueSoon → only if VIP or risk (otherwise not actionable enough)
+      if (urgency === 'dueSoon' && !isVip && !isRisk) continue;
 
-      // Risk booster (0-10)
-      if (isRisk) score += 10;
+      // ── Hierarchical priority (urgency gates, value/risk modify) ───
+      // Base level from urgency tier
+      let level: PriorityLevel;
+      let sortKey: number;
 
-      // Confidence modifier (-10 to 0)
-      if (confidence === 'low' && cycleDays) score -= 10;
+      if (urgency === 'critical') {
+        level = 'critical';
+        sortKey = 100;
+      } else if (urgency === 'overdue') {
+        level = isVip ? 'critical' : 'high';  // VIP overdue → critical
+        sortKey = isVip ? 90 : 70;
+      } else if (urgency === 'slight') {
+        level = isVip ? 'high' : 'follow';
+        sortKey = isVip ? 60 : 40;
+      } else if (urgency === 'dormant') {
+        level = isVip ? 'high' : 'follow';
+        sortKey = isVip ? 55 : 35;
+      } else { // dueSoon (only VIP/risk reach here)
+        level = 'follow';
+        sortKey = 20;
+      }
 
-      // Skip low-priority
-      if (score < 20) continue;
+      // Risk boosts sort within same level
+      if (isRisk) sortKey += 5;
+      // Low confidence demotes level if not already strong
+      if (confidence === 'low' && cycleDays && level === 'high') {
+        level = 'follow';
+        sortKey -= 10;
+      }
 
-      // Level
-      const level: PriorityCustomer['level'] =
-        score >= 60 ? 'critical' :
-        score >= 40 ? 'high' :
-        score >= 25 ? 'medium' : 'low';
-
-      // Reason
+      // ── Reason — decision-oriented ─────────────────────────────────
       const parts: string[] = [];
-      if (cycleDays && daysSince !== null) {
-        const overdue = daysSince - cycleDays;
-        if (overdue > 0) parts.push(`${overdue} gün gecikmiş`);
-        else parts.push(`yakında tekrar zamanı`);
-      } else if (daysSince !== null && daysSince > 60) {
+      if (urgency === 'critical' || urgency === 'overdue') {
+        parts.push(cycleDays ? `+${overdueDays} gün gecikmiş` : `${daysSince} gündür gelmedi`);
+      } else if (urgency === 'slight') {
+        parts.push('ritmini kaçırıyor');
+      } else if (urgency === 'dormant') {
         parts.push(`${daysSince} gündür gelmedi`);
+      } else {
+        parts.push('tekrar zamanı yaklaşıyor');
       }
       if (isVip) parts.push('değerli müşteri');
-      if (isRisk) parts.push('dikkat gerektiriyor');
+      if (isRisk) parts.push('dikkat gerekli');
       if (confidence === 'low' && cycleDays) parts.push('sınırlı veri');
+
+      // ── Action label ───────────────────────────────────────────────
+      const actionLabel = level === 'critical'
+        ? 'Hemen planla'
+        : level === 'high'
+        ? 'Randevu oluştur'
+        : 'Takip et';
 
       ranked.push({
         id: c.id,
         name: `${c.firstName} ${c.lastName}`,
-        score,
+        sortKey,
         level,
-        reason: parts.join(' · ') || 'Takip önerilir',
+        reason: parts.join(' · '),
+        actionLabel,
+        actionHref: `/customers?highlight=${c.id}`,
       });
     }
 
-    return ranked.sort((a, b) => b.score - a.score).slice(0, 5);
+    return ranked.sort((a, b) => b.sortKey - a.sortKey).slice(0, 5);
   }, [customersData, appointments, now]);
 
   const todayAppts = useMemo(() => {
@@ -334,8 +374,8 @@ export default function DashboardPage() {
           </div>
           <div className="space-y-1.5">
             {priorityCustomers.map((pc) => (
-              <Link key={pc.id} href={`/customers?highlight=${pc.id}`}>
-                <div className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 hover:bg-muted/50 transition-colors cursor-pointer group">
+              <div key={pc.id} className="flex items-center gap-2 rounded-lg px-2.5 py-2 hover:bg-muted/50 transition-colors group">
+                <Link href={pc.actionHref} className="flex items-center gap-2.5 flex-1 min-w-0">
                   <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                     <span className="text-[10px] font-semibold text-primary">{pc.name.split(' ').map(w => w[0]).join('')}</span>
                   </div>
@@ -345,17 +385,20 @@ export default function DashboardPage() {
                       <span className={`text-[9px] px-1 py-0 rounded-full border font-medium shrink-0 ${
                         pc.level === 'critical' ? 'bg-red-50 border-red-200 text-red-700' :
                         pc.level === 'high'     ? 'bg-orange-50 border-orange-200 text-orange-700' :
-                        pc.level === 'medium'   ? 'bg-amber-50 border-amber-200 text-amber-700' :
-                                                  'bg-gray-50 border-gray-200 text-gray-600'
+                                                  'bg-blue-50 border-blue-200 text-blue-600'
                       }`}>
-                        {pc.level === 'critical' ? 'Kritik' : pc.level === 'high' ? 'Yüksek' : pc.level === 'medium' ? 'Orta' : 'Düşük'}
+                        {pc.level === 'critical' ? 'Kritik' : pc.level === 'high' ? 'Yüksek' : 'Takip'}
                       </span>
                     </div>
                     <p className="text-[10px] text-muted-foreground truncate mt-0.5">{pc.reason}</p>
                   </div>
-                  <ChevronRight className="h-3 w-3 text-muted-foreground/30 group-hover:text-muted-foreground shrink-0" />
-                </div>
-              </Link>
+                </Link>
+                <Link href="/calendar" className="shrink-0">
+                  <Button size="sm" variant="ghost" className="h-6 px-2 text-[10px] text-primary hover:text-primary">
+                    {pc.actionLabel}
+                  </Button>
+                </Link>
+              </div>
             ))}
           </div>
         </div>
