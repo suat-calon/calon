@@ -8,7 +8,7 @@ import {
   CalendarDays, Clock, CheckCircle2, AlertCircle,
   XCircle, ArrowRight, Plus, Users, Scissors,
   AlertTriangle, Link2, Copy, ExternalLink, Check,
-  Settings, UserPlus, Sparkles, Circle,
+  Settings, UserPlus, Sparkles, Circle, ChevronRight,
 } from 'lucide-react';
 
 import { Badge }  from '@/components/ui/badge';
@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import { useTenant } from '@/hooks/api/use-auth';
 import { useServices } from '@/hooks/api/use-services';
 import { useStaff } from '@/hooks/api/use-staff';
+import { useCustomers } from '@/hooks/api/use-customers';
 import {
   useAppointments,
   type Appointment,
@@ -37,6 +38,7 @@ export default function DashboardPage() {
   const { data: appointments, isLoading, error } = useAppointments();
   const { data: services } = useServices();
   const { data: staffData } = useStaff();
+  const { data: customersData } = useCustomers();
 
   const [copied, setCopied] = useState(false);
   const bookingUrl = tenant?.slug
@@ -61,6 +63,129 @@ export default function DashboardPage() {
   }, [services, staffData, tenant, appointments]);
 
   const now = useMemo(() => new Date(), []);
+
+  // ── Priority Engine — deterministic customer ranking ─────────────────
+  interface PriorityCustomer {
+    id: string;
+    name: string;
+    score: number;
+    level: 'critical' | 'high' | 'medium' | 'low';
+    reason: string;
+  }
+
+  const priorityCustomers = useMemo<PriorityCustomer[]>(() => {
+    const customers = (customersData?.data ?? []).filter((c) => !c.isDeleted);
+    if (!customers.length || !appointments) return [];
+
+    // Build customer appointment map
+    const custAppts: Record<string, Appointment[]> = {};
+    for (const a of appointments) {
+      if (!a.customer) continue;
+      if (!custAppts[a.customer.id]) custAppts[a.customer.id] = [];
+      custAppts[a.customer.id].push(a);
+    }
+
+    const nowMs = now.getTime();
+    const DAY = 1000 * 60 * 60 * 24;
+
+    const ranked: PriorityCustomer[] = [];
+
+    for (const c of customers) {
+      const appts = custAppts[c.id] ?? [];
+      const completed = appts.filter((a) => a.status === 'COMPLETED');
+      const visitCount = completed.length;
+      const noShowCount = appts.filter((a) => a.status === 'NO_SHOW').length;
+      const hasUpcoming = appts.some((a) => new Date(a.startTime).getTime() >= nowMs && a.status !== 'CANCELLED' && a.status !== 'NO_SHOW');
+
+      // Skip: has upcoming (already managed) or brand new (no history)
+      if (hasUpcoming) continue;
+      if (visitCount === 0) continue;
+
+      const isVip = visitCount >= 5;
+      const isRisk = noShowCount >= 2;
+      const lastVisitMs = completed.length > 0
+        ? Math.max(...completed.map((a) => new Date(a.startTime).getTime()))
+        : null;
+      const daysSince = lastVisitMs ? Math.floor((nowMs - lastVisitMs) / DAY) : null;
+
+      // Cycle (median, same as customer detail)
+      let cycleDays: number | null = null;
+      let confidence: 'low' | 'medium' | 'high' = 'low';
+      if (visitCount >= 2) {
+        const sorted = completed.map((a) => new Date(a.startTime).getTime()).sort((a, b) => a - b);
+        const intervals: number[] = [];
+        for (let i = 1; i < sorted.length; i++) intervals.push(Math.round((sorted[i] - sorted[i - 1]) / DAY));
+        if (intervals.length > 0) {
+          const si = [...intervals].sort((a, b) => a - b);
+          cycleDays = si[Math.floor(si.length / 2)];
+          const spread = si[si.length - 1] - si[0];
+          const norm = cycleDays > 0 ? spread / cycleDays : 0;
+          if (intervals.length >= 4)      confidence = norm > 1.0 ? 'medium' : 'high';
+          else if (intervals.length >= 2) confidence = norm > 1.0 ? 'low' : 'medium';
+        }
+      }
+
+      // Priority score (0-100)
+      let score = 0;
+
+      // Urgency component (0-50)
+      if (cycleDays && daysSince !== null && cycleDays > 0) {
+        const ratio = daysSince / cycleDays;
+        const overdue = daysSince - cycleDays;
+        if (ratio >= 1.8 && overdue >= 14)      score += 50;
+        else if (ratio >= 1.3 && overdue >= 7)  score += 40;
+        else if (ratio >= 1.0 && overdue >= 3)  score += 30;
+        else if (ratio >= 0.8)                  score += 15;
+      } else if (daysSince !== null && daysSince > 90) {
+        score += 35; // Fallback dormant
+      } else if (daysSince !== null && daysSince > 60) {
+        score += 20;
+      }
+
+      // Value component (0-25)
+      if (isVip) score += 25;
+      else if (visitCount >= 3) score += 15;
+      else if (visitCount >= 1) score += 5;
+
+      // Risk booster (0-10)
+      if (isRisk) score += 10;
+
+      // Confidence modifier (-10 to 0)
+      if (confidence === 'low' && cycleDays) score -= 10;
+
+      // Skip low-priority
+      if (score < 20) continue;
+
+      // Level
+      const level: PriorityCustomer['level'] =
+        score >= 60 ? 'critical' :
+        score >= 40 ? 'high' :
+        score >= 25 ? 'medium' : 'low';
+
+      // Reason
+      const parts: string[] = [];
+      if (cycleDays && daysSince !== null) {
+        const overdue = daysSince - cycleDays;
+        if (overdue > 0) parts.push(`${overdue} gün gecikmiş`);
+        else parts.push(`yakında tekrar zamanı`);
+      } else if (daysSince !== null && daysSince > 60) {
+        parts.push(`${daysSince} gündür gelmedi`);
+      }
+      if (isVip) parts.push('değerli müşteri');
+      if (isRisk) parts.push('dikkat gerektiriyor');
+      if (confidence === 'low' && cycleDays) parts.push('sınırlı veri');
+
+      ranked.push({
+        id: c.id,
+        name: `${c.firstName} ${c.lastName}`,
+        score,
+        level,
+        reason: parts.join(' · ') || 'Takip önerilir',
+      });
+    }
+
+    return ranked.sort((a, b) => b.score - a.score).slice(0, 5);
+  }, [customersData, appointments, now]);
 
   const todayAppts = useMemo(() => {
     if (!appointments) return [];
@@ -192,6 +317,47 @@ export default function DashboardPage() {
           <Button variant="outline" size="sm" asChild className="shrink-0 border-amber-300 text-amber-800 hover:bg-amber-100">
             <Link href="/calendar">Onayla</Link>
           </Button>
+        </div>
+      )}
+
+      {/* ── Priority Customers ──────────────────────────────────────────── */}
+      {priorityCustomers.length > 0 && (
+        <div className="bg-white border rounded-xl p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold flex items-center gap-1.5">
+              <Users className="h-4 w-4 text-primary" />
+              Öncelikli Müşteriler
+            </h2>
+            <Link href="/customers" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+              Tümü →
+            </Link>
+          </div>
+          <div className="space-y-1.5">
+            {priorityCustomers.map((pc) => (
+              <Link key={pc.id} href={`/customers?highlight=${pc.id}`}>
+                <div className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 hover:bg-muted/50 transition-colors cursor-pointer group">
+                  <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                    <span className="text-[10px] font-semibold text-primary">{pc.name.split(' ').map(w => w[0]).join('')}</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-medium truncate">{pc.name}</span>
+                      <span className={`text-[9px] px-1 py-0 rounded-full border font-medium shrink-0 ${
+                        pc.level === 'critical' ? 'bg-red-50 border-red-200 text-red-700' :
+                        pc.level === 'high'     ? 'bg-orange-50 border-orange-200 text-orange-700' :
+                        pc.level === 'medium'   ? 'bg-amber-50 border-amber-200 text-amber-700' :
+                                                  'bg-gray-50 border-gray-200 text-gray-600'
+                      }`}>
+                        {pc.level === 'critical' ? 'Kritik' : pc.level === 'high' ? 'Yüksek' : pc.level === 'medium' ? 'Orta' : 'Düşük'}
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground truncate mt-0.5">{pc.reason}</p>
+                  </div>
+                  <ChevronRight className="h-3 w-3 text-muted-foreground/30 group-hover:text-muted-foreground shrink-0" />
+                </div>
+              </Link>
+            ))}
+          </div>
         </div>
       )}
 
