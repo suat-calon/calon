@@ -41,6 +41,7 @@ import { LedgerService }     from './ledger.service';
 import { isValidTransition } from '../operations/appointment/appointment.machine';
 import { TakeDepositDto }    from './dto/take-deposit.dto';
 import { CheckoutDto }       from './dto/checkout.dto';
+import { buildAndValidateBreakdown } from './checkout-breakdown';
 import { PAYMENT_REPO, IPaymentRepository } from './payment.repository.interface';
 
 // ── Çıkış tipi ───────────────────────────────────────────────────────────────
@@ -181,18 +182,10 @@ export class PaymentService {
       }
 
       // ── 3. Ledger'a ödeme kaydı — Append-Only, geri alınamaz ────────────
-      // Structured details: checkout line item breakdown (varsa)
-      const details: Record<string, unknown> | undefined = dto.lineItems?.length
-        ? {
-            items: dto.lineItems.map((li) => ({
-              type:   li.type,
-              label:  li.label,
-              amount: li.amount,
-            })),
-            collectedNow:  dto.amount,
-            depositPaid:   appt.depositPaid ? Number(appt.depositPaid) : 0,
-            grossTotal:    dto.lineItems.reduce((s, li) => s + li.amount, 0),
-          }
+      // Structured details: build + validate (throws BadRequest on mismatch)
+      const depositPaidNum = appt.depositPaid ? Number(appt.depositPaid) : 0;
+      const details = dto.lineItems?.length
+        ? buildAndValidateBreakdown(dto.lineItems, dto.amount, depositPaidNum)
         : undefined;
 
       const ledgerEntry = await this.ledger.record(
@@ -203,7 +196,7 @@ export class PaymentService {
           amount:      dto.amount,
           description: dto.notes ?? `Hesap kapatma — Randevu: ${appointmentId}`,
           reference:   dto.reference,
-          details,
+          details:     details as Record<string, unknown> | undefined,
         },
       );
 
