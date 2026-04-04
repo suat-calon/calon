@@ -154,6 +154,10 @@ export default function CalendarPage() {
   const [checkoutOpen, setCheckoutOpen]         = useState(false);
   const [checkoutMethod, setCheckoutMethod]     = useState<CheckoutPaymentMethod>('PAYMENT_CASH');
   const [checkoutRef, setCheckoutRef]           = useState('');
+  // Revenue engine: extra checkout items (upsell / product / manual)
+  const [extraItems, setExtraItems] = useState<{ name: string; price: number }[]>([]);
+  const [newItemName, setNewItemName] = useState('');
+  const [newItemPrice, setNewItemPrice] = useState('');
 
   const customers = customersData?.data ?? [];
   const staffList = staffData?.data ?? [];
@@ -678,7 +682,9 @@ export default function CalendarPage() {
                 {detailApt.status === 'IN_SERVICE' && (() => {
                   const checkoutServicePrice = Number(detailApt.service?.price ?? detailApt.totalPrice ?? 0);
                   const checkoutDeposit      = Number(detailApt.depositPaid ?? 0);
-                  const checkoutRemaining    = Math.max(checkoutServicePrice - checkoutDeposit, 0);
+                  const extrasTotal          = extraItems.reduce((s, i) => s + i.price, 0);
+                  const checkoutGross        = checkoutServicePrice + extrasTotal;
+                  const checkoutRemaining    = Math.max(checkoutGross - checkoutDeposit, 0);
 
                   return (
                     <div className="space-y-2">
@@ -690,27 +696,83 @@ export default function CalendarPage() {
                           onClick={() => {
                             setCheckoutMethod('PAYMENT_CASH');
                             setCheckoutRef('');
+                            setExtraItems([]);
+                            setNewItemName('');
+                            setNewItemPrice('');
                             setCheckoutOpen(true);
                           }}
                         >
-                          💰 Tahsilatı Kapat {checkoutDeposit > 0 ? `(Kalan: ${checkoutRemaining.toLocaleString('tr-TR')} ₺)` : ''}
+                          💰 Tahsilatı Kapat
                         </Button>
                       ) : (
-                        <div className="space-y-2 bg-emerald-50 rounded-lg p-3 border border-emerald-200">
-                          {checkoutDeposit > 0 && (
-                            <div className="text-xs text-emerald-700 space-y-0.5">
-                              <div className="flex justify-between"><span>Hizmet tutarı</span><span>{checkoutServicePrice.toLocaleString('tr-TR')} ₺</span></div>
-                              <div className="flex justify-between"><span>Alınan depozito</span><span>−{checkoutDeposit.toLocaleString('tr-TR')} ₺</span></div>
+                        <div className="space-y-2.5 bg-emerald-50 rounded-lg p-3 border border-emerald-200">
+                          {/* ── Order summary ── */}
+                          <div className="text-xs space-y-0.5">
+                            <div className="flex justify-between text-emerald-800">
+                              <span>{detailApt.service?.name ?? 'Hizmet'}</span>
+                              <span>{checkoutServicePrice.toLocaleString('tr-TR')} ₺</span>
                             </div>
-                          )}
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium text-emerald-900">
-                              {checkoutDeposit > 0 ? 'Kalan Tahsilat' : 'Tutar'}
-                            </span>
+                            {extraItems.map((item, idx) => (
+                              <div key={idx} className="flex justify-between text-emerald-700">
+                                <span className="flex items-center gap-1">
+                                  <button
+                                    className="text-red-400 hover:text-red-600 text-[10px]"
+                                    onClick={() => setExtraItems(extraItems.filter((_, i) => i !== idx))}
+                                  >✕</button>
+                                  {item.name}
+                                </span>
+                                <span>{item.price.toLocaleString('tr-TR')} ₺</span>
+                              </div>
+                            ))}
+                            {checkoutDeposit > 0 && (
+                              <div className="flex justify-between text-emerald-600">
+                                <span>Alınan depozito</span>
+                                <span>−{checkoutDeposit.toLocaleString('tr-TR')} ₺</span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* ── Add extra item ── */}
+                          <div className="flex gap-1.5">
+                            <Input
+                              placeholder="Ek kalem (ör: bakım ürünü)"
+                              value={newItemName}
+                              onChange={(e) => setNewItemName(e.target.value)}
+                              className="h-7 text-[11px] flex-1"
+                            />
+                            <Input
+                              type="number"
+                              placeholder="₺"
+                              value={newItemPrice}
+                              onChange={(e) => setNewItemPrice(e.target.value)}
+                              className="h-7 text-[11px] w-16"
+                              min={0}
+                              step="0.01"
+                            />
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 px-2 text-[10px]"
+                              disabled={!newItemName.trim() || !newItemPrice || Number(newItemPrice) <= 0}
+                              onClick={() => {
+                                setExtraItems([...extraItems, { name: newItemName.trim(), price: Number(newItemPrice) }]);
+                                setNewItemName('');
+                                setNewItemPrice('');
+                              }}
+                            >
+                              <Plus className="h-3 w-3" />
+                            </Button>
+                          </div>
+
+                          {/* ── Total ── */}
+                          <div className="flex items-center justify-between border-t border-emerald-200 pt-1.5">
+                            <span className="text-sm font-semibold text-emerald-900">Tahsil Edilecek</span>
                             <span className="text-lg font-bold text-emerald-900">
                               {checkoutRemaining.toLocaleString('tr-TR')} ₺
                             </span>
                           </div>
+
+                          {/* ── Payment method ── */}
                           <div>
                             <label className="text-xs text-emerald-700">Ödeme Yöntemi</label>
                             <select
@@ -730,7 +792,7 @@ export default function CalendarPage() {
                             className="h-8 text-xs"
                           />
                           <div className="flex gap-2">
-                            <Button size="sm" variant="outline" className="flex-1" onClick={() => setCheckoutOpen(false)}>
+                            <Button size="sm" variant="outline" className="flex-1" onClick={() => { setCheckoutOpen(false); setExtraItems([]); }}>
                               Vazgeç
                             </Button>
                             <Button
@@ -739,14 +801,21 @@ export default function CalendarPage() {
                               disabled={checkoutAppointment.isPending}
                               onClick={async () => {
                                 try {
+                                  // Build notes with item breakdown for ledger trace
+                                  const breakdown = [
+                                    `${detailApt.service?.name ?? 'Hizmet'}: ${checkoutServicePrice}₺`,
+                                    ...extraItems.map(i => `${i.name}: ${i.price}₺`),
+                                  ].join(' | ');
                                   const updated = await checkoutAppointment.mutateAsync({
                                     appointmentId: detailApt.id,
                                     amount: checkoutRemaining,
                                     paymentMethod: checkoutMethod,
                                     ...(checkoutRef ? { reference: checkoutRef } : {}),
+                                    notes: extraItems.length > 0 ? breakdown : undefined,
                                   });
                                   setDetailApt({ ...detailApt, status: updated.status, totalPrice: updated.totalPrice, updatedAt: updated.updatedAt });
                                   setCheckoutOpen(false);
+                                  setExtraItems([]);
                                   toast({ title: 'Tahsilat tamamlandı', description: `${checkoutRemaining.toLocaleString('tr-TR')} ₺ — ${checkoutMethod === 'PAYMENT_CASH' ? 'Nakit' : checkoutMethod === 'PAYMENT_CARD' ? 'Kart' : 'Online'}` });
                                 } catch (err: unknown) {
                                   const msg = err && typeof err === 'object' && 'response' in err
