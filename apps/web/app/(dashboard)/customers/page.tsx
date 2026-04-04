@@ -312,22 +312,48 @@ function CustomerProfile({ customer: c, appointments: appts }: { customer: Custo
     ? Math.floor((now.getTime() - new Date(lastVisit.startTime).getTime()) / (1000 * 60 * 60 * 24))
     : null;
 
-  // Customer type — deterministic heuristic
-  // Thresholds: new=0 visits, returning=1-4, vip=5+, dormant=90+ days, risk=noShow>=2
-  type CustomerType = 'new' | 'returning' | 'vip' | 'dormant' | 'risk';
-  let customerType: CustomerType = 'new';
-  if (noShowCount >= 2)                                          customerType = 'risk';
-  else if (daysSinceLastVisit !== null && daysSinceLastVisit > 90) customerType = 'dormant';
-  else if (visitCount >= 5)                                      customerType = 'vip';
-  else if (visitCount >= 1)                                      customerType = 'returning';
-
-  const typeConfig: Record<CustomerType, { label: string; color: string; bg: string }> = {
-    new:       { label: 'Yeni',       color: 'text-blue-700',    bg: 'bg-blue-50 border-blue-200' },
-    returning: { label: 'Tekrar',     color: 'text-emerald-700', bg: 'bg-emerald-50 border-emerald-200' },
-    vip:       { label: 'VIP',        color: 'text-purple-700',  bg: 'bg-purple-50 border-purple-200' },
-    dormant:   { label: 'Uzak',       color: 'text-gray-600',    bg: 'bg-gray-50 border-gray-200' },
-    risk:      { label: 'Dikkat',     color: 'text-red-700',     bg: 'bg-red-50 border-red-200' },
+  // ── Multi-signal model (bağımsız, override yok) ─────────────────────
+  // Her sinyal bağımsız boolean — aynı müşteri VIP + Dormant + Risk olabilir.
+  // Thresholds açık, deterministic, kodda okunur.
+  const signals = {
+    isNew:       visitCount === 0,                                              // Henüz tamamlanan randevusu yok
+    isReturning: visitCount >= 1 && visitCount < 5,                             // 1-4 tamamlanan ziyaret
+    isVip:       visitCount >= 5,                                               // 5+ tamamlanan ziyaret
+    isDormant:   daysSinceLastVisit !== null && daysSinceLastVisit > 90,         // 90+ gün gelmedi
+    isRisk:      noShowCount >= 2 || (totalAppts >= 4 && noShowRate > 0.3),     // 2+ no-show VEYA %30+ no-show oranı
+    hasUpcoming: upcoming.length > 0,                                           // Yaklaşan randevusu var
   };
+
+  // Badge config — multi-badge, en fazla 3 gösterilir
+  const badgeConfig = [
+    { key: 'isVip',       show: signals.isVip,       label: 'VIP',        color: 'text-purple-700',  bg: 'bg-purple-50 border-purple-200' },
+    { key: 'isRisk',      show: signals.isRisk,      label: 'Dikkat',     color: 'text-red-700',     bg: 'bg-red-50 border-red-200' },
+    { key: 'isDormant',   show: signals.isDormant,    label: 'Uzak',       color: 'text-gray-600',    bg: 'bg-gray-50 border-gray-200' },
+    { key: 'isReturning', show: signals.isReturning,  label: 'Tekrar',     color: 'text-emerald-700', bg: 'bg-emerald-50 border-emerald-200' },
+    { key: 'isNew',       show: signals.isNew,        label: 'Yeni',       color: 'text-blue-700',    bg: 'bg-blue-50 border-blue-200' },
+    { key: 'hasUpcoming', show: signals.hasUpcoming,   label: 'Randevulu',  color: 'text-indigo-700',  bg: 'bg-indigo-50 border-indigo-200' },
+  ].filter((b) => b.show).slice(0, 3);
+
+  // ── Summary sentence — sinyallere dayalı, bağlamsal ───────────────
+  const summaryParts: string[] = [];
+  if (signals.isVip && signals.isDormant) {
+    summaryParts.push(`Değerli müşteri (${visitCount} ziyaret), ancak ${daysSinceLastVisit} gündür gelmedi.`);
+  } else if (signals.isVip) {
+    summaryParts.push(`Düzenli ve değerli müşteri — ${visitCount} tamamlanan ziyaret.`);
+  } else if (signals.isDormant) {
+    summaryParts.push(`${daysSinceLastVisit} gündür gelmedi.`);
+  } else if (signals.isNew) {
+    summaryParts.push('Yeni müşteri, henüz tamamlanan randevusu yok.');
+  } else if (signals.isReturning) {
+    summaryParts.push(`${visitCount} ziyaret tamamladı${daysSinceLastVisit !== null ? `, son ziyaret ${daysSinceLastVisit} gün önce` : ''}.`);
+  }
+  if (signals.isRisk) {
+    summaryParts.push(`${noShowCount} kez gelmedi — dikkat gerektiriyor.`);
+  }
+  if (signals.hasUpcoming) {
+    summaryParts.push('Yaklaşan randevusu var.');
+  }
+  const summaryLine = summaryParts.join(' ');
 
   // Favori hizmet
   const svcCounts: Record<string, { name: string; count: number }> = {};
@@ -349,14 +375,50 @@ function CustomerProfile({ customer: c, appointments: appts }: { customer: Custo
   }
   const topStaff = Object.values(staffCounts).sort((a, b) => b.count - a.count)[0] ?? null;
 
-  // Next best action — deterministic heuristic
-  let nextAction: { label: string; href: string; icon: typeof CalendarPlus } | null = null;
-  if (upcoming.length === 0 && customerType === 'dormant') {
-    nextAction = { label: 'Tekrar randevu oluştur', href: '/calendar', icon: CalendarPlus };
-  } else if (upcoming.length === 0 && visitCount > 0) {
-    nextAction = { label: 'Sonraki randevuyu planla', href: '/calendar', icon: CalendarPlus };
-  } else if (visitCount === 0) {
-    nextAction = { label: 'İlk randevuyu oluştur', href: '/calendar', icon: CalendarPlus };
+  // ── Next best action — bağlamsal, nedenli ──────────────────────────
+  let nextAction: { label: string; reason: string; href: string; icon: typeof CalendarPlus } | null = null;
+  if (signals.hasUpcoming) {
+    nextAction = {
+      label: 'Yaklaşan randevuyu görüntüle',
+      reason: `${fmtDate(upcoming[0].startTime)} tarihli randevusu var.`,
+      href: `/calendar?date=${upcoming[0].startTime.split('T')[0]}`,
+      icon: Calendar,
+    };
+  } else if (signals.isDormant && topService) {
+    nextAction = {
+      label: `${topService.name} için tekrar randevu oluştur`,
+      reason: `Son ziyareti ${daysSinceLastVisit} gün önce — en sık aldığı hizmet.`,
+      href: '/calendar',
+      icon: CalendarPlus,
+    };
+  } else if (signals.isDormant) {
+    nextAction = {
+      label: 'Tekrar randevu oluştur',
+      reason: `${daysSinceLastVisit} gündür gelmedi — tekrar kazanma zamanı.`,
+      href: '/calendar',
+      icon: CalendarPlus,
+    };
+  } else if (signals.isReturning && topService) {
+    nextAction = {
+      label: `Sonraki ${topService.name} randevusunu planla`,
+      reason: `${topService.count} kez bu hizmeti aldı.`,
+      href: '/calendar',
+      icon: CalendarPlus,
+    };
+  } else if (signals.isNew) {
+    nextAction = {
+      label: 'İlk randevuyu oluştur',
+      reason: 'Henüz tamamlanan randevusu yok.',
+      href: '/calendar',
+      icon: CalendarPlus,
+    };
+  } else if (visitCount > 0) {
+    nextAction = {
+      label: 'Sonraki randevuyu planla',
+      reason: `${visitCount} ziyaret tamamladı — devam ettirin.`,
+      href: '/calendar',
+      icon: CalendarPlus,
+    };
   }
 
   // Copy helper
@@ -374,11 +436,13 @@ function CustomerProfile({ customer: c, appointments: appts }: { customer: Custo
             <span className="text-lg font-bold text-primary">{c.firstName[0]}{c.lastName[0]}</span>
           </div>
           <div>
-            <SheetTitle className="text-left flex items-center gap-2">
+            <SheetTitle className="text-left flex items-center gap-1.5 flex-wrap">
               {c.firstName} {c.lastName}
-              <span className={`text-[10px] px-1.5 py-0.5 rounded-full border font-medium ${typeConfig[customerType].bg} ${typeConfig[customerType].color}`}>
-                {typeConfig[customerType].label}
-              </span>
+              {badgeConfig.map((b) => (
+                <span key={b.key} className={`text-[10px] px-1.5 py-0.5 rounded-full border font-medium ${b.bg} ${b.color}`}>
+                  {b.label}
+                </span>
+              ))}
             </SheetTitle>
             <SheetDescription className="text-left">
               Müşteri #{c.id.slice(0, 8)} • Kayıt: {fmtDate(c.createdAt)}
@@ -388,6 +452,11 @@ function CustomerProfile({ customer: c, appointments: appts }: { customer: Custo
       </SheetHeader>
 
       <div className="mt-5 space-y-5">
+
+        {/* ── Summary sentence ──────────────────────────────────────────── */}
+        {summaryLine && (
+          <p className="text-xs text-muted-foreground leading-relaxed italic">{summaryLine}</p>
+        )}
 
         {/* ── Attention Flags ───────────────────────────────────────────── */}
         {missingPrice.length > 0 && (
@@ -509,10 +578,13 @@ function CustomerProfile({ customer: c, appointments: appts }: { customer: Custo
         {/* ── Next Best Action ──────────────────────────────────────────── */}
         {nextAction && (
           <Link href={nextAction.href}>
-            <div className="flex items-center gap-3 bg-primary/5 border border-primary/10 rounded-lg px-3 py-2.5 hover:bg-primary/10 transition-colors cursor-pointer">
-              <nextAction.icon className="h-4 w-4 text-primary shrink-0" />
-              <span className="text-xs font-medium text-primary">{nextAction.label}</span>
-              <ChevronRight className="h-3.5 w-3.5 text-primary/50 ml-auto" />
+            <div className="bg-primary/5 border border-primary/10 rounded-lg px-3 py-2.5 hover:bg-primary/10 transition-colors cursor-pointer">
+              <div className="flex items-center gap-2">
+                <nextAction.icon className="h-4 w-4 text-primary shrink-0" />
+                <span className="text-xs font-medium text-primary flex-1">{nextAction.label}</span>
+                <ChevronRight className="h-3.5 w-3.5 text-primary/50" />
+              </div>
+              <p className="text-[10px] text-muted-foreground mt-1 ml-6">{nextAction.reason}</p>
             </div>
           </Link>
         )}
