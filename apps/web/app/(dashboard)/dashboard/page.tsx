@@ -64,23 +64,21 @@ export default function DashboardPage() {
 
   const now = useMemo(() => new Date(), []);
 
-  // ── Priority Engine v2 — hierarchical gate model ──────────────────────
+  // ── Priority Engine v3 — depth-aware, value-limited ────────────────────
   //
-  // NOT linear score. Urgency is the primary GATE.
-  // Value/risk are MODIFIERS within the same urgency tier.
-  //
-  // Gate 1: Suppress (hasUpcoming, isNew, onTrack)
-  // Gate 2: Urgency tier (critical > overdue > slightOverdue > dormant > dueSoon)
-  // Modifier: value (VIP/returning), risk (noShow), confidence (low penalty)
-  //
-  // Priority levels: Kritik / Yüksek / Takip Et
-  // "Düşük" = not shown (excluded from list)
+  // v3 changes from v2:
+  //   1. sortKey = tierBase + min(overdueDays, 30) → depth ordering within tier
+  //   2. VIP no longer promotes level (overdue+VIP stays 'high', not 'critical')
+  //      VIP adds +3 within-tier boost only
+  //   3. dormant uses daysSince as unified depth metric
+  //   4. action labels include topService when available
+  //   5. reason is hierarchical: urgency first, context second
   //
   type PriorityLevel = 'critical' | 'high' | 'follow';
   interface PriorityCustomer {
     id: string;
     name: string;
-    sortKey: number; // internal sort, not shown
+    sortKey: number;
     level: PriorityLevel;
     reason: string;
     actionLabel: string;
@@ -100,6 +98,7 @@ export default function DashboardPage() {
 
     const nowMs = now.getTime();
     const DAY = 1000 * 60 * 60 * 24;
+    const DEPTH_CAP = 30; // max overdueDays contribution to sortKey
     const ranked: PriorityCustomer[] = [];
 
     for (const c of customers) {
@@ -110,20 +109,25 @@ export default function DashboardPage() {
       const hasUpcoming = appts.some((a) => new Date(a.startTime).getTime() >= nowMs && a.status !== 'CANCELLED' && a.status !== 'NO_SHOW');
 
       // ── Gate 1: Hard suppress ──────────────────────────────────────
-      if (hasUpcoming) continue;  // Already managed
-      if (visitCount === 0) continue;  // No history
+      if (hasUpcoming) continue;
+      if (visitCount === 0) continue;
 
       const isVip = visitCount >= 5;
       const isRisk = noShowCount >= 2;
       const lastVisitMs = Math.max(...completed.map((a) => new Date(a.startTime).getTime()));
       const daysSince = Math.floor((nowMs - lastVisitMs) / DAY);
 
+      // Top service (for contextual action)
+      const svcMap: Record<string, { n: string; c: number }> = {};
+      for (const a of completed) { const s = a.service?.name; if (s) { if (!svcMap[s]) svcMap[s] = { n: s, c: 0 }; svcMap[s].c++; } }
+      const topSvc = Object.values(svcMap).sort((a, b) => b.c - a.c)[0]?.n ?? null;
+
       // Cycle (median, variance-aware confidence)
       let cycleDays: number | null = null;
       let confidence: 'low' | 'medium' | 'high' = 'low';
       let overdueDays = 0;
-      type UrgencyTier = 'critical' | 'overdue' | 'slight' | 'dormant' | 'dueSoon' | 'none';
-      let urgency: UrgencyTier = 'none';
+      type UT = 'critical' | 'overdue' | 'slight' | 'dormant' | 'dueSoon' | 'none';
+      let urgency: UT = 'none';
 
       if (visitCount >= 2) {
         const sorted = completed.map((a) => new Date(a.startTime).getTime()).sort((a, b) => a - b);
@@ -142,7 +146,7 @@ export default function DashboardPage() {
       // ── Gate 2: Urgency tier ───────────────────────────────────────
       if (cycleDays && cycleDays > 0) {
         const ratio = daysSince / cycleDays;
-        overdueDays = daysSince - cycleDays;
+        overdueDays = Math.max(daysSince - cycleDays, 0);
         if      (ratio >= 1.8 && overdueDays >= 14) urgency = 'critical';
         else if (ratio >= 1.3 && overdueDays >= 7)  urgency = 'overdue';
         else if (ratio >= 1.0 && overdueDays >= 3)  urgency = 'slight';
@@ -150,53 +154,58 @@ export default function DashboardPage() {
         else                                        urgency = 'none';
       } else if (daysSince > 90) {
         urgency = 'dormant';
-        overdueDays = daysSince - 90;
+        overdueDays = daysSince; // unified depth: total absence days
       } else if (daysSince > 60) {
-        urgency = 'dueSoon'; // approaching dormant
+        urgency = 'dueSoon';
       }
 
-      // ── Gate 3: Must be actionable to enter list ───────────────────
-      // none/onTrack → excluded
+      // ── Gate 3: Actionability ──────────────────────────────────────
       if (urgency === 'none') continue;
-      // dueSoon → only if VIP or risk (otherwise not actionable enough)
       if (urgency === 'dueSoon' && !isVip && !isRisk) continue;
 
-      // ── Hierarchical priority (urgency gates, value/risk modify) ───
-      // Base level from urgency tier
+      // ── Level + depth-aware sortKey ────────────────────────────────
+      //
+      // Level: urgency tier directly → NO VIP level promotion
+      //   critical → Kritik
+      //   overdue  → Yüksek
+      //   slight   → Takip
+      //   dormant  → Yüksek (long absence = serious)
+      //   dueSoon  → Takip
+      //
+      // sortKey = tierBase + min(overdueDays, DEPTH_CAP) + small modifiers
+      //   VIP adds +3 (boost, not override)
+      //   risk adds +2
+      //   low confidence subtracts -5
+      //
       let level: PriorityLevel;
-      let sortKey: number;
+      let tierBase: number;
 
       if (urgency === 'critical') {
-        level = 'critical';
-        sortKey = 100;
+        level = 'critical'; tierBase = 200;
       } else if (urgency === 'overdue') {
-        level = isVip ? 'critical' : 'high';  // VIP overdue → critical
-        sortKey = isVip ? 90 : 70;
-      } else if (urgency === 'slight') {
-        level = isVip ? 'high' : 'follow';
-        sortKey = isVip ? 60 : 40;
+        level = 'high'; tierBase = 140;
       } else if (urgency === 'dormant') {
-        level = isVip ? 'high' : 'follow';
-        sortKey = isVip ? 55 : 35;
-      } else { // dueSoon (only VIP/risk reach here)
-        level = 'follow';
-        sortKey = 20;
-      }
-
-      // Risk boosts sort within same level
-      if (isRisk) sortKey += 5;
-      // Low confidence demotes level if not already strong
-      if (confidence === 'low' && cycleDays && level === 'high') {
-        level = 'follow';
-        sortKey -= 10;
-      }
-
-      // ── Reason — decision-oriented ─────────────────────────────────
-      const parts: string[] = [];
-      if (urgency === 'critical' || urgency === 'overdue') {
-        parts.push(cycleDays ? `+${overdueDays} gün gecikmiş` : `${daysSince} gündür gelmedi`);
+        level = 'high'; tierBase = 120;
       } else if (urgency === 'slight') {
-        parts.push('ritmini kaçırıyor');
+        level = 'follow'; tierBase = 80;
+      } else {
+        level = 'follow'; tierBase = 40;
+      }
+
+      const depthBonus = Math.min(overdueDays, DEPTH_CAP);
+      let sortKey = tierBase + depthBonus;
+      if (isVip) sortKey += 3;     // small boost, never crosses tier boundary
+      if (isRisk) sortKey += 2;
+      if (confidence === 'low' && cycleDays) sortKey -= 5;
+
+      // ── Reason — hierarchical: urgency → context ──────────────────
+      const parts: string[] = [];
+      if (urgency === 'critical') {
+        parts.push(`+${overdueDays} gün gecikmiş`);
+      } else if (urgency === 'overdue') {
+        parts.push(`+${overdueDays} gün gecikmiş`);
+      } else if (urgency === 'slight') {
+        parts.push(`ritmini ${overdueDays} gün geçti`);
       } else if (urgency === 'dormant') {
         parts.push(`${daysSince} gündür gelmedi`);
       } else {
@@ -205,13 +214,19 @@ export default function DashboardPage() {
       if (isVip) parts.push('değerli müşteri');
       if (isRisk) parts.push('dikkat gerekli');
       if (confidence === 'low' && cycleDays) parts.push('sınırlı veri');
+      if (topSvc && (urgency === 'critical' || urgency === 'overdue')) {
+        parts.push(`${topSvc} için`);
+      }
 
-      // ── Action label ───────────────────────────────────────────────
-      const actionLabel = level === 'critical'
-        ? 'Hemen planla'
-        : level === 'high'
-        ? 'Randevu oluştur'
-        : 'Takip et';
+      // ── Action — tier + context aware ──────────────────────────────
+      let actionLabel: string;
+      if (urgency === 'critical') {
+        actionLabel = topSvc ? `${topSvc} planla` : 'Hemen planla';
+      } else if (urgency === 'overdue' || urgency === 'dormant') {
+        actionLabel = 'Randevu oluştur';
+      } else {
+        actionLabel = 'Takip et';
+      }
 
       ranked.push({
         id: c.id,
