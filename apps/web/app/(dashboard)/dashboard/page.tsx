@@ -64,22 +64,31 @@ export default function DashboardPage() {
 
   const now = useMemo(() => new Date(), []);
 
-  // ── Priority Engine v3 — depth-aware, value-limited ────────────────────
+  // ── Impact Engine v1 — urgency × value, impact-first ───────────────────
   //
-  // v3 changes from v2:
-  //   1. sortKey = tierBase + min(overdueDays, 30) → depth ordering within tier
-  //   2. VIP no longer promotes level (overdue+VIP stays 'high', not 'critical')
-  //      VIP adds +3 within-tier boost only
-  //   3. dormant uses daysSince as unified depth metric
-  //   4. action labels include topService when available
-  //   5. reason is hierarchical: urgency first, context second
+  // Impact = urgency tier × value tier (matrix, not linear sum)
   //
-  type PriorityLevel = 'critical' | 'high' | 'follow';
+  // Urgency tiers (gate): critical > overdue > dormant > slight > dueSoon > none
+  // Value tiers (modifier): vip(5+) > returning(3+) > basic(1+)
+  //
+  // Impact matrix:
+  //   urgency\value │ VIP(5+)    │ Returning(3+) │ Basic(1+)
+  //   ──────────────┼────────────┼───────────────┼──────────
+  //   critical      │ Çok Kritik │ Çok Kritik    │ Kritik
+  //   overdue       │ Çok Kritik │ Kritik        │ Kritik
+  //   dormant       │ Kritik     │ Kritik        │ İzlenmeli
+  //   slight        │ Kritik     │ İzlenmeli     │ İzlenmeli
+  //   dueSoon       │ İzlenmeli  │ (excluded)    │ (excluded)
+  //
+  // Within same impact level: sorted by overdueDays depth
+  // Modifiers: risk +2 sortKey, low confidence -3 sortKey
+  //
+  type ImpactLevel = 'veryHigh' | 'high' | 'monitor';
   interface PriorityCustomer {
     id: string;
     name: string;
     sortKey: number;
-    level: PriorityLevel;
+    level: ImpactLevel;
     reason: string;
     actionLabel: string;
     actionHref: string;
@@ -163,69 +172,82 @@ export default function DashboardPage() {
       if (urgency === 'none') continue;
       if (urgency === 'dueSoon' && !isVip && !isRisk) continue;
 
-      // ── Level + depth-aware sortKey ────────────────────────────────
+      // ── Impact matrix: urgency × value → impact level ─────────────
       //
-      // Level: urgency tier directly → NO VIP level promotion
-      //   critical → Kritik
-      //   overdue  → Yüksek
-      //   slight   → Takip
-      //   dormant  → Yüksek (long absence = serious)
-      //   dueSoon  → Takip
-      //
-      // sortKey = tierBase + min(overdueDays, DEPTH_CAP) + small modifiers
-      //   VIP adds +3 (boost, not override)
-      //   risk adds +2
-      //   low confidence subtracts -5
-      //
-      let level: PriorityLevel;
+      // Value tier (safe, visit-count based — no approximate revenue)
+      const valueTier: 'vip' | 'returning' | 'basic' =
+        isVip ? 'vip' : visitCount >= 3 ? 'returning' : 'basic';
+
+      // Impact level from matrix (urgency × value)
+      let level: ImpactLevel;
       let tierBase: number;
 
       if (urgency === 'critical') {
-        level = 'critical'; tierBase = 200;
+        // critical urgency: VIP/returning → veryHigh, basic → high
+        level = valueTier !== 'basic' ? 'veryHigh' : 'high';
+        tierBase = level === 'veryHigh' ? 300 : 250;
       } else if (urgency === 'overdue') {
-        level = 'high'; tierBase = 140;
+        // overdue: VIP → veryHigh, returning → high, basic → high
+        level = valueTier === 'vip' ? 'veryHigh' : 'high';
+        tierBase = level === 'veryHigh' ? 240 : 180;
       } else if (urgency === 'dormant') {
-        level = 'high'; tierBase = 120;
+        // dormant: VIP/returning → high, basic → monitor
+        level = valueTier !== 'basic' ? 'high' : 'monitor';
+        tierBase = level === 'high' ? 160 : 100;
       } else if (urgency === 'slight') {
-        level = 'follow'; tierBase = 80;
+        // slight: VIP → high, returning/basic → monitor
+        level = valueTier === 'vip' ? 'high' : 'monitor';
+        tierBase = level === 'high' ? 120 : 70;
       } else {
-        level = 'follow'; tierBase = 40;
+        // dueSoon (only VIP/risk reach here)
+        level = 'monitor';
+        tierBase = 40;
       }
 
+      // Within same impact level: depth ordering + small modifiers
       const depthBonus = Math.min(overdueDays, DEPTH_CAP);
       let sortKey = tierBase + depthBonus;
-      if (isVip) sortKey += 3;     // small boost, never crosses tier boundary
       if (isRisk) sortKey += 2;
-      if (confidence === 'low' && cycleDays) sortKey -= 5;
+      if (confidence === 'low' && cycleDays) sortKey -= 3;
 
-      // ── Reason — hierarchical: urgency → context ──────────────────
+      // ── Reason — impact-first: why this matters → urgency context ──
       const parts: string[] = [];
-      if (urgency === 'critical') {
-        parts.push(`+${overdueDays} gün gecikmiş`);
-      } else if (urgency === 'overdue') {
-        parts.push(`+${overdueDays} gün gecikmiş`);
-      } else if (urgency === 'slight') {
-        parts.push(`ritmini ${overdueDays} gün geçti`);
+
+      // Impact significance
+      if (level === 'veryHigh' && isVip) {
+        parts.push('değerli müşteri kaybediliyor');
+      } else if (level === 'veryHigh') {
+        parts.push('düzenli müşteri ciddi gecikmiş');
+      } else if (level === 'high' && urgency === 'dormant') {
+        parts.push('uzun süredir görünmüyor');
+      } else if (level === 'high') {
+        parts.push('tekrar zamanını geçti');
+      } else {
+        parts.push('takip edilmeli');
+      }
+
+      // Urgency context
+      if (urgency === 'critical' || urgency === 'overdue') {
+        parts.push(`+${overdueDays} gün`);
       } else if (urgency === 'dormant') {
         parts.push(`${daysSince} gündür gelmedi`);
-      } else {
-        parts.push('tekrar zamanı yaklaşıyor');
-      }
-      if (isVip) parts.push('değerli müşteri');
-      if (isRisk) parts.push('dikkat gerekli');
-      if (confidence === 'low' && cycleDays) parts.push('sınırlı veri');
-      if (topSvc && (urgency === 'critical' || urgency === 'overdue')) {
-        parts.push(`${topSvc} için`);
+      } else if (urgency === 'slight') {
+        parts.push(`${overdueDays} gün geçti`);
       }
 
-      // ── Action — tier + context aware ──────────────────────────────
+      // Additional context
+      if (isRisk) parts.push('dikkat gerekli');
+      if (confidence === 'low' && cycleDays) parts.push('sınırlı veri');
+      if (topSvc && level === 'veryHigh') parts.push(topSvc);
+
+      // ── Action — impact-aware ──────────────────────────────────────
       let actionLabel: string;
-      if (urgency === 'critical') {
+      if (level === 'veryHigh') {
         actionLabel = topSvc ? `${topSvc} planla` : 'Hemen planla';
-      } else if (urgency === 'overdue' || urgency === 'dormant') {
+      } else if (level === 'high') {
         actionLabel = 'Randevu oluştur';
       } else {
-        actionLabel = 'Takip et';
+        actionLabel = 'İncele';
       }
 
       ranked.push({
@@ -381,7 +403,7 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-semibold flex items-center gap-1.5">
               <Users className="h-4 w-4 text-primary" />
-              Öncelikli Müşteriler
+              Dikkat Gereken Müşteriler
             </h2>
             <Link href="/customers" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
               Tümü →
@@ -398,11 +420,11 @@ export default function DashboardPage() {
                     <div className="flex items-center gap-1.5">
                       <span className="text-xs font-medium truncate">{pc.name}</span>
                       <span className={`text-[9px] px-1 py-0 rounded-full border font-medium shrink-0 ${
-                        pc.level === 'critical' ? 'bg-red-50 border-red-200 text-red-700' :
+                        pc.level === 'veryHigh' ? 'bg-red-50 border-red-200 text-red-700' :
                         pc.level === 'high'     ? 'bg-orange-50 border-orange-200 text-orange-700' :
                                                   'bg-blue-50 border-blue-200 text-blue-600'
                       }`}>
-                        {pc.level === 'critical' ? 'Kritik' : pc.level === 'high' ? 'Yüksek' : 'Takip'}
+                        {pc.level === 'veryHigh' ? 'Çok Kritik' : pc.level === 'high' ? 'Kritik' : 'İzle'}
                       </span>
                     </div>
                     <p className="text-[10px] text-muted-foreground truncate mt-0.5">{pc.reason}</p>
