@@ -38,6 +38,8 @@ export interface RecordLedgerInput {
   currency?:      string;                               // Varsayılan: TRY
   description?:   string;
   reference?:     string;
+  /** Structured breakdown — checkout item details, gross/deposit/collected summary */
+  details?:       Record<string, unknown>;
 }
 
 // ── Servis ───────────────────────────────────────────────────────────────────
@@ -68,17 +70,20 @@ export class LedgerService {
     const db: Prisma.TransactionClient =
       tx ?? (this.prisma as unknown as Prisma.TransactionClient);
 
-    return db.transactionLedger.create({
-      data: {
-        tenantId:      input.tenantId,
-        appointmentId: input.appointmentId ?? null,
-        type:          input.type,
-        amount:        new Prisma.Decimal(String(input.amount)),
-        currency:      input.currency  ?? 'TRY',
-        description:   input.description ?? null,
-        reference:     input.reference   ?? null,
-      },
-    });
+    const createData: Prisma.TransactionLedgerUncheckedCreateInput = {
+      tenantId:      input.tenantId,
+      appointmentId: input.appointmentId ?? null,
+      type:          input.type,
+      amount:        new Prisma.Decimal(String(input.amount)),
+      currency:      input.currency  ?? 'TRY',
+      description:   input.description ?? null,
+      reference:     input.reference   ?? null,
+    };
+    if (input.details) {
+      createData.details = input.details as Prisma.InputJsonValue;
+    }
+
+    return db.transactionLedger.create({ data: createData });
   }
 
   // ── read (salt okunur) ────────────────────────────────────────────────────

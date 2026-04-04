@@ -801,17 +801,20 @@ export default function CalendarPage() {
                               disabled={checkoutAppointment.isPending}
                               onClick={async () => {
                                 try {
-                                  // Build notes with item breakdown for ledger trace
-                                  const breakdown = [
-                                    `${detailApt.service?.name ?? 'Hizmet'}: ${checkoutServicePrice}₺`,
-                                    ...extraItems.map(i => `${i.name}: ${i.price}₺`),
-                                  ].join(' | ');
+                                  // Build structured line items for ledger details
+                                  const allItems = [
+                                    { type: 'service', label: detailApt.service?.name ?? 'Hizmet', amount: checkoutServicePrice },
+                                    ...extraItems.map(i => ({ type: 'extra' as const, label: i.name, amount: i.price })),
+                                  ];
+                                  // Human-readable notes (secondary, for description field)
+                                  const breakdown = allItems.map(i => `${i.label}: ${i.amount}₺`).join(' | ');
                                   const updated = await checkoutAppointment.mutateAsync({
                                     appointmentId: detailApt.id,
                                     amount: checkoutRemaining,
                                     paymentMethod: checkoutMethod,
                                     ...(checkoutRef ? { reference: checkoutRef } : {}),
                                     notes: extraItems.length > 0 ? breakdown : undefined,
+                                    lineItems: allItems,
                                   });
                                   setDetailApt({ ...detailApt, status: updated.status, totalPrice: updated.totalPrice, updatedAt: updated.updatedAt });
                                   setCheckoutOpen(false);

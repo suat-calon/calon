@@ -707,6 +707,7 @@ model TransactionLedger {
   currency      String          @default("TRY")
   description   String?
   reference     String? // Harici ödeme referansı
+  details       Json?   // Structured breakdown (checkout items, gross/deposit/collected)
   processedAt   DateTime        @default(now())
 
   // KVKK: Finansal veriler 10 yıl saklanır, kişisel veriler anonimleştirilir

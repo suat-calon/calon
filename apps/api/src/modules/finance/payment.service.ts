@@ -181,14 +181,29 @@ export class PaymentService {
       }
 
       // ── 3. Ledger'a ödeme kaydı — Append-Only, geri alınamaz ────────────
+      // Structured details: checkout line item breakdown (varsa)
+      const details: Record<string, unknown> | undefined = dto.lineItems?.length
+        ? {
+            items: dto.lineItems.map((li) => ({
+              type:   li.type,
+              label:  li.label,
+              amount: li.amount,
+            })),
+            collectedNow:  dto.amount,
+            depositPaid:   appt.depositPaid ? Number(appt.depositPaid) : 0,
+            grossTotal:    dto.lineItems.reduce((s, li) => s + li.amount, 0),
+          }
+        : undefined;
+
       const ledgerEntry = await this.ledger.record(
         {
           tenantId,
           appointmentId,
-          type:        dto.paymentMethod,   // PAYMENT_CASH | PAYMENT_CARD | PAYMENT_ONLINE
+          type:        dto.paymentMethod,
           amount:      dto.amount,
           description: dto.notes ?? `Hesap kapatma — Randevu: ${appointmentId}`,
           reference:   dto.reference,
+          details,
         },
       );
 

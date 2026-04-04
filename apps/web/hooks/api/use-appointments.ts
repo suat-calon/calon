@@ -191,30 +191,38 @@ export function useUpdateAppointmentStatus() {
 
 export type CheckoutPaymentMethod = 'PAYMENT_CASH' | 'PAYMENT_CARD' | 'PAYMENT_ONLINE';
 
+export interface CheckoutLineItem {
+  type:   string; // 'service' | 'extra'
+  label:  string;
+  amount: number;
+}
+
 export interface CheckoutPayload {
   appointmentId:  string;
   amount:         number;
   paymentMethod:  CheckoutPaymentMethod;
   reference?:     string;
   notes?:         string;
+  lineItems?:     CheckoutLineItem[];
 }
 
 /**
  * Randevu tahsilat kapanışı — POST /payments/:appointmentId/checkout
  * IN_SERVICE statüsünden COMPLETED'a geçirir + TransactionLedger kaydı yazar.
- * Backend: amount server-side doğrulanır, paymentMethod ledger'a yazılır.
+ * lineItems varsa ledger.details JSONB olarak structured breakdown saklanır.
  */
 export function useCheckoutAppointment() {
   const qc = useQueryClient();
 
   return useMutation<Appointment, Error, CheckoutPayload>({
-    mutationFn: ({ appointmentId, amount, paymentMethod, reference, notes }) =>
+    mutationFn: ({ appointmentId, amount, paymentMethod, reference, notes, lineItems }) =>
       apiClient
         .post<Appointment>(`/payments/${appointmentId}/checkout`, {
           amount,
           paymentMethod,
           ...(reference ? { reference } : {}),
           ...(notes ? { notes } : {}),
+          ...(lineItems && lineItems.length > 0 ? { lineItems } : {}),
         })
         .then((r) => r.data),
     onSuccess: () => {

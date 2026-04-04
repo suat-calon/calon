@@ -1,13 +1,16 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { TransactionType }                  from '@prisma/client';
 import {
+  IsArray,
   IsEnum,
   IsNumber,
   IsOptional,
   IsString,
   MaxLength,
   Min,
+  ValidateNested,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 
 /**
  * Hesap kapama işleminde kabul edilen ödeme yöntemleri.
@@ -66,4 +69,33 @@ export class CheckoutDto {
   @MaxLength(500)
   @IsOptional()
   notes?: string;
+
+  /**
+   * Structured checkout breakdown — hizmet + ek kalem detayları.
+   * Ledger'a details JSONB olarak kaydedilir.
+   * Opsiyonel: yoksa yalnız flat amount saklanır (geriye uyumlu).
+   */
+  @ApiPropertyOptional({
+    description: 'Ödeme kalemleri (hizmet + extras)',
+    type: 'array',
+    items: { type: 'object' },
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CheckoutLineItemDto)
+  @IsOptional()
+  lineItems?: CheckoutLineItemDto[];
+}
+
+/** Tek checkout kalemi — hizmet, ürün veya manuel ek */
+export class CheckoutLineItemDto {
+  @IsString()
+  type!: string; // 'service' | 'extra'
+
+  @IsString()
+  label!: string;
+
+  @IsNumber()
+  @Min(0)
+  amount!: number;
 }
