@@ -324,13 +324,29 @@ function CustomerProfile({ customer: c, appointments: appts }: { customer: Custo
     hasUpcoming: upcoming.length > 0,                                           // Yaklaşan randevusu var
   };
 
-  // ── Cycle intelligence — müşteri dönüş ritmi ──────────────────────
-  // Completed visit tarihlerinden aralıkları hesapla → tipik döngü üret.
-  // Minimum 2 completed visit gerekli (1 interval).
-  // 2-3 visit: median, 4+: mean — küçük veri setinde outlier direnci.
-  type CycleStatus = 'onTrack' | 'dueSoon' | 'overdue' | 'insufficient';
+  // ── Cycle intelligence v2 — confidence + urgency ───────────────────
+  //
+  // Formula: ALWAYS median (outlier-resistant, stable across sample sizes)
+  //   No hybrid jump (median→mean) at 3→4 visits
+  //   Median = sorted intervals[floor(n/2)]
+  //
+  // Confidence:
+  //   low:    2 visits (1 interval) — "yaklaşık"
+  //   medium: 3-4 visits (2-3 intervals)
+  //   high:   5+ visits (4+ intervals) — "genelde"
+  //
+  // Urgency (ratio = daysSinceLastVisit / typicalCycleDays):
+  //   none:             ratio < 0.8
+  //   dueSoon:          0.8 ≤ ratio < 1.0
+  //   slightlyOverdue:  1.0 ≤ ratio < 1.3
+  //   overdue:          1.3 ≤ ratio < 1.8
+  //   critical:         ratio ≥ 1.8
+  //
+  type CycleConfidence = 'low' | 'medium' | 'high';
+  type CycleUrgency = 'none' | 'dueSoon' | 'slightlyOverdue' | 'overdue' | 'critical' | 'insufficient';
   let typicalCycleDays: number | null = null;
-  let cycleStatus: CycleStatus = 'insufficient';
+  let cycleConfidence: CycleConfidence = 'low';
+  let cycleUrgency: CycleUrgency = 'insufficient';
 
   if (visitCount >= 2) {
     const sortedDates = completedApts
@@ -343,38 +359,46 @@ function CustomerProfile({ customer: c, appointments: appts }: { customer: Custo
     }
 
     if (intervals.length > 0) {
-      if (intervals.length <= 2) {
-        // Median for small samples (outlier-resistant)
-        const sorted = [...intervals].sort((a, b) => a - b);
-        typicalCycleDays = sorted[Math.floor(sorted.length / 2)];
-      } else {
-        // Mean for larger samples
-        typicalCycleDays = Math.round(intervals.reduce((s, v) => s + v, 0) / intervals.length);
-      }
+      // Always median — stable, outlier-resistant, no hybrid jump
+      const sorted = [...intervals].sort((a, b) => a - b);
+      typicalCycleDays = sorted[Math.floor(sorted.length / 2)];
 
-      // Cycle status — müşteri kendi ritmine göre gecikmiş mi?
+      // Confidence based on interval count
+      if (intervals.length >= 4)      cycleConfidence = 'high';
+      else if (intervals.length >= 2) cycleConfidence = 'medium';
+      else                            cycleConfidence = 'low';
+
+      // Urgency based on ratio
       if (daysSinceLastVisit !== null && typicalCycleDays > 0) {
         const ratio = daysSinceLastVisit / typicalCycleDays;
-        if (ratio < 0.8)       cycleStatus = 'onTrack';   // Henüz erken
-        else if (ratio < 1.2)  cycleStatus = 'dueSoon';   // Yaklaşan zaman
-        else                   cycleStatus = 'overdue';   // Gecikmiş
+        if (ratio < 0.8)       cycleUrgency = 'none';
+        else if (ratio < 1.0)  cycleUrgency = 'dueSoon';
+        else if (ratio < 1.3)  cycleUrgency = 'slightlyOverdue';
+        else if (ratio < 1.8)  cycleUrgency = 'overdue';
+        else                   cycleUrgency = 'critical';
       }
     }
   }
 
-  // isDormant'ı cycle-aware yap: cycle varsa cycle'a göre, yoksa sabit 90 gün
+  // isDormant: cycle varsa urgency'e göre, yoksa sabit 90 gün fallback
   const effectiveDormant = typicalCycleDays !== null
-    ? cycleStatus === 'overdue'
+    ? cycleUrgency === 'overdue' || cycleUrgency === 'critical'
     : (daysSinceLastVisit !== null && daysSinceLastVisit > 90);
-
-  // Signals'deki isDormant'ı güncelle
   signals.isDormant = effectiveDormant;
 
-  // Cycle badge (overdue veya dueSoon ise ek badge)
-  const cycleBadge = cycleStatus === 'overdue'
-    ? { key: 'overdue', show: true, label: 'Gecikmiş', color: 'text-orange-700', bg: 'bg-orange-50 border-orange-200' }
-    : cycleStatus === 'dueSoon'
-    ? { key: 'dueSoon', show: true, label: 'Yakında', color: 'text-amber-700', bg: 'bg-amber-50 border-amber-200' }
+  // Confidence-aware cycle label
+  const cycleLabel = typicalCycleDays !== null
+    ? cycleConfidence === 'low'
+      ? `yaklaşık ${typicalCycleDays} gün`
+      : `${typicalCycleDays} gün`
+    : null;
+
+  // Cycle badge — urgency-based, priority ordered
+  const cycleBadge =
+    cycleUrgency === 'critical'         ? { key: 'critical',  show: true, label: 'Acil',      color: 'text-red-800',    bg: 'bg-red-100 border-red-300' }
+    : cycleUrgency === 'overdue'        ? { key: 'overdue',   show: true, label: 'Gecikmiş',  color: 'text-orange-700', bg: 'bg-orange-50 border-orange-200' }
+    : cycleUrgency === 'slightlyOverdue'? { key: 'slight',    show: true, label: 'Geçiyor',   color: 'text-amber-700',  bg: 'bg-amber-50 border-amber-200' }
+    : cycleUrgency === 'dueSoon'        ? { key: 'dueSoon',   show: true, label: 'Yakında',   color: 'text-blue-600',   bg: 'bg-blue-50 border-blue-200' }
     : null;
 
   // Badge config — multi-badge, en fazla 3 gösterilir
@@ -388,26 +412,27 @@ function CustomerProfile({ customer: c, appointments: appts }: { customer: Custo
     ...(cycleBadge ? [cycleBadge] : []),
   ].filter((b) => b.show).slice(0, 3);
 
-  // ── Summary sentence — sinyallere + cycle'a dayalı, bağlamsal ──────
+  // ── Summary sentence — confidence + urgency aware ─────────────────
   const summaryParts: string[] = [];
 
-  // Cycle-aware summary (sabit dormant yerine kişisel ritim)
-  if (typicalCycleDays !== null && cycleStatus === 'overdue' && signals.isVip) {
-    summaryParts.push(`Değerli müşteri (${visitCount} ziyaret). Genelde ${typicalCycleDays} günde bir gelir, ${daysSinceLastVisit} gündür gelmedi.`);
-  } else if (typicalCycleDays !== null && cycleStatus === 'overdue') {
-    summaryParts.push(`Genelde ${typicalCycleDays} günde bir gelir, son ziyareti ${daysSinceLastVisit} gün önce — beklenen döngüyü geçti.`);
-  } else if (typicalCycleDays !== null && cycleStatus === 'dueSoon') {
-    summaryParts.push(`Genelde ${typicalCycleDays} günde bir gelir, yakında tekrar zamanı.`);
+  if (cycleLabel && cycleUrgency === 'critical' && signals.isVip) {
+    summaryParts.push(`Değerli müşteri (${visitCount} ziyaret). ${cycleConfidence === 'low' ? 'Yaklaşık' : 'Genelde'} ${cycleLabel}de bir gelir; ${daysSinceLastVisit} gün oldu — acil tekrar zamanı.`);
+  } else if (cycleLabel && cycleUrgency === 'critical') {
+    summaryParts.push(`${cycleConfidence === 'low' ? 'Yaklaşık' : 'Genelde'} ${cycleLabel}de bir gelir; ${daysSinceLastVisit} gün oldu — ciddi gecikme.`);
+  } else if (cycleLabel && (cycleUrgency === 'overdue' || cycleUrgency === 'slightlyOverdue')) {
+    summaryParts.push(`${cycleConfidence === 'low' ? 'Yaklaşık' : 'Genelde'} ${cycleLabel}de bir gelir, ${daysSinceLastVisit} gün oldu.`);
+  } else if (cycleLabel && cycleUrgency === 'dueSoon') {
+    summaryParts.push(`${cycleConfidence === 'low' ? 'Yaklaşık' : 'Genelde'} ${cycleLabel}de bir gelir, yakında tekrar zamanı.`);
   } else if (signals.isVip && signals.isDormant) {
-    summaryParts.push(`Değerli müşteri (${visitCount} ziyaret), ancak ${daysSinceLastVisit} gündür gelmedi.`);
+    summaryParts.push(`Değerli müşteri (${visitCount} ziyaret), ${daysSinceLastVisit} gündür gelmedi.`);
   } else if (signals.isVip) {
     summaryParts.push(`Düzenli ve değerli müşteri — ${visitCount} tamamlanan ziyaret.`);
   } else if (signals.isDormant) {
     summaryParts.push(`${daysSinceLastVisit} gündür gelmedi.`);
   } else if (signals.isNew) {
     summaryParts.push('Yeni müşteri, henüz tamamlanan randevusu yok.');
-  } else if (signals.isReturning && typicalCycleDays !== null) {
-    summaryParts.push(`${visitCount} ziyaret, genelde ${typicalCycleDays} günde bir geliyor.`);
+  } else if (signals.isReturning && cycleLabel) {
+    summaryParts.push(`${visitCount} ziyaret, ${cycleConfidence === 'low' ? 'yaklaşık' : 'genelde'} ${cycleLabel}de bir geliyor.`);
   } else if (signals.isReturning) {
     summaryParts.push(`${visitCount} ziyaret tamamladı${daysSinceLastVisit !== null ? `, son ziyaret ${daysSinceLastVisit} gün önce` : ''}.`);
   }
@@ -440,8 +465,10 @@ function CustomerProfile({ customer: c, appointments: appts }: { customer: Custo
   }
   const topStaff = Object.values(staffCounts).sort((a, b) => b.count - a.count)[0] ?? null;
 
-  // ── Next best action — cycle-aware, bağlamsal, nedenli ─────────────
+  // ── Next best action — urgency + confidence aware ──────────────────
+  const confPrefix = cycleConfidence === 'low' ? 'Yaklaşık' : 'Genelde';
   let nextAction: { label: string; reason: string; href: string; icon: typeof CalendarPlus } | null = null;
+
   if (signals.hasUpcoming) {
     nextAction = {
       label: 'Yaklaşan randevuyu görüntüle',
@@ -449,38 +476,52 @@ function CustomerProfile({ customer: c, appointments: appts }: { customer: Custo
       href: `/calendar?date=${upcoming[0].startTime.split('T')[0]}`,
       icon: Calendar,
     };
-  } else if (cycleStatus === 'overdue' && topService) {
+  } else if (cycleUrgency === 'critical' && topService) {
+    nextAction = {
+      label: `${topService.name} için hemen randevu oluşturun`,
+      reason: `${confPrefix} ${cycleLabel}de bir gelir; ${daysSinceLastVisit} gün oldu — ciddi gecikme.`,
+      href: '/calendar',
+      icon: CalendarPlus,
+    };
+  } else if (cycleUrgency === 'critical') {
+    nextAction = {
+      label: 'Acil tekrar randevu oluşturun',
+      reason: `Beklenen ~${typicalCycleDays} günlük döngüyü ciddi aştı (${daysSinceLastVisit} gün).`,
+      href: '/calendar',
+      icon: CalendarPlus,
+    };
+  } else if ((cycleUrgency === 'overdue' || cycleUrgency === 'slightlyOverdue') && topService) {
     nextAction = {
       label: `${topService.name} için tekrar randevu zamanı`,
-      reason: `Genelde ${typicalCycleDays} günde bir gelir, ${daysSinceLastVisit} gün oldu — döngüsünü geçti.`,
+      reason: `${confPrefix} ${cycleLabel}de bir gelir, ${daysSinceLastVisit} gün oldu.`,
       href: '/calendar',
       icon: CalendarPlus,
     };
-  } else if (cycleStatus === 'overdue') {
+  } else if (cycleUrgency === 'overdue' || cycleUrgency === 'slightlyOverdue') {
     nextAction = {
       label: 'Tekrar randevu zamanı geldi',
-      reason: `Beklenen ${typicalCycleDays} günlük döngüyü geçti (${daysSinceLastVisit} gün).`,
+      reason: `Beklenen ~${typicalCycleDays} günlük döngüyü geçti (${daysSinceLastVisit} gün).`,
       href: '/calendar',
       icon: CalendarPlus,
     };
-  } else if (cycleStatus === 'dueSoon' && topService) {
+  } else if (cycleUrgency === 'dueSoon' && topService) {
     nextAction = {
       label: `${topService.name} randevusunu planlayın`,
-      reason: `Genelde ${typicalCycleDays} günde bir gelir — yakında tekrar zamanı.`,
+      reason: `${confPrefix} ${cycleLabel}de bir gelir — yakında tekrar zamanı.`,
       href: '/calendar',
       icon: CalendarPlus,
     };
   } else if (signals.isDormant && topService) {
     nextAction = {
       label: `${topService.name} için tekrar randevu oluştur`,
-      reason: `Son ziyareti ${daysSinceLastVisit} gün önce — en sık aldığı hizmet.`,
+      reason: `Son ziyareti ${daysSinceLastVisit} gün önce.`,
       href: '/calendar',
       icon: CalendarPlus,
     };
   } else if (signals.isDormant) {
     nextAction = {
       label: 'Tekrar randevu oluştur',
-      reason: `${daysSinceLastVisit} gündür gelmedi — tekrar kazanma zamanı.`,
+      reason: `${daysSinceLastVisit} gündür gelmedi.`,
       href: '/calendar',
       icon: CalendarPlus,
     };
@@ -494,8 +535,8 @@ function CustomerProfile({ customer: c, appointments: appts }: { customer: Custo
   } else if (visitCount > 0 && !signals.hasUpcoming) {
     nextAction = {
       label: 'Sonraki randevuyu planla',
-      reason: typicalCycleDays
-        ? `Genelde ${typicalCycleDays} günde bir geliyor — ${visitCount} ziyaret tamamladı.`
+      reason: cycleLabel
+        ? `${confPrefix} ${cycleLabel}de bir geliyor — ${visitCount} ziyaret tamamladı.`
         : `${visitCount} ziyaret tamamladı — devam ettirin.`,
       href: '/calendar',
       icon: CalendarPlus,
@@ -621,8 +662,12 @@ function CustomerProfile({ customer: c, appointments: appts }: { customer: Custo
           {typicalCycleDays !== null && (
             <div className="flex items-center gap-1.5">
               <TrendingUp className="h-3 w-3" />
-              <span>Tipik döngü: ~{typicalCycleDays} gün
-                {cycleStatus === 'overdue' ? ' ⚠ gecikmiş' : cycleStatus === 'dueSoon' ? ' ⏳ yakında' : ''}
+              <span>Döngü: {cycleLabel}
+                {cycleUrgency === 'critical' ? ' 🔴 acil' :
+                 cycleUrgency === 'overdue' ? ' ⚠ gecikmiş' :
+                 cycleUrgency === 'slightlyOverdue' ? ' ⚡ geçiyor' :
+                 cycleUrgency === 'dueSoon' ? ' ⏳ yakında' : ''}
+                {cycleConfidence === 'low' ? ' (sınırlı veri)' : ''}
               </span>
             </div>
           )}
