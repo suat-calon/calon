@@ -5,7 +5,8 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
   Search, Loader2, AlertCircle, Users, Phone, Mail, Calendar,
-  ChevronRight, Clock, Star, ExternalLink, Plus,
+  ChevronRight, Clock, Star, ExternalLink, Plus, Copy, CalendarPlus,
+  TrendingUp, AlertTriangle, FileText, Banknote,
 } from 'lucide-react';
 
 import { Badge }   from '@/components/ui/badge';
@@ -270,9 +271,35 @@ export default function CustomersPage() {
 
 function CustomerProfile({ customer: c, appointments: appts }: { customer: Customer; appointments: Appointment[] }) {
   const now = new Date();
-  const upcoming  = appts.filter((a) => new Date(a.startTime) >= now && a.status !== 'CANCELLED');
-  const past      = appts.filter((a) => new Date(a.startTime) < now || a.status === 'COMPLETED' || a.status === 'CANCELLED');
-  const completed = appts.filter((a) => a.status === 'COMPLETED').length;
+
+  // ── Derived stats ───────────────────────────────────────────────────────
+  const upcoming     = appts.filter((a) => new Date(a.startTime) >= now && a.status !== 'CANCELLED' && a.status !== 'NO_SHOW');
+  const past         = appts.filter((a) => new Date(a.startTime) < now || a.status === 'COMPLETED' || a.status === 'CANCELLED' || a.status === 'NO_SHOW');
+  const completedApts = appts.filter((a) => a.status === 'COMPLETED');
+  const visitCount   = completedApts.length;
+  const noShowCount  = appts.filter((a) => a.status === 'NO_SHOW').length;
+  const cancelCount  = appts.filter((a) => a.status === 'CANCELLED').length;
+  const totalSpend   = completedApts.reduce((sum, a) => sum + Number(a.totalPrice ?? 0), 0);
+  const lastVisit    = completedApts.length > 0
+    ? completedApts.sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime())[0]
+    : null;
+  const unpaidCompleted = completedApts.filter((a) => !a.totalPrice || Number(a.totalPrice) === 0);
+
+  // Favori hizmet
+  const svcCounts: Record<string, { name: string; count: number }> = {};
+  for (const a of completedApts) {
+    const sname = a.service?.name ?? 'Bilinmiyor';
+    if (!svcCounts[sname]) svcCounts[sname] = { name: sname, count: 0 };
+    svcCounts[sname].count++;
+  }
+  const topService = Object.values(svcCounts).sort((a, b) => b.count - a.count)[0] ?? null;
+
+  // Copy helper
+  function copyToClipboard(text: string, label: string) {
+    navigator.clipboard.writeText(text).then(() => {
+      toast({ title: 'Kopyalandı', description: `${label} panoya kopyalandı.` });
+    }).catch(() => {});
+  }
 
   return (
     <>
@@ -283,42 +310,136 @@ function CustomerProfile({ customer: c, appointments: appts }: { customer: Custo
           </div>
           <div>
             <SheetTitle className="text-left">{c.firstName} {c.lastName}</SheetTitle>
-            <SheetDescription className="text-left">Müşteri #{c.id.slice(0, 8)}</SheetDescription>
+            <SheetDescription className="text-left">
+              Müşteri #{c.id.slice(0, 8)} • Kayıt: {fmtDate(c.createdAt)}
+            </SheetDescription>
           </div>
         </div>
       </SheetHeader>
 
-      <div className="mt-6 space-y-6">
-        {/* Contact */}
+      <div className="mt-5 space-y-5">
+
+        {/* ── Attention Flags ───────────────────────────────────────────── */}
+        {unpaidCompleted.length > 0 && (
+          <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg p-2.5">
+            <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
+            <span className="text-xs text-amber-800 font-medium">
+              {unpaidCompleted.length} tamamlanmış randevuda tahsilat bekliyor
+            </span>
+          </div>
+        )}
+        {noShowCount >= 2 && (
+          <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg p-2.5">
+            <AlertCircle className="h-4 w-4 text-red-500 shrink-0" />
+            <span className="text-xs text-red-700 font-medium">
+              {noShowCount} kez gelmedi (no-show)
+            </span>
+          </div>
+        )}
+
+        {/* ── Contact + Quick Actions ───────────────────────────────────── */}
         <section className="space-y-2">
           <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">İletişim</h3>
           <div className="space-y-1.5">
-            {c.phone && <div className="flex items-center gap-2 text-sm"><Phone className="h-4 w-4 text-muted-foreground" /><span>{c.phone}</span></div>}
-            {c.email && <div className="flex items-center gap-2 text-sm"><Mail className="h-4 w-4 text-muted-foreground" /><span>{c.email}</span></div>}
+            {c.phone && (
+              <div className="flex items-center gap-2 text-sm group">
+                <Phone className="h-4 w-4 text-muted-foreground" />
+                <span className="flex-1">{c.phone}</span>
+                <button onClick={() => copyToClipboard(c.phone!, 'Telefon')} className="opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Copy className="h-3 w-3 text-muted-foreground hover:text-foreground" />
+                </button>
+              </div>
+            )}
+            {c.email && (
+              <div className="flex items-center gap-2 text-sm group">
+                <Mail className="h-4 w-4 text-muted-foreground" />
+                <span className="flex-1 truncate">{c.email}</span>
+                <button onClick={() => copyToClipboard(c.email!, 'E-posta')} className="opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Copy className="h-3 w-3 text-muted-foreground hover:text-foreground" />
+                </button>
+              </div>
+            )}
             {!c.phone && !c.email && <p className="text-sm text-muted-foreground italic">İletişim bilgisi yok</p>}
           </div>
         </section>
 
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-3">
-          <div className="bg-muted/50 rounded-lg p-3 text-center">
-            <p className="text-lg font-bold">{completed}</p>
-            <p className="text-[10px] text-muted-foreground mt-0.5">Ziyaret</p>
+        {/* ── Stats (4-grid) ───────────────────────────────────────────── */}
+        <div className="grid grid-cols-4 gap-2">
+          <div className="bg-muted/50 rounded-lg p-2.5 text-center">
+            <p className="text-lg font-bold">{visitCount}</p>
+            <p className="text-[9px] text-muted-foreground mt-0.5">Ziyaret</p>
           </div>
-          <div className="bg-muted/50 rounded-lg p-3 text-center">
+          <div className="bg-muted/50 rounded-lg p-2.5 text-center">
+            <p className="text-lg font-bold">{totalSpend > 0 ? `${totalSpend.toLocaleString('tr-TR')}` : '0'}</p>
+            <p className="text-[9px] text-muted-foreground mt-0.5">₺ Toplam</p>
+          </div>
+          <div className="bg-muted/50 rounded-lg p-2.5 text-center">
             <p className="text-lg font-bold">{c.loyaltyPoints}</p>
-            <p className="text-[10px] text-muted-foreground mt-0.5">Puan</p>
+            <p className="text-[9px] text-muted-foreground mt-0.5">Puan</p>
           </div>
-          <div className="bg-muted/50 rounded-lg p-3 text-center flex flex-col items-center justify-center">
-            <div className="flex items-center gap-1">
-              <Star className="h-3.5 w-3.5 text-amber-500" />
-              <p className="text-xs font-medium">{tierLabel[c.loyaltyTier] ?? c.loyaltyTier}</p>
+          <div className="bg-muted/50 rounded-lg p-2.5 text-center flex flex-col items-center justify-center">
+            <div className="flex items-center gap-0.5">
+              <Star className="h-3 w-3 text-amber-500" />
+              <p className="text-[10px] font-medium">{tierLabel[c.loyaltyTier] ?? c.loyaltyTier}</p>
             </div>
-            <p className="text-[10px] text-muted-foreground mt-0.5">Seviye</p>
+            <p className="text-[9px] text-muted-foreground mt-0.5">Seviye</p>
           </div>
         </div>
 
-        {/* Upcoming */}
+        {/* ── Insight Strip ────────────────────────────────────────────── */}
+        <div className="text-xs text-muted-foreground space-y-1 bg-muted/30 rounded-lg p-2.5">
+          {lastVisit && (
+            <div className="flex items-center gap-1.5">
+              <Clock className="h-3 w-3" />
+              <span>Son ziyaret: {fmtDate(lastVisit.startTime)}</span>
+            </div>
+          )}
+          {topService && (
+            <div className="flex items-center gap-1.5">
+              <TrendingUp className="h-3 w-3" />
+              <span>En çok: {topService.name} ({topService.count}×)</span>
+            </div>
+          )}
+          {cancelCount > 0 && (
+            <div className="flex items-center gap-1.5">
+              <AlertCircle className="h-3 w-3" />
+              <span>{cancelCount} iptal</span>
+            </div>
+          )}
+        </div>
+
+        {/* ── Notes ────────────────────────────────────────────────────── */}
+        {c.notes && (
+          <section className="space-y-1.5">
+            <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+              <FileText className="h-3 w-3" /> Not
+            </h3>
+            <p className="text-sm bg-amber-50/50 border border-amber-100 rounded-lg p-2.5 text-gray-700">
+              {c.notes}
+            </p>
+          </section>
+        )}
+
+        {/* ── Quick Actions ────────────────────────────────────────────── */}
+        <section className="space-y-2">
+          <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Hızlı İşlem</h3>
+          <div className="flex gap-2">
+            <Link href="/calendar" className="flex-1">
+              <Button size="sm" variant="outline" className="w-full text-xs">
+                <CalendarPlus className="mr-1 h-3 w-3" /> Randevu Oluştur
+              </Button>
+            </Link>
+            {upcoming.length > 0 && (
+              <Link href={`/calendar?date=${upcoming[0].startTime.split('T')[0]}`} className="flex-1">
+                <Button size="sm" variant="outline" className="w-full text-xs">
+                  <Calendar className="mr-1 h-3 w-3" /> Yaklaşan Randevu
+                </Button>
+              </Link>
+            )}
+          </div>
+        </section>
+
+        {/* ── Upcoming ─────────────────────────────────────────────────── */}
         <section className="space-y-2">
           <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Yaklaşan ({upcoming.length})</h3>
           {upcoming.length === 0
@@ -327,7 +448,7 @@ function CustomerProfile({ customer: c, appointments: appts }: { customer: Custo
           }
         </section>
 
-        {/* Past */}
+        {/* ── Past ─────────────────────────────────────────────────────── */}
         <section className="space-y-2">
           <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Geçmiş ({past.length})</h3>
           {past.length === 0
@@ -336,10 +457,10 @@ function CustomerProfile({ customer: c, appointments: appts }: { customer: Custo
           }
         </section>
 
-        {/* Meta */}
+        {/* ── Meta ─────────────────────────────────────────────────────── */}
         <section className="pt-2 border-t text-xs text-muted-foreground space-y-1">
-          <p>Kayıt: {fmtDate(c.createdAt)}</p>
-          {c.referralCode && <p>Referans: {c.referralCode}</p>}
+          {c.referralCode && <p>Referans kodu: {c.referralCode}</p>}
+          {c.consentGiven && <p>KVKK onayı: ✅ {c.consentDate ? fmtDate(c.consentDate ?? '') : ''}</p>}
         </section>
       </div>
     </>
@@ -347,16 +468,21 @@ function CustomerProfile({ customer: c, appointments: appts }: { customer: Custo
 }
 
 function ApptRow({ a }: { a: Appointment }) {
-  // Navigate to calendar week containing this appointment
   const apptDate = a.startTime.split('T')[0];
+  const hasPaid = a.status === 'COMPLETED' && a.totalPrice && Number(a.totalPrice) > 0;
   return (
     <Link href={`/calendar?date=${apptDate}`} className="block">
-      <div className="flex items-center gap-3 bg-white border rounded-lg px-3 py-2 hover:bg-muted/30 transition-colors cursor-pointer group">
+      <div className="flex items-center gap-2.5 bg-white border rounded-lg px-3 py-2 hover:bg-muted/30 transition-colors cursor-pointer group">
         <Clock className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
         <div className="flex-1 min-w-0">
           <p className="text-xs font-medium truncate">{a.service?.name ?? 'Hizmet'} — {a.staff?.firstName ?? ''}</p>
           <p className="text-[10px] text-muted-foreground">{fmtDateTime(a.startTime)}</p>
         </div>
+        {hasPaid && (
+          <span className="text-[9px] px-1 py-0.5 rounded bg-emerald-50 text-emerald-700 font-medium flex items-center gap-0.5">
+            <Banknote className="h-2.5 w-2.5" />{Number(a.totalPrice).toLocaleString('tr-TR')}₺
+          </span>
+        )}
         <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${statusColor[a.status] ?? 'bg-gray-100 text-gray-800'}`}>
           {statusLabel[a.status] ?? a.status}
         </span>

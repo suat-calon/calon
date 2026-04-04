@@ -17,6 +17,7 @@ export interface Customer {
   loyaltyPoints: number;
   referralCode?: string | null;
   consentGiven:  boolean;
+  consentDate?:  string | null;
   isDeleted:     boolean;
   createdAt:     string;
   updatedAt:     string;
