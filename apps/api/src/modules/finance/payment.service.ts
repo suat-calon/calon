@@ -182,11 +182,32 @@ export class PaymentService {
       }
 
       // ── 3. Ledger'a ödeme kaydı — Append-Only, geri alınamaz ────────────
-      // Structured details: build + validate (throws BadRequest on mismatch)
+      //
+      // Domain enforcement:
+      //   Service line ALWAYS comes from backend (appointment → service relation).
+      //   Frontend service items in lineItems are IGNORED — prevents price manipulation.
+      //   Frontend extra items (type='extra') are accepted as-is (validated).
+      //
       const depositPaidNum = appt.depositPaid ? Number(appt.depositPaid) : 0;
-      const details = dto.lineItems?.length
-        ? buildAndValidateBreakdown(dto.lineItems, dto.amount, depositPaidNum)
-        : undefined;
+
+      let details: ReturnType<typeof buildAndValidateBreakdown> | undefined;
+      if (dto.lineItems?.length) {
+        // Filter: keep only extras from frontend, rebuild service from backend
+        const extraItems = dto.lineItems.filter((li) => li.type === 'extra');
+
+        // Backend-authoritative service line
+        const servicePrice = appt.service
+          ? Number(appt.service.price)
+          : (appt.totalPrice ? Number(appt.totalPrice) : 0);
+        const serviceName = appt.service?.name ?? 'Hizmet';
+
+        const authorizedItems = [
+          { type: 'service' as const, label: serviceName, amount: servicePrice },
+          ...extraItems,
+        ];
+
+        details = buildAndValidateBreakdown(authorizedItems, dto.amount, depositPaidNum);
+      }
 
       const ledgerEntry = await this.ledger.record(
         {

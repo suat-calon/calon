@@ -25,10 +25,15 @@ export interface AppointmentCheckoutInput {
   totalPrice: unknown;  // Money or Decimal-compatible
 }
 
+/** Appointment with service relation for checkout domain enforcement */
+export type AppointmentWithService = Appointment & {
+  service?: { id: string; name: string; price: unknown } | null;
+};
+
 export interface IPaymentRepository {
   // ── Appointment (finance operations) ────────────────────────────────────────
 
-  findAppointmentById(id: string, tenantId: string): Promise<Appointment | null>;
+  findAppointmentById(id: string, tenantId: string): Promise<AppointmentWithService | null>;
   updateAppointmentDeposit(id: string, data: AppointmentDepositUpdateInput): Promise<Appointment>;
   checkoutAppointment(id: string, data: AppointmentCheckoutInput): Promise<Appointment>;
 }

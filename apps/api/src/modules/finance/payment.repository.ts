@@ -22,9 +22,12 @@ export class PrismaPaymentRepository implements IPaymentRepository {
     return getActiveTxClient(this.prisma as unknown as Prisma.TransactionClient);
   }
 
-  async findAppointmentById(id: string, tenantId: string): Promise<Appointment | null> {
+  async findAppointmentById(id: string, tenantId: string) {
     return this.db.appointment.findFirst({
       where: { id, tenantId, isDeleted: false },
+      include: {
+        service: { select: { id: true, name: true, price: true } },
+      },
     });
   }
 
