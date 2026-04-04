@@ -192,10 +192,29 @@ export class PaymentService {
         },
       );
 
-      // ── 4. Durum geçişi + toplam tutar kaydı ─────────────────────────────
+      // ── 4. Durum geçişi ──────────────────────────────────────────────────
+      //
+      // totalPrice semantiği:
+      //   totalPrice = toplam hizmet tutarı (service.price, create sırasında set edilir).
+      //   dto.amount = şu an tahsil edilen tutar (remaining = totalPrice - depositPaid).
+      //   Checkout'ta totalPrice overwrite EDİLMEZ — mevcut hizmet tutarını korur.
+      //
+      //   Eğer totalPrice henüz set edilmemişse (null/0):
+      //   → Geriye uyumluluk: dto.amount toplam tutar olarak yazılır.
+      //   → Bu senaryo depozitosuz randevularda oluşabilir.
+      //
+      //   Ledger authoritative trace:
+      //   DEPOSIT entries + PAYMENT entry = toplam hizmet değeri
+      //   totalPrice ayrıca toplam hizmet tutarını tutar.
+      //
+      const existingTotal = appt.totalPrice ? Number(appt.totalPrice) : 0;
+      const finalTotalPrice = existingTotal > 0
+        ? new Money(existingTotal)          // totalPrice zaten set → koru
+        : new Money(dto.amount);            // totalPrice null/0 → dto.amount ile doldur
+
       const updated = await this.paymentRepo.checkoutAppointment(appointmentId, {
         status:     AppointmentStatus.COMPLETED,
-        totalPrice: new Money(dto.amount),
+        totalPrice: finalTotalPrice,
       });
 
       // ── 5. AuditLog ───────────────────────────────────────────────────────
@@ -209,7 +228,7 @@ export class PaymentService {
           actorId:    actorId  ?? null,
           actorRole:  actorRole ?? null,
           before:     { status: appt.status, totalPrice: appt.totalPrice?.toString() },
-          after:      { status: AppointmentStatus.COMPLETED, totalPrice: dto.amount },
+          after:      { status: AppointmentStatus.COMPLETED, totalPrice: finalTotalPrice.toString(), collectedNow: dto.amount },
         },
       });
 
