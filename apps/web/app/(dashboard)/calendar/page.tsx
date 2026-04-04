@@ -593,118 +593,144 @@ export default function CalendarPage() {
                 </div>
 
                 {/* ── Ekonomik Özet ──────────────────────────────── */}
-                {(detailApt.totalPrice || detailApt.depositPaid) && (
-                  <div className="bg-muted/50 rounded-lg p-3 space-y-1">
-                    {detailApt.totalPrice && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">Toplam</span>
-                        <span className="text-lg font-semibold">{Number(detailApt.totalPrice).toLocaleString('tr-TR')} ₺</span>
-                      </div>
-                    )}
-                    {detailApt.depositPaid && Number(detailApt.depositPaid) > 0 && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground">Depozito</span>
-                        <span className="text-sm text-muted-foreground">{Number(detailApt.depositPaid).toLocaleString('tr-TR')} ₺</span>
-                      </div>
-                    )}
-                    {/* Ledger kayıtları */}
-                    {ledgerData && ledgerData.length > 0 && (
-                      <div className="border-t border-border/50 pt-1 mt-1">
-                        {ledgerData.map((entry) => (
-                          <div key={entry.id} className="flex items-center justify-between text-xs">
-                            <span className="text-muted-foreground">
-                              {entry.type === 'PAYMENT_CASH' ? '💵 Nakit' :
-                               entry.type === 'PAYMENT_CARD' ? '💳 Kart' :
-                               entry.type === 'PAYMENT_ONLINE' ? '🌐 Online' :
-                               entry.type === 'DEPOSIT' ? '📋 Depozito' :
-                               entry.type === 'ADJUSTMENT' ? '📊 Kayıt' : entry.type}
-                            </span>
-                            <span className="font-medium">{Number(entry.amount).toLocaleString('tr-TR')} ₺</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
+                {(() => {
+                  const servicePrice = Number(detailApt.service?.price ?? detailApt.totalPrice ?? 0);
+                  const deposit      = Number(detailApt.depositPaid ?? 0);
+                  const remaining    = Math.max(servicePrice - deposit, 0);
+                  const hasDeposit   = deposit > 0;
+
+                  return (servicePrice > 0 || hasDeposit) ? (
+                    <div className="bg-muted/50 rounded-lg p-3 space-y-1.5">
+                      {servicePrice > 0 && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-muted-foreground">Hizmet Tutarı</span>
+                          <span className="text-lg font-semibold">{servicePrice.toLocaleString('tr-TR')} ₺</span>
+                        </div>
+                      )}
+                      {hasDeposit && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-muted-foreground">Alınan Depozito</span>
+                          <span className="text-sm text-emerald-600 font-medium">−{deposit.toLocaleString('tr-TR')} ₺</span>
+                        </div>
+                      )}
+                      {hasDeposit && servicePrice > 0 && (
+                        <div className="flex items-center justify-between border-t border-border/50 pt-1">
+                          <span className="text-sm font-medium">Kalan</span>
+                          <span className="text-lg font-bold">{remaining.toLocaleString('tr-TR')} ₺</span>
+                        </div>
+                      )}
+                      {/* Ledger kayıtları */}
+                      {ledgerData && ledgerData.length > 0 && (
+                        <div className="border-t border-border/50 pt-1 mt-1">
+                          {ledgerData.map((entry) => (
+                            <div key={entry.id} className="flex items-center justify-between text-xs">
+                              <span className="text-muted-foreground">
+                                {entry.type === 'PAYMENT_CASH' ? '💵 Nakit' :
+                                 entry.type === 'PAYMENT_CARD' ? '💳 Kart' :
+                                 entry.type === 'PAYMENT_ONLINE' ? '🌐 Online' :
+                                 entry.type === 'DEPOSIT' ? '📋 Depozito' :
+                                 entry.type === 'ADJUSTMENT' ? '📊 Kayıt' : entry.type}
+                              </span>
+                              <span className="font-medium">{Number(entry.amount).toLocaleString('tr-TR')} ₺</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ) : null;
+                })()}
 
                 {/* ── Checkout / Tahsilat — sadece IN_SERVICE ── */}
-                {detailApt.status === 'IN_SERVICE' && (
-                  <div className="space-y-2">
-                    <span className="text-xs text-muted-foreground font-medium">Tahsilat</span>
-                    {!checkoutOpen ? (
-                      <Button
-                        size="sm"
-                        className="w-full bg-emerald-600 hover:bg-emerald-700"
-                        onClick={() => {
-                          setCheckoutMethod('PAYMENT_CASH');
-                          setCheckoutRef('');
-                          setCheckoutOpen(true);
-                        }}
-                      >
-                        💰 Tahsilatı Kapat
-                      </Button>
-                    ) : (
-                      <div className="space-y-2 bg-emerald-50 rounded-lg p-3 border border-emerald-200">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium text-emerald-900">Tutar</span>
-                          <span className="text-lg font-bold text-emerald-900">
-                            {Number(detailApt.service?.price ?? detailApt.totalPrice ?? 0).toLocaleString('tr-TR')} ₺
-                          </span>
+                {detailApt.status === 'IN_SERVICE' && (() => {
+                  const checkoutServicePrice = Number(detailApt.service?.price ?? detailApt.totalPrice ?? 0);
+                  const checkoutDeposit      = Number(detailApt.depositPaid ?? 0);
+                  const checkoutRemaining    = Math.max(checkoutServicePrice - checkoutDeposit, 0);
+
+                  return (
+                    <div className="space-y-2">
+                      <span className="text-xs text-muted-foreground font-medium">Tahsilat</span>
+                      {!checkoutOpen ? (
+                        <Button
+                          size="sm"
+                          className="w-full bg-emerald-600 hover:bg-emerald-700"
+                          onClick={() => {
+                            setCheckoutMethod('PAYMENT_CASH');
+                            setCheckoutRef('');
+                            setCheckoutOpen(true);
+                          }}
+                        >
+                          💰 Tahsilatı Kapat {checkoutDeposit > 0 ? `(Kalan: ${checkoutRemaining.toLocaleString('tr-TR')} ₺)` : ''}
+                        </Button>
+                      ) : (
+                        <div className="space-y-2 bg-emerald-50 rounded-lg p-3 border border-emerald-200">
+                          {checkoutDeposit > 0 && (
+                            <div className="text-xs text-emerald-700 space-y-0.5">
+                              <div className="flex justify-between"><span>Hizmet tutarı</span><span>{checkoutServicePrice.toLocaleString('tr-TR')} ₺</span></div>
+                              <div className="flex justify-between"><span>Alınan depozito</span><span>−{checkoutDeposit.toLocaleString('tr-TR')} ₺</span></div>
+                            </div>
+                          )}
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium text-emerald-900">
+                              {checkoutDeposit > 0 ? 'Kalan Tahsilat' : 'Tutar'}
+                            </span>
+                            <span className="text-lg font-bold text-emerald-900">
+                              {checkoutRemaining.toLocaleString('tr-TR')} ₺
+                            </span>
+                          </div>
+                          <div>
+                            <label className="text-xs text-emerald-700">Ödeme Yöntemi</label>
+                            <select
+                              value={checkoutMethod}
+                              onChange={(e) => setCheckoutMethod(e.target.value as CheckoutPaymentMethod)}
+                              className="w-full h-8 text-sm rounded border border-emerald-300 bg-white px-2 mt-0.5"
+                            >
+                              <option value="PAYMENT_CASH">Nakit</option>
+                              <option value="PAYMENT_CARD">Kart</option>
+                              <option value="PAYMENT_ONLINE">Online</option>
+                            </select>
+                          </div>
+                          <Input
+                            placeholder="Referans (opsiyonel)"
+                            value={checkoutRef}
+                            onChange={(e) => setCheckoutRef(e.target.value)}
+                            className="h-8 text-xs"
+                          />
+                          <div className="flex gap-2">
+                            <Button size="sm" variant="outline" className="flex-1" onClick={() => setCheckoutOpen(false)}>
+                              Vazgeç
+                            </Button>
+                            <Button
+                              size="sm"
+                              className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+                              disabled={checkoutAppointment.isPending}
+                              onClick={async () => {
+                                try {
+                                  const updated = await checkoutAppointment.mutateAsync({
+                                    appointmentId: detailApt.id,
+                                    amount: checkoutRemaining,
+                                    paymentMethod: checkoutMethod,
+                                    ...(checkoutRef ? { reference: checkoutRef } : {}),
+                                  });
+                                  setDetailApt({ ...detailApt, status: updated.status, totalPrice: updated.totalPrice, updatedAt: updated.updatedAt });
+                                  setCheckoutOpen(false);
+                                  toast({ title: 'Tahsilat tamamlandı', description: `${checkoutRemaining.toLocaleString('tr-TR')} ₺ — ${checkoutMethod === 'PAYMENT_CASH' ? 'Nakit' : checkoutMethod === 'PAYMENT_CARD' ? 'Kart' : 'Online'}` });
+                                } catch (err: unknown) {
+                                  const msg = err && typeof err === 'object' && 'response' in err
+                                    ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
+                                    : 'Tahsilat başarısız.';
+                                  toast({ variant: 'destructive', title: 'Hata', description: msg ?? 'Tahsilat başarısız.' });
+                                }
+                              }}
+                            >
+                              {checkoutAppointment.isPending ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : null}
+                              Onayla
+                            </Button>
+                          </div>
                         </div>
-                        <div>
-                          <label className="text-xs text-emerald-700">Ödeme Yöntemi</label>
-                          <select
-                            value={checkoutMethod}
-                            onChange={(e) => setCheckoutMethod(e.target.value as CheckoutPaymentMethod)}
-                            className="w-full h-8 text-sm rounded border border-emerald-300 bg-white px-2 mt-0.5"
-                          >
-                            <option value="PAYMENT_CASH">Nakit</option>
-                            <option value="PAYMENT_CARD">Kart</option>
-                            <option value="PAYMENT_ONLINE">Online</option>
-                          </select>
-                        </div>
-                        <Input
-                          placeholder="Referans (opsiyonel)"
-                          value={checkoutRef}
-                          onChange={(e) => setCheckoutRef(e.target.value)}
-                          className="h-8 text-xs"
-                        />
-                        <div className="flex gap-2">
-                          <Button size="sm" variant="outline" className="flex-1" onClick={() => setCheckoutOpen(false)}>
-                            Vazgeç
-                          </Button>
-                          <Button
-                            size="sm"
-                            className="flex-1 bg-emerald-600 hover:bg-emerald-700"
-                            disabled={checkoutAppointment.isPending}
-                            onClick={async () => {
-                              try {
-                                const amount = Number(detailApt.service?.price ?? detailApt.totalPrice ?? 0);
-                                const updated = await checkoutAppointment.mutateAsync({
-                                  appointmentId: detailApt.id,
-                                  amount,
-                                  paymentMethod: checkoutMethod,
-                                  ...(checkoutRef ? { reference: checkoutRef } : {}),
-                                });
-                                setDetailApt({ ...detailApt, status: updated.status, totalPrice: updated.totalPrice, updatedAt: updated.updatedAt });
-                                setCheckoutOpen(false);
-                                toast({ title: 'Tahsilat tamamlandı', description: `${amount.toLocaleString('tr-TR')} ₺ — ${checkoutMethod === 'PAYMENT_CASH' ? 'Nakit' : checkoutMethod === 'PAYMENT_CARD' ? 'Kart' : 'Online'}` });
-                              } catch (err: unknown) {
-                                const msg = err && typeof err === 'object' && 'response' in err
-                                  ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
-                                  : 'Tahsilat başarısız.';
-                                toast({ variant: 'destructive', title: 'Hata', description: msg ?? 'Tahsilat başarısız.' });
-                              }
-                            }}
-                          >
-                            {checkoutAppointment.isPending ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : null}
-                            Onayla
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
+                      )}
+                    </div>
+                  );
+                })()}
 
                 {/* ── Completed + Paid göstergesi ── */}
                 {detailApt.status === 'COMPLETED' && ledgerData && ledgerData.some(e => e.type.startsWith('PAYMENT_')) && (
