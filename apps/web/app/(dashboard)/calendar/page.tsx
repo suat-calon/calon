@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useRouter }   from 'next/navigation';
+import Link            from 'next/link';
 import { useForm }     from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z }           from 'zod';
@@ -286,7 +287,40 @@ export default function CalendarPage() {
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       ) : (
-        <div className="flex-1 overflow-auto">
+        <div className="flex-1 overflow-auto relative">
+          {/* Activation-aware empty state overlay */}
+          {(appointments ?? []).length === 0 && (
+            <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/80 backdrop-blur-sm">
+              <div className="text-center max-w-sm mx-auto p-6">
+                {!(services ?? []).some(s => !s.isDeleted) ? (
+                  <>
+                    <div className="p-3 rounded-xl bg-amber-50 inline-block mb-3"><Scissors className="h-6 w-6 text-amber-500" /></div>
+                    <p className="text-sm font-medium">Önce hizmet ekleyin</p>
+                    <p className="text-xs text-muted-foreground mt-1">Randevu oluşturabilmek için en az bir hizmet gerekli.</p>
+                    <Button size="sm" className="mt-3" asChild><Link href="/services">Hizmet Ekle</Link></Button>
+                  </>
+                ) : !(staffList.length > 0) ? (
+                  <>
+                    <div className="p-3 rounded-xl bg-amber-50 inline-block mb-3"><User className="h-6 w-6 text-amber-500" /></div>
+                    <p className="text-sm font-medium">Personel ekleyin</p>
+                    <p className="text-xs text-muted-foreground mt-1">Randevu oluşturabilmek için en az bir personel gerekli.</p>
+                    <Button size="sm" className="mt-3" asChild><Link href="/staff">Personel Ekle</Link></Button>
+                  </>
+                ) : (
+                  <>
+                    <div className="p-3 rounded-xl bg-primary/10 inline-block mb-3"><CalendarIcon className="h-6 w-6 text-primary" /></div>
+                    <p className="text-sm font-medium">Takvim hazır, ilk randevunuzu oluşturun</p>
+                    <p className="text-xs text-muted-foreground mt-1">Yeni Randevu butonuna tıklayın veya booking linkinizi paylaşın.</p>
+                    <div className="flex gap-2 justify-center mt-3">
+                      <Button size="sm" onClick={() => setDialogOpen(true)}>
+                        <Plus className="mr-1 h-3 w-3" /> Randevu Oluştur
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
           <div className="min-w-[700px]">
             {/* Day headers */}
             <div className="grid grid-cols-[56px_repeat(7,1fr)] border-b bg-white sticky top-0 z-10">

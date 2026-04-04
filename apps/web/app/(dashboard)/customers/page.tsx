@@ -6,7 +6,7 @@ import Link from 'next/link';
 import {
   Search, Loader2, AlertCircle, Users, Phone, Mail, Calendar,
   ChevronRight, Clock, Star, ExternalLink, Plus, Copy, CalendarPlus,
-  TrendingUp, AlertTriangle, FileText,
+  TrendingUp, AlertTriangle, FileText, Link2,
 } from 'lucide-react';
 
 import { Badge }   from '@/components/ui/badge';
@@ -219,7 +219,19 @@ export default function CustomersPage() {
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <div className="p-3 rounded-xl bg-muted mb-3"><Users className="h-6 w-6 text-muted-foreground/50" /></div>
           <p className="text-sm text-muted-foreground">{search ? 'Arama sonucu bulunamadı.' : 'Henüz müşteri kaydı yok.'}</p>
-          {!search && <p className="text-xs text-muted-foreground mt-1">Booking üzerinden randevu alındığında müşteriler otomatik oluşturulur.</p>}
+          {!search && (
+            <div className="mt-3 space-y-2">
+              <p className="text-xs text-muted-foreground">Booking linkinizi paylaşarak ilk müşterinizi kazanın veya manuel ekleyin.</p>
+              <div className="flex gap-2 justify-center">
+                <Button size="sm" variant="outline" onClick={() => { setNewFirst(''); setNewLast(''); setNewPhone(''); setNewEmail(''); setNewNotes(''); setNewConsent(false); setCreateOpen(true); }}>
+                  <Plus className="mr-1 h-3 w-3" /> Manuel Ekle
+                </Button>
+                <Button size="sm" variant="outline" asChild>
+                  <Link href="/settings"><Link2 className="mr-1 h-3 w-3" /> Booking Link</Link>
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         <div className="space-y-2">

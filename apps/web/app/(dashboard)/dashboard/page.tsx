@@ -38,6 +38,11 @@ export default function DashboardPage() {
   const { data: services } = useServices();
   const { data: staffData } = useStaff();
 
+  const [copied, setCopied] = useState(false);
+  const bookingUrl = tenant?.slug
+    ? `${process.env.NEXT_PUBLIC_BOOKING_URL ?? 'https://book.calon.com.tr'}/${tenant.slug}`
+    : null;
+
   // ── Activation state — derived from real domain data ────────────────────
   const activation = useMemo(() => {
     const hasServices    = (services ?? []).length > 0;
@@ -104,8 +109,8 @@ export default function DashboardPage() {
         </Button>
       </div>
 
-      {/* ── Activation Checklist — shown until all steps done ──────────── */}
-      {!activation.allDone && (
+      {/* ── Activation Checklist / Ready Card ────────────────────────────── */}
+      {!activation.allDone ? (
         <div className="bg-gradient-to-br from-primary/5 via-primary/3 to-transparent border border-primary/10 rounded-xl p-4 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
@@ -141,7 +146,34 @@ export default function DashboardPage() {
             ))}
           </div>
         </div>
-      )}
+      ) : (appointments ?? []).length <= 3 ? (
+        /* Ready card — shown briefly after activation, fades when real usage starts */
+        <div className="bg-emerald-50/50 border border-emerald-200/50 rounded-xl p-4 shadow-sm">
+          <div className="flex items-center gap-2 mb-3">
+            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+            <h2 className="text-sm font-semibold text-emerald-900">Salonunuz hazır</h2>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            {bookingUrl && (
+              <button
+                onClick={() => { navigator.clipboard.writeText(bookingUrl); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
+                className="flex items-center gap-2 bg-white rounded-lg px-3 py-2 text-xs font-medium border hover:bg-muted/50 transition-colors"
+              >
+                {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5 text-muted-foreground" />}
+                Booking Link Kopyala
+              </button>
+            )}
+            <Link href="/calendar" className="flex items-center gap-2 bg-white rounded-lg px-3 py-2 text-xs font-medium border hover:bg-muted/50 transition-colors">
+              <Plus className="h-3.5 w-3.5 text-muted-foreground" />
+              Randevu Oluştur
+            </Link>
+            <Link href="/customers" className="flex items-center gap-2 bg-white rounded-lg px-3 py-2 text-xs font-medium border hover:bg-muted/50 transition-colors">
+              <Users className="h-3.5 w-3.5 text-muted-foreground" />
+              Müşterileri Gör
+            </Link>
+          </div>
+        </div>
+      ) : null}
 
       {/* ── Pending Alert ─────────────────────────────────────────────────── */}
       {stats.pending > 0 && (
