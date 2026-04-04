@@ -8,12 +8,14 @@ import {
   CalendarDays, Clock, CheckCircle2, AlertCircle,
   XCircle, ArrowRight, Plus, Users, Scissors,
   AlertTriangle, Link2, Copy, ExternalLink, Check,
-  Settings,
+  Settings, UserPlus, Sparkles, Circle,
 } from 'lucide-react';
 
 import { Badge }  from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useTenant } from '@/hooks/api/use-auth';
+import { useServices } from '@/hooks/api/use-services';
+import { useStaff } from '@/hooks/api/use-staff';
 import {
   useAppointments,
   type Appointment,
@@ -33,6 +35,25 @@ const STATUS_VARIANT: Record<AppointmentStatus, 'default' | 'success' | 'info' |
 export default function DashboardPage() {
   const { data: tenant } = useTenant();
   const { data: appointments, isLoading, error } = useAppointments();
+  const { data: services } = useServices();
+  const { data: staffData } = useStaff();
+
+  // ── Activation state — derived from real domain data ────────────────────
+  const activation = useMemo(() => {
+    const hasServices    = (services ?? []).length > 0;
+    const hasStaff       = (staffData?.data ?? []).length > 0;
+    const hasBookingLink = !!tenant?.slug;
+    const hasAppointment = (appointments ?? []).length > 0;
+    const steps = [
+      { id: 'service',  label: 'Hizmet ekle',             done: hasServices,    href: '/services',  icon: Scissors },
+      { id: 'staff',    label: 'Personel ekle',            done: hasStaff,       href: '/staff',     icon: UserPlus },
+      { id: 'link',     label: 'Booking link\'i kontrol et', done: hasBookingLink, href: '/settings',  icon: Link2 },
+      { id: 'first',    label: 'İlk randevuyu oluştur',    done: hasAppointment, href: '/calendar',  icon: CalendarDays },
+    ];
+    const completedCount = steps.filter((s) => s.done).length;
+    const allDone = completedCount === steps.length;
+    return { steps, completedCount, allDone };
+  }, [services, staffData, tenant, appointments]);
 
   const now = useMemo(() => new Date(), []);
 
@@ -82,6 +103,45 @@ export default function DashboardPage() {
           </Link>
         </Button>
       </div>
+
+      {/* ── Activation Checklist — shown until all steps done ──────────── */}
+      {!activation.allDone && (
+        <div className="bg-gradient-to-br from-primary/5 via-primary/3 to-transparent border border-primary/10 rounded-xl p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-primary" />
+              <h2 className="text-sm font-semibold">Salonunuzu hazırlayın</h2>
+            </div>
+            <span className="text-xs text-muted-foreground">
+              {activation.completedCount}/{activation.steps.length} tamamlandı
+            </span>
+          </div>
+          <div className="space-y-1.5">
+            {activation.steps.map((step) => (
+              <Link
+                key={step.id}
+                href={step.href}
+                className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-colors text-sm ${
+                  step.done
+                    ? 'bg-emerald-50/50 text-emerald-700'
+                    : 'bg-white hover:bg-muted/50 text-foreground shadow-sm border border-border/50'
+                }`}
+              >
+                {step.done ? (
+                  <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+                ) : (
+                  <Circle className="h-4 w-4 text-muted-foreground/40 shrink-0" />
+                )}
+                <step.icon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                <span className={`flex-1 ${step.done ? 'line-through opacity-60' : 'font-medium'}`}>
+                  {step.label}
+                </span>
+                {!step.done && <ArrowRight className="h-3.5 w-3.5 text-muted-foreground/50" />}
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ── Pending Alert ─────────────────────────────────────────────────── */}
       {stats.pending > 0 && (

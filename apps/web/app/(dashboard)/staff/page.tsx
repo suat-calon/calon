@@ -67,6 +67,7 @@ export default function StaffPage() {
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <div className="p-3 rounded-xl bg-muted mb-3"><UserCog className="h-6 w-6 text-muted-foreground/50" /></div>
           <p className="text-sm text-muted-foreground">Henüz personel bulunmuyor.</p>
+          <p className="text-xs text-muted-foreground mt-1">Online booking için en az bir personel gereklidir.</p>
         </div>
       ) : (
         <div className="space-y-2">
