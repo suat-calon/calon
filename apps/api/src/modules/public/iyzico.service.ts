@@ -75,6 +75,33 @@ export interface IyzicoCheckoutResponse {
   paymentPageUrl?:     string;
 }
 
+export interface IyzicoRefundResponse {
+  status:           string;      // 'success' | 'failure'
+  errorCode?:       string;
+  errorMessage?:    string;
+  conversationId?:  string;
+  paymentId?:       string;
+  paymentTransactionId?: string;
+  price?:           number;
+  currency?:        string;
+}
+
+export interface IyzicoPaymentRetrieveResponse {
+  status:           string;
+  errorCode?:       string;
+  errorMessage?:    string;
+  paymentId?:       string;
+  price?:           number;
+  paidPrice?:       number;
+  currency?:        string;
+  itemTransactions?: Array<{
+    paymentTransactionId: string;
+    transactionStatus:    number;
+    price:                number;
+    paidPrice:            number;
+  }>;
+}
+
 // ── Servis ────────────────────────────────────────────────────────────────────
 
 @Injectable()
@@ -155,6 +182,81 @@ export class IyzicoService {
     }
 
     return valid;
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // REFUND (CHECKOUT-LEDGER-02.1)
+  // ══════════���════════════════════════════════════════════════════════════════
+
+  /**
+   * Creates a refund via Iyzico refund API.
+   *
+   * Iyzico refund.create() requires paymentTransactionId (NOT paymentId).
+   * For checkout form payments, paymentTransactionId is available in the
+   * webhook response stored in Payment.providerMeta.
+   *
+   * @param paymentTransactionId — The Iyzico paymentTransactionId (from provider meta)
+   * @param price — Refund amount as string (e.g., "150.00")
+   * @param ip — Requester IP for Iyzico audit
+   * @param conversationId — Our internal reference (e.g., appointmentId)
+   */
+  createRefund(request: {
+    paymentTransactionId: string;
+    price: string;
+    ip: string;
+    conversationId: string;
+  }): Promise<IyzicoRefundResponse> {
+    this.logger.log(
+      `[Refund] İyzico refund başlatılıyor: txId=${request.paymentTransactionId} amount=${request.price}`,
+    );
+
+    return new Promise<IyzicoRefundResponse>((resolve, reject) => {
+      this.iyzipay.refund.create(
+        {
+          locale: 'tr',
+          conversationId: request.conversationId,
+          paymentTransactionId: request.paymentTransactionId,
+          price: request.price,
+          ip: request.ip,
+        },
+        (err: Error | null, result: IyzicoRefundResponse) => {
+          if (err) {
+            this.logger.error(`[Refund] İyzico SDK hatası: ${String(err)}`);
+            return reject(new InternalServerErrorException('Ödeme geçidi ile iade bağlantısı kurulamadı.'));
+          }
+
+          this.logger.log(`[Refund] İyzico yanıtı: status=${result.status} paymentId=${result.paymentId ?? 'n/a'}`);
+
+          resolve(result);
+        },
+      );
+    });
+  }
+
+  /**
+   * Retrieves payment details from Iyzico.
+   * Useful for getting paymentTransactionId from a paymentId.
+   */
+  retrievePayment(request: {
+    paymentId: string;
+    conversationId: string;
+  }): Promise<IyzicoPaymentRetrieveResponse> {
+    return new Promise<IyzicoPaymentRetrieveResponse>((resolve, reject) => {
+      this.iyzipay.payment.retrieve(
+        {
+          locale: 'tr',
+          conversationId: request.conversationId,
+          paymentId: request.paymentId,
+        },
+        (err: Error | null, result: IyzicoPaymentRetrieveResponse) => {
+          if (err) {
+            this.logger.error(`[Retrieve] İyzico SDK hatası: ${String(err)}`);
+            return reject(new InternalServerErrorException('Ödeme geçidi ile bağlantı kurulamadı.'));
+          }
+          resolve(result);
+        },
+      );
+    });
   }
 
   /** CallbackUrl accessor (PaymentService'den erişim için) */

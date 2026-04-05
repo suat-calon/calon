@@ -43,6 +43,7 @@ import { TakeDepositDto }    from './dto/take-deposit.dto';
 import { CheckoutDto }       from './dto/checkout.dto';
 import { buildAndValidateBreakdown } from './checkout-breakdown';
 import { PAYMENT_REPO, IPaymentRepository } from './payment.repository.interface';
+import { IyzicoService } from '../public/iyzico.service';
 
 // ── Çıkış tipi ───────────────────────────────────────────────────────────────
 
@@ -58,6 +59,7 @@ export class PaymentService {
   constructor(
     private readonly prisma:  PrismaService,
     private readonly ledger:  LedgerService,
+    private readonly iyzico:  IyzicoService,
     @InjectQueue(QUEUE_NAMES.STOCK_DEDUCT)
     private readonly inventoryQueue: Queue,
     @Inject(PAYMENT_REPO) private readonly paymentRepo: IPaymentRepository,
@@ -273,5 +275,169 @@ export class PaymentService {
     });
 
     return result;
+  }
+
+  // ── refund ──────────────────────────────────────────────────────────────────
+
+  /**
+   * CHECKOUT-LEDGER-02.1: Provider-backed refund workflow.
+   *
+   * Full refund chain:
+   *   1. Validate appointment + payment + amount
+   *   2. Check for existing online Payment (Iyzico) — if exists, call provider
+   *   3. Provider refund call → response validation
+   *   4. Payment state: PAID → REFUNDED (only on provider success)
+   *   5. Ledger REFUND entry (negative amount, only on confirmed refund)
+   *   6. Audit trail
+   *
+   * For cash/card (non-Iyzico) payments:
+   *   No provider call needed — direct ledger reversal + audit.
+   *
+   * Failure posture:
+   *   - Provider timeout/5xx → throw, no state change, retry safe
+   *   - Provider explicit failure → throw with error, no state change
+   *   - Already REFUNDED → BadRequestException (idempotent rejection)
+   *   - Ledger entry ONLY on confirmed financial event
+   */
+  async refund(
+    tenantId: string,
+    appointmentId: string,
+    dto: { amount: number; reason: string; ip?: string },
+    actorId?: string,
+  ): Promise<PaymentResult> {
+    const appt = await this.paymentRepo.findAppointmentById(appointmentId, tenantId);
+    if (!appt) throw new NotFoundException('Randevu bulunamadı.');
+
+    if (appt.status !== AppointmentStatus.COMPLETED) {
+      throw new BadRequestException(
+        `İade yalnız COMPLETED randevularda yapılabilir. Mevcut durum: ${appt.status}`,
+      );
+    }
+
+    if (dto.amount <= 0) {
+      throw new BadRequestException('İade tutarı 0\'dan büyük olmalıdır.');
+    }
+
+    // Net ledger total check
+    const existingEntries = await this.ledger.findByAppointment(tenantId, appointmentId);
+    const netTotal = existingEntries.reduce((sum, e) => sum + Number(e.amount), 0);
+
+    if (dto.amount > netTotal + 0.02) { // 0.02₺ tolerance
+      throw new BadRequestException(
+        `İade tutarı (${dto.amount}) mevcut net toplamı (${netTotal.toFixed(2)}) aşamaz.`,
+      );
+    }
+
+    // Check for existing online Payment (Iyzico-backed)
+    const onlinePayment = await this.prisma.payment.findUnique({
+      where: { appointmentId },
+    });
+
+    let providerRefundResult: Record<string, unknown> | null = null;
+
+    // ── Provider refund (only for Iyzico-paid appointments) ─────────────
+    if (onlinePayment && onlinePayment.status === 'PAID' && onlinePayment.providerId) {
+      // Already refunded? Block duplicate.
+      if (String(onlinePayment.status) === 'REFUNDED') {
+        throw new BadRequestException('Bu ödeme zaten iade edilmiş.');
+      }
+
+      // Get paymentTransactionId from provider meta
+      const meta = onlinePayment.providerMeta as Record<string, unknown> | null;
+      let paymentTransactionId: string | null = null;
+
+      // Try to get from stored meta first
+      if (meta?.paymentTransactionId) {
+        paymentTransactionId = String(meta.paymentTransactionId);
+      }
+
+      // If not in meta, retrieve from Iyzico
+      if (!paymentTransactionId && onlinePayment.providerId) {
+        const retrieved = await this.iyzico.retrievePayment({
+          paymentId: onlinePayment.providerId,
+          conversationId: appointmentId,
+        });
+
+        if (retrieved.status === 'success' && retrieved.itemTransactions?.length) {
+          paymentTransactionId = retrieved.itemTransactions[0].paymentTransactionId;
+        }
+      }
+
+      if (!paymentTransactionId) {
+        throw new BadRequestException(
+          'İyzico paymentTransactionId bulunamadı. Manuel iade gerekli.',
+        );
+      }
+
+      // Call Iyzico refund API
+      const refundResult = await this.iyzico.createRefund({
+        paymentTransactionId,
+        price: dto.amount.toFixed(2),
+        ip: dto.ip ?? '127.0.0.1',
+        conversationId: appointmentId,
+      });
+
+      // Provider failure → throw, no state change
+      if (refundResult.status !== 'success') {
+        throw new BadRequestException(
+          `İyzico iade başarısız: ${refundResult.errorCode ?? 'UNKNOWN'} — ${refundResult.errorMessage ?? 'Bilinmeyen hata'}`,
+        );
+      }
+
+      providerRefundResult = refundResult as unknown as Record<string, unknown>;
+
+      // Provider success confirmed → update payment status
+      await this.prisma.payment.update({
+        where: { id: onlinePayment.id },
+        data: {
+          status: 'REFUNDED',
+          providerMeta: {
+            ...(meta ?? {}),
+            refund: providerRefundResult as Prisma.InputJsonValue,
+            refundedAt: new Date().toISOString(),
+          } as Prisma.InputJsonValue,
+        },
+      });
+    }
+    // For cash/card payments: no provider call needed, direct ledger reversal
+
+    // ── Ledger + Audit (only after confirmed refund) ────────────────────
+    return this.prisma.$tenantTransaction(async () => {
+      const ledgerEntry = await this.ledger.record({
+        tenantId,
+        appointmentId,
+        type: TransactionType.REFUND,
+        amount: -dto.amount,
+        description: `İade: ${dto.reason}`,
+        reference: providerRefundResult
+          ? `iyzico:${(providerRefundResult as { paymentId?: string }).paymentId ?? 'n/a'}`
+          : undefined,
+        details: providerRefundResult
+          ? { provider: 'iyzico', refundResponse: providerRefundResult }
+          : { provider: 'manual', reason: dto.reason },
+      });
+
+      const _db = getActiveTxClient(this.prisma as unknown as Prisma.TransactionClient);
+      await _db.auditLog.create({
+        data: {
+          tenantId,
+          entityType: 'Appointment',
+          entityId:   appointmentId,
+          action:     'REFUND',
+          actorId:    actorId ?? null,
+          actorRole:  null,
+          before:     { netTotal: netTotal.toFixed(2), paymentStatus: onlinePayment?.status ?? 'N/A' },
+          after:      {
+            refundAmount: dto.amount,
+            newNetTotal: (netTotal - dto.amount).toFixed(2),
+            reason: dto.reason,
+            providerBacked: !!providerRefundResult,
+            paymentStatus: providerRefundResult ? 'REFUNDED' : 'N/A',
+          },
+        },
+      });
+
+      return { appointment: appt, ledgerEntry };
+    });
   }
 }

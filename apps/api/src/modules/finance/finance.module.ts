@@ -22,12 +22,14 @@ import { PaymentService }       from './payment.service';
 import { PaymentController }    from './payment.controller';
 import { PrismaPaymentRepository } from './payment.repository';
 import { PAYMENT_REPO }         from './payment.repository.interface';
+import { ReconciliationService } from './reconciliation.service';
 
 @Module({
   controllers: [PaymentController],
   providers:   [
     LedgerService,
     PaymentService,
+    ReconciliationService,
     {
       provide:  PAYMENT_REPO,
       useClass: PrismaPaymentRepository,

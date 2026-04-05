@@ -25,6 +25,7 @@ import {
   UnauthorizedException,
   BadRequestException,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { RawBodyRequest } from '@nestjs/common';
 import { Prisma }         from '@prisma/client';
 import { Request }        from 'express';
@@ -50,6 +51,7 @@ export class BillingWebhookController {
 
   @Post('iyzico')
   @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   async handleBillingIyzico(
     @Body() payload: IyzicoWebhookPayload,
     @Req()  req:     RawBodyRequest<Request>,

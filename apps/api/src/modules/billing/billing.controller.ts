@@ -17,6 +17,7 @@ import {
   Body,
   Req,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { ConfigService } from '@nestjs/config';
 import { Request }       from 'express';
 
@@ -50,6 +51,7 @@ export class BillingController {
   // ─────────────────────────────────────────────────────────────────────────
 
   @Post('payment-session')
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   async createPaymentSession(
     @Req() req: { tenantId: string } & Request,
     @Body() dto: PaymentSessionDto,

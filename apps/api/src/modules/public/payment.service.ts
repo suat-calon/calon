@@ -243,15 +243,20 @@ export class PaymentService {
     payload:   IyzicoWebhookPayload,
     rawBody?:  string,  // Gelecekte tam body ile imza kontrolü için
   ): Promise<{ received: true }> {
-    // ── 1. İmza doğrulama ────────────────────────────────────────────────────
-    if (payload.iyziReferenceCode && payload.signature) {
-      const valid = this.iyzico.verifyWebhookSignature(
-        payload.iyziReferenceCode,
-        payload.signature,
-      );
-      if (!valid) {
-        throw new UnauthorizedException('Webhook imza doğrulaması başarısız.');
-      }
+    // ── 1. İmza doğrulama — ZORUNLU (Phase CHECKOUT-LEDGER-02 hardening) ────
+    // Signature yoksa veya geçersizse webhook reddedilir.
+    // Eski davranış: missing fields → sessiz kabul. YENİ: reject.
+    if (!payload.iyziReferenceCode || !payload.signature) {
+      this.logger.warn('[WebhookHardening] Missing signature or referenceCode — rejected');
+      throw new UnauthorizedException('Webhook signature fields missing.');
+    }
+    const signatureValid = this.iyzico.verifyWebhookSignature(
+      payload.iyziReferenceCode,
+      payload.signature,
+    );
+    if (!signatureValid) {
+      this.logger.warn('[WebhookHardening] Invalid HMAC signature — rejected');
+      throw new UnauthorizedException('Webhook imza doğrulaması başarısız.');
     }
 
     const iyziPaymentId = payload.paymentId;
@@ -260,7 +265,7 @@ export class PaymentService {
 
     if (!iyziPaymentId || !appointmentId) {
       this.logger.warn(`Webhook eksik alan: paymentId=${iyziPaymentId} conversationId=${appointmentId}`);
-      return { received: true }; // İyzico 200 beklediği için yutuyoruz
+      throw new BadRequestException('Webhook missing required fields: paymentId, conversationId.');
     }
 
     // ── 2. Atomic idempotency gate — WebhookEvent @unique insert ─────────────

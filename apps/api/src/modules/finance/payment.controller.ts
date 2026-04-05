@@ -29,6 +29,7 @@ import {
   DefaultValuePipe,
   UseInterceptors,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import {
   ApiTags,
   ApiBearerAuth,
@@ -42,6 +43,7 @@ import {
 
 import { PaymentService }          from './payment.service';
 import { LedgerService }           from './ledger.service';
+import { ReconciliationService }   from './reconciliation.service';
 import { TakeDepositDto }          from './dto/take-deposit.dto';
 import { CheckoutDto }             from './dto/checkout.dto';
 import { IdempotencyInterceptor }  from '../../common/idempotency.interceptor';
@@ -54,8 +56,9 @@ import { WriteOperation }          from '../billing/decorators/write-operation.d
 @Controller('payments')
 export class PaymentController {
   constructor(
-    private readonly paymentService: PaymentService,
-    private readonly ledgerService:  LedgerService,
+    private readonly paymentService:       PaymentService,
+    private readonly ledgerService:        LedgerService,
+    private readonly reconciliationService: ReconciliationService,
   ) {}
 
   // ── POST /payments/:appointmentId/deposit ──────────────────────────────────
@@ -64,6 +67,7 @@ export class PaymentController {
   @WriteOperation()
   @HttpCode(HttpStatus.CREATED)
   @UseInterceptors(IdempotencyInterceptor)
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
   @ApiOperation({ summary: 'Randevu için kaparo al' })
   @ApiHeader({
     name:        'X-Idempotency-Key',
@@ -88,6 +92,7 @@ export class PaymentController {
   @WriteOperation()
   @HttpCode(HttpStatus.CREATED)
   @UseInterceptors(IdempotencyInterceptor)
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
   @ApiOperation({ summary: 'Hesap kapat: ödeme al + randevuyu COMPLETED\'a geçir' })
   @ApiHeader({
     name:        'X-Idempotency-Key',
@@ -130,5 +135,43 @@ export class PaymentController {
     @Param('appointmentId', ParseUUIDPipe)          appointmentId: string,
   ) {
     return this.ledgerService.findByAppointment(tenantId, appointmentId);
+  }
+
+  // ── GET /payments/reconciliation ───────────────────────────────────────
+  // CHECKOUT-LEDGER-03: Finance truth read model.
+
+  @Get('reconciliation')
+  @ApiOperation({ summary: 'Finance reconciliation — mismatch detection (read-only, no auto-repair)' })
+  @ApiOkResponse({ description: 'Reconciliation summary with mismatch list, priority, and suggested actions' })
+  getReconciliation(
+    @CurrentTenant() tenantId: string,
+  ) {
+    return this.reconciliationService.reconcile(tenantId);
+  }
+
+  // ── POST /payments/:appointmentId/refund ─────────────────────────────────
+  // CHECKOUT-LEDGER-02: Refund workflow endpoint.
+
+  @Post(':appointmentId/refund')
+  @WriteOperation()
+  @HttpCode(HttpStatus.CREATED)
+  @UseInterceptors(IdempotencyInterceptor)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Randevu için iade yap (REFUND ledger entry)' })
+  @ApiHeader({
+    name:        'X-Idempotency-Key',
+    description: 'Çift iade koruması için benzersiz işlem anahtarı (UUID önerilir)',
+    required:    false,
+  })
+  @ApiCreatedResponse({ description: 'İade Ledger\'e işlendi (negatif tutar, append-only)' })
+  @ApiBadRequestResponse({ description: 'Randevu COMPLETED değil veya iade tutarı geçersiz' })
+  @ApiNotFoundResponse({ description: 'Randevu bulunamadı' })
+  refund(
+    @CurrentTenant()                               tenantId: string,
+    @CurrentUser()                                 user:     CurrentUserPayload,
+    @Param('appointmentId', ParseUUIDPipe)          apptId:   string,
+    @Body()                                        dto:      { amount: number; reason: string },
+  ) {
+    return this.paymentService.refund(tenantId, apptId, dto, user.id);
   }
 }
