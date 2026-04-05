@@ -8,7 +8,7 @@ export default function AdminMetricsPage() {
 
   return (
     <div className="space-y-6 max-w-4xl">
-      <h1 className="text-2xl font-bold tracking-tight">Platform Metrikleri</h1>
+      <h1 className="text-lg font-semibold tracking-tight">Platform Metrikleri</h1>
 
       {error ? (
         <div className="flex items-center gap-2 text-destructive py-8 justify-center">
@@ -30,14 +30,14 @@ export default function AdminMetricsPage() {
             <MetricCard label="Bugünkü Randevu" value={metrics.bookingsToday} />
           </div>
 
-          <div className="bg-white rounded-xl border p-5 space-y-3">
+          <div className="bg-card rounded-lg border p-5 space-y-3">
             <h3 className="text-sm font-semibold">MRR (Tahmini Aylık Gelir)</h3>
             <p className="text-3xl font-bold">₺{(metrics.monthlyRecurringRevenue ?? 0).toLocaleString('tr-TR')}</p>
             <p className="text-xs text-muted-foreground">Aktif aboneliklerin plan bazlı tahmini toplamı</p>
           </div>
 
           {metrics.planDistribution && Object.keys(metrics.planDistribution).length > 0 && (
-            <div className="bg-white rounded-xl border p-5 space-y-3">
+            <div className="bg-card rounded-lg border p-5 space-y-3">
               <h3 className="text-sm font-semibold">Plan Dağılımı</h3>
               <div className="space-y-2">
                 {Object.entries(metrics.planDistribution).map(([plan, count]) => (
@@ -66,7 +66,7 @@ export default function AdminMetricsPage() {
 
 function MetricCard({ label, value, accent }: { label: string; value: number; accent?: boolean }) {
   return (
-    <div className="bg-white rounded-xl border p-4 text-center">
+    <div className="bg-card rounded-lg border p-4 text-center">
       <p className={`text-2xl font-bold ${accent ? 'text-primary' : ''}`}>{value}</p>
       <p className="text-xs text-muted-foreground mt-1">{label}</p>
     </div>

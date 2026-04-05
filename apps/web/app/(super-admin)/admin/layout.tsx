@@ -2,13 +2,15 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { useTheme } from 'next-themes';
 import {
   LayoutDashboard, Building2, CreditCard, Activity, BarChart3,
-  Shield, LogOut, Loader2,
+  Shield, LogOut, Sun, Moon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/api/use-auth';
+import { cn } from '@/lib/utils';
 
 const qc = new QueryClient();
 
@@ -24,79 +26,106 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { data: auth, isLoading, error } = useAuth();
+  const { theme, setTheme } = useTheme();
 
   // Loading
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <Loader2 className="h-6 w-6 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  // Not logged in → redirect to login
-  if (error || !auth) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-sm space-y-4 text-center">
-          <Shield className="h-8 w-8 text-primary mx-auto" />
-          <h1 className="text-xl font-bold">Super Admin</h1>
-          <p className="text-sm text-muted-foreground">Oturum bulunamadı. Lütfen önce giriş yapın.</p>
-          <Button className="w-full" onClick={() => router.push('/login')}>Giriş Yap</Button>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 animate-spin rounded-full border-2 border-muted border-t-primary" />
+          <p className="text-xs text-muted-foreground">Yükleniyor...</p>
         </div>
       </div>
     );
   }
 
-  // Wrong role → forbidden
+  // Not logged in
+  if (error || !auth) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="bg-card rounded-lg border p-8 w-full max-w-sm space-y-4 text-center">
+          <Shield className="h-7 w-7 text-primary mx-auto" />
+          <h1 className="text-lg font-semibold">Super Admin</h1>
+          <p className="text-xs text-muted-foreground">Oturum bulunamadı. Lütfen önce giriş yapın.</p>
+          <Button className="w-full" size="sm" onClick={() => router.push('/login')}>Giriş Yap</Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Wrong role
   if (auth.role !== 'SUPER_ADMIN') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-sm space-y-4 text-center">
-          <Shield className="h-8 w-8 text-destructive mx-auto" />
-          <h1 className="text-xl font-bold">Erişim Reddedildi</h1>
-          <p className="text-sm text-muted-foreground">Bu alan yalnızca platform yöneticilerine (SUPER_ADMIN) açıktır.</p>
-          <p className="text-xs text-muted-foreground">Mevcut rol: {auth.role}</p>
-          <Button variant="outline" className="w-full" onClick={() => router.push('/calendar')}>Panele Dön</Button>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="bg-card rounded-lg border p-8 w-full max-w-sm space-y-4 text-center">
+          <Shield className="h-7 w-7 text-destructive mx-auto" />
+          <h1 className="text-lg font-semibold">Erişim Reddedildi</h1>
+          <p className="text-xs text-muted-foreground">Bu alan yalnızca SUPER_ADMIN rolüne açıktır.</p>
+          <p className="text-[10px] text-muted-foreground/60">Mevcut rol: {auth.role}</p>
+          <Button variant="outline" size="sm" className="w-full" onClick={() => router.push('/calendar')}>Panele Dön</Button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex bg-slate-50">
-      {/* Sidebar */}
-      <aside className="w-56 bg-slate-900 text-white flex flex-col shrink-0">
-        <div className="px-4 py-4 border-b border-slate-700">
+    <div className="min-h-screen flex bg-muted/40 dark:bg-background">
+      {/* Sidebar — control cockpit style */}
+      <aside className="w-[220px] bg-card border-r border-border/60 flex flex-col shrink-0">
+        <div className="h-14 flex items-center px-4 border-b border-border/60">
           <div className="flex items-center gap-2">
-            <Shield className="h-5 w-5 text-primary" />
-            <span className="font-bold text-sm">Calon Admin</span>
+            <div className="w-6 h-6 rounded-md bg-primary/15 flex items-center justify-center">
+              <Shield className="h-3.5 w-3.5 text-primary" />
+            </div>
+            <div>
+              <span className="text-[13px] font-semibold text-foreground">Calon Admin</span>
+              <p className="text-[9px] text-muted-foreground/60 leading-none">SUPER_ADMIN</p>
+            </div>
           </div>
-          <p className="text-[10px] text-slate-400 mt-1">Read-only Cockpit · SUPER_ADMIN</p>
         </div>
-        <nav className="flex-1 py-3 space-y-0.5">
+
+        <nav className="flex-1 px-2.5 py-2.5 space-y-[2px]">
+          <p className="px-3 pt-1 pb-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70">Platform</p>
           {NAV.map((item) => {
             const active = pathname === item.href || (item.href !== '/admin' && pathname.startsWith(item.href));
             return (
               <Link key={item.href} href={item.href}
-                className={`flex items-center gap-2.5 px-4 py-2 text-sm transition-colors ${active ? 'bg-slate-700 text-white font-medium' : 'text-slate-300 hover:bg-slate-800 hover:text-white'}`}
+                className={cn(
+                  'group flex items-center gap-2.5 px-3 py-[7px] rounded-md text-[13px] font-medium transition-all duration-150',
+                  active
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'text-foreground/60 hover:bg-muted hover:text-foreground',
+                )}
               >
-                <item.icon className="h-4 w-4" />
+                <item.icon className={cn('h-[18px] w-[18px] shrink-0', active ? 'text-primary-foreground' : 'text-foreground/40 group-hover:text-foreground/60')} />
                 {item.label}
               </Link>
             );
           })}
         </nav>
-        <div className="p-3 border-t border-slate-700">
-          <Button variant="ghost" size="sm" className="w-full text-slate-400 hover:text-white justify-start" onClick={() => router.push('/calendar')}>
-            <LogOut className="h-3.5 w-3.5 mr-2" />Panele Dön
+
+        <div className="px-2.5 pb-2.5 pt-2 border-t border-border/60 space-y-[2px]">
+          <p className="px-3 pt-1 pb-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70">Sistem</p>
+          <button
+            type="button"
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            className="group flex items-center gap-2.5 w-full px-3 py-[7px] rounded-md text-[13px] font-medium text-foreground/60 hover:bg-muted hover:text-foreground transition-all"
+          >
+            {theme === 'dark' ? <Sun className="h-[18px] w-[18px] text-foreground/40" /> : <Moon className="h-[18px] w-[18px] text-foreground/40" />}
+            {theme === 'dark' ? 'Açık Tema' : 'Koyu Tema'}
+          </button>
+          <Button variant="ghost" size="sm" className="w-full justify-start text-foreground/60 hover:text-foreground text-[13px] h-auto py-[7px] px-3 font-medium" onClick={() => router.push('/calendar')}>
+            <LogOut className="h-[18px] w-[18px] mr-2.5 text-foreground/40" />Panele Dön
           </Button>
         </div>
       </aside>
 
       {/* Main */}
-      <main className="flex-1 p-6 overflow-auto">
-        {children}
+      <main className="flex-1 overflow-auto">
+        <div className="px-5 py-5">
+          {children}
+        </div>
       </main>
     </div>
   );

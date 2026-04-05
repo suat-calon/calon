@@ -11,7 +11,7 @@ export default function AdminOpsPage() {
   return (
     <div className="space-y-6 max-w-4xl">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">Operasyon & Sağlık</h1>
+        <h1 className="text-lg font-semibold tracking-tight">Operasyon & Sağlık</h1>
         {health && (
           <Badge variant={health.status === 'ready' ? 'success' : 'destructive'} className="text-xs">
             {health.status === 'ready' ? '● Sağlıklı' : '○ Sorunlu'}
@@ -28,7 +28,7 @@ export default function AdminOpsPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Health checks */}
-          <div className="bg-white rounded-xl border p-5 space-y-3">
+          <div className="bg-card rounded-lg border p-5 space-y-3">
             <h3 className="text-sm font-semibold flex items-center gap-2"><Activity className="h-4 w-4" />Altyapı Sağlığı</h3>
             {health?.checks ? (
               <div className="space-y-2">
@@ -39,7 +39,7 @@ export default function AdminOpsPage() {
           </div>
 
           {/* Version */}
-          <div className="bg-white rounded-xl border p-5 space-y-3">
+          <div className="bg-card rounded-lg border p-5 space-y-3">
             <h3 className="text-sm font-semibold">Versiyon Bilgisi</h3>
             {vLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : version ? (
               <div className="space-y-1.5 text-sm">
@@ -53,7 +53,7 @@ export default function AdminOpsPage() {
         </div>
       )}
 
-      <div className="bg-white rounded-xl border p-5 space-y-2">
+      <div className="bg-card rounded-lg border p-5 space-y-2">
         <h3 className="text-sm font-semibold">Queue / Worker</h3>
         <p className="text-sm text-muted-foreground">Queue detay metrikleri Prometheus <code>/metrics</code> endpoint üzerinden erişilebilir. Bu fazda doğrudan queue görünümü henüz aktif değil.</p>
         <p className="text-xs text-muted-foreground italic">Sonraki fazda: queue job sayıları, failed job listesi, DLQ görünümü</p>

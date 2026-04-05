@@ -20,7 +20,7 @@ export default function AdminTenantsPage() {
 
   return (
     <div className="space-y-5 max-w-6xl">
-      <h1 className="text-2xl font-bold tracking-tight">Salonlar</h1>
+      <h1 className="text-lg font-semibold tracking-tight">Salonlar</h1>
       <div className="relative max-w-sm">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input placeholder="Salon ara..." className="pl-9 h-9" value={search} onChange={e => setSearch(e.target.value)} />
@@ -40,7 +40,7 @@ export default function AdminTenantsPage() {
       ) : (
         <div className="space-y-2">
           {filtered.map(t => (
-            <button key={t.id} type="button" className="w-full bg-white rounded-xl border shadow-sm px-4 py-3 flex items-center gap-4 hover:shadow-md transition-shadow text-left"
+            <button key={t.id} type="button" className="w-full bg-card rounded-lg border shadow-sm px-4 py-3 flex items-center gap-4 hover:shadow-md transition-shadow text-left"
               onClick={() => setSelected(t)}>
               <div className="p-2 rounded-lg bg-muted"><Building2 className="h-4 w-4 text-muted-foreground" /></div>
               <div className="flex-1 min-w-0">
