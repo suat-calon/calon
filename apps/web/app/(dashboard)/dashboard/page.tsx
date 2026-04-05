@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback, useEffect } from 'react';
 import Link from 'next/link';
 import { format, isToday, parseISO, isAfter } from 'date-fns';
 import { tr } from 'date-fns/locale';
@@ -287,6 +287,112 @@ export default function DashboardPage() {
     ).slice(0, 5);
   }, [customersData, appointments, now]);
 
+  // ── Decision Feedback — frontend-only observation ───────────────────
+  //
+  // Tracks: recommendation shown → operator action → booking outcome
+  // Storage: localStorage 'calon.impact.observations'
+  // Window: 14 days per observation
+  // Attribution: "observed after" only, never "caused by"
+  //
+  const OBS_KEY = 'calon.impact.observations';
+  const OBS_WINDOW_DAYS = 14;
+  const OBS_MAX_ACTIVE = 20;
+
+  interface ObservationEntry {
+    customerId:   string;
+    shownAt:      string; // ISO
+    impactClass:  string;
+    actionMode:   string;
+    hardness:     string;
+    ctaLabel:     string;
+    operatorAction: 'none' | 'cta_clicked' | 'customer_opened';
+    actedAt:      string | null;
+    outcome:      'pending' | 'booking_observed' | 'no_change' | 'expired';
+    outcomeAt:    string | null;
+  }
+
+  // Load observations
+  const getObservations = useCallback((): Record<string, ObservationEntry> => {
+    try {
+      const raw = typeof window !== 'undefined' ? localStorage.getItem(OBS_KEY) : null;
+      return raw ? JSON.parse(raw) : {};
+    } catch { return {}; }
+  }, []);
+
+  const saveObservations = useCallback((obs: Record<string, ObservationEntry>) => {
+    try {
+      // Prune expired + limit size
+      const nowIso = new Date().toISOString();
+      const cutoff = new Date(Date.now() - OBS_WINDOW_DAYS * 24 * 60 * 60 * 1000).toISOString();
+      const pruned: Record<string, ObservationEntry> = {};
+      const entries = Object.entries(obs).filter(([, v]) => v.shownAt > cutoff);
+      for (const [k, v] of entries.slice(-OBS_MAX_ACTIVE)) pruned[k] = v;
+      localStorage.setItem(OBS_KEY, JSON.stringify(pruned));
+    } catch { /* localStorage full or unavailable */ }
+  }, []);
+
+  // Record recommendation exposure on render
+  useEffect(() => {
+    if (priorityCustomers.length === 0) return;
+    const obs = getObservations();
+    const nowIso = new Date().toISOString();
+    let changed = false;
+
+    for (const pc of priorityCustomers) {
+      if (!obs[pc.id] || obs[pc.id].outcome !== 'pending') {
+        obs[pc.id] = {
+          customerId: pc.id,
+          shownAt: nowIso,
+          impactClass: pc.level,
+          actionMode: 'unknown', // will be enriched below
+          hardness: 'unknown',
+          ctaLabel: pc.actionLabel,
+          operatorAction: 'none',
+          actedAt: null,
+          outcome: 'pending',
+          outcomeAt: null,
+        };
+        changed = true;
+      }
+    }
+
+    // Check outcomes: did any observed customer get a booking?
+    if (appointments) {
+      for (const [cid, entry] of Object.entries(obs)) {
+        if (entry.outcome !== 'pending') continue;
+        const custApts = appointments.filter(
+          (a) => a.customer?.id === cid &&
+          a.createdAt > entry.shownAt &&
+          a.status !== 'CANCELLED'
+        );
+        if (custApts.length > 0) {
+          entry.outcome = 'booking_observed';
+          entry.outcomeAt = new Date().toISOString();
+          changed = true;
+        }
+        // Check window expiry
+        const windowEnd = new Date(new Date(entry.shownAt).getTime() + OBS_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+        if (new Date() > windowEnd && entry.outcome === 'pending') {
+          entry.outcome = 'no_change';
+          entry.outcomeAt = new Date().toISOString();
+          changed = true;
+        }
+      }
+    }
+
+    if (changed) saveObservations(obs);
+  }, [priorityCustomers, appointments, getObservations, saveObservations]);
+
+  // Operator action recorder
+  const recordAction = useCallback((customerId: string, action: 'cta_clicked' | 'customer_opened') => {
+    const obs = getObservations();
+    if (obs[customerId] && obs[customerId].outcome === 'pending') {
+      obs[customerId].operatorAction = action;
+      obs[customerId].actedAt = new Date().toISOString();
+      saveObservations(obs);
+    }
+  }, [getObservations, saveObservations]);
+
   const todayAppts = useMemo(() => {
     if (!appointments) return [];
     return appointments
@@ -435,7 +541,7 @@ export default function DashboardPage() {
           <div className="space-y-1.5">
             {priorityCustomers.map((pc) => (
               <div key={pc.id} className="flex items-center gap-2 rounded-lg px-2.5 py-2 hover:bg-muted/50 transition-colors group">
-                <Link href={pc.actionHref} className="flex items-center gap-2.5 flex-1 min-w-0">
+                <Link href={pc.actionHref} onClick={() => recordAction(pc.id, 'customer_opened')} className="flex items-center gap-2.5 flex-1 min-w-0">
                   <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                     <span className="text-[10px] font-semibold text-primary">{pc.name.split(' ').map(w => w[0]).join('')}</span>
                   </div>
@@ -453,7 +559,7 @@ export default function DashboardPage() {
                     <p className="text-[10px] text-muted-foreground truncate mt-0.5">{pc.reason}</p>
                   </div>
                 </Link>
-                <Link href="/calendar" className="shrink-0">
+                <Link href="/calendar" onClick={() => recordAction(pc.id, 'cta_clicked')} className="shrink-0">
                   <Button size="sm" variant="ghost" className="h-6 px-2 text-[10px] text-primary hover:text-primary">
                     {pc.actionLabel}
                   </Button>
