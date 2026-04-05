@@ -1,6 +1,7 @@
 # CALON — CONTEXT BRIEF
 > Yeni sohbet açıldığında bu dosyayı ilk mesaj olarak yapıştır.
-> Son güncelleme: P5 TAMAM (P5-0..P5-4 tamamlandı), P6 sırada.
+> Son güncelleme: 2026-03-23 — Infra/branch gerçeği hizalandı.
+> Source of truth: docs/runtime/REALITY_CHECK.md
 
 ---
 
@@ -19,10 +20,11 @@
 | Katman | Araç |
 |--------|------|
 | DB (production) | Neon (PostgreSQL) |
-| Cache (production) | Cloud Redis |
-| API/Worker host | Natro (Docker container) |
-| Frontend host | Vercel |
+| Cache (production) | Upstash Redis |
+| API/Worker host | Oracle Cloud (Docker container) |
+| Frontend host | Vercel (web + booking) |
 | Edge/DNS | Cloudflare |
+| Domain registrar | Natro (backend host DEĞİL) |
 | DB (local dev) | docker-compose calon_postgres |
 | Cache (local dev) | docker-compose calon_redis |
 | ORM | Prisma |
@@ -41,15 +43,14 @@
 
 **Monorepo yapısı:**
 ```
-apps/api/          → NestJS backend (Natro Docker)
+apps/api/          → NestJS backend (Oracle Cloud Docker)
 apps/booking/      → Public booking app (Vercel)
 apps/web/          → Admin web app (Vercel)
 packages/database/ → Prisma schema & client (canonical kaynak)
 docker/            → Production Dockerfile'lar
 test/fixtures/     → Seed/fixture JSON'lar
 CLAUDE.md          → Claude Code session anayasası
-STATUS.md          → Aktif faz takibi
-tracker.html       → Local MVP-Exit-Gate tracker (localStorage, repoya commit edilmez)
+docs/runtime/REALITY_CHECK.md → Tek mutlak durum belgesi (STATUS.md ve tracker.html arşivlendi)
 CONTEXT_BRIEF.md   → Yeni sohbet context özeti (bu dosya)
 docs/security/tenant-isolation.md → P4 güvenlik dokümantasyonu
 ```
@@ -131,11 +132,11 @@ docs/security/tenant-isolation.md → P4 güvenlik dokümantasyonu
 | P3 | Seed Disiplini | ✅ TAMAM | Idempotent seed, sıfır DB doğrulandı |
 | P4 | Tenant İzolasyonu | ✅ TAMAM | RLS restore + docs yazıldı |
 | P5 | Booking Core | ✅ TAMAM | 18 e2e test, GIST+RLS+interceptor v3.0 |
-| P6 | Production ENV Contract | ⬜ SIRADA | |
-| P7 | Docker Productionization | ⬜ | |
-| P8 | Routing / DNS / Edge | ⬜ | |
-| P9 | Gözlemleme / Observability | ⬜ | |
-| P10 | Controlled Launch | ⬜ | |
+| P6 | Production ENV Contract | ✅ TAMAM | env-contract, .env.example |
+| P7 | Docker Productionization | ✅ TAMAM | compose, Dockerfile, production override |
+| P8 | Routing / DNS / Edge | ✅ TAMAM | Oracle Cloud, Cloudflare, Vercel, SSL |
+| P9 | Gözlemleme / Observability | ✅ TAMAM | correlation-id, logging, metrics |
+| P10 | Controlled Launch | KISMİ | Frontend core + stage P0/P1 hazır, stage deploy bekleniyor |
 
 ### P5 Alt Faz Detayı (TAMAM)
 | Alt Faz | İş | Durum | CI |
@@ -170,15 +171,19 @@ docs/security/tenant-isolation.md → P4 güvenlik dokümantasyonu
 
 ---
 
-## 8. BİLİNÇLİ SİLİNEN DOSYALAR (GERİ GETİRİLMEYECEK)
+## 8. GOVERNANCE BELGELERİ
 
-```
-❌ AI_EXECUTION_RULES.md          → Eski ChatGPT protokolü, CLAUDE.md ile çakışıyordu
-❌ ARCHITECTURE_LOCK.md           → Eski ChatGPT protokolü
-❌ CALON_ENGINEERING_CONSTITUTION.md → Eski ChatGPT protokolü  
-❌ PROJECT_PROTOCOL.md            → Eski ChatGPT protokolü
-```
-CLAUDE.md tek yetkili kaynak.
+Aşağıdaki belgeler `docs/governance/` altında mevcuttur:
+- AI_EXECUTION_RULES.md
+- ARCHITECTURE_LOCK.md
+- CALON_ENGINEERING_CONSTITUTION.md
+- GIT_STRATEGY.md
+- PROJECT_PROTOCOL.md
+
+**Kanonik AI ajan protokolü:** `docs/runtime/EXECUTION_AGENT_STRICT_MODE.md`
+**Kanonik branch politikası:** `docs/runtime/BRANCH_POLICY.md`
+
+Governance belgeleri destekleyici referanstır. Runtime belgeleri baskındır.
 
 ---
 
@@ -189,8 +194,9 @@ Bu chat (Opus):   Strateji, mimari karar, faz geçişi, dokümantasyon üretimi
 Claude Code:      Kod yazımı ve infaz (C:\dev\calon klasöründe, Opus 4.6)
 NotebookLM:       Geçmiş context sorgulama, teknik düzeltme kontrolü
 CLAUDE.md:        Claude Code session anayasası (repo kökünde)
-STATUS.md:        Aktif faz takibi (her session sonrası güncellenir)
-tracker.html:     Local takip arayüzü (C:\dev\calon\tracker.html, çift tıkla)
+REALITY_CHECK.md: Tek mutlak durum belgesi (docs/runtime/)
+STRICT_MODE.md:   AI ajan infaz protokolü (docs/runtime/)
+BRANCH_POLICY.md: Branch stratejisi (docs/runtime/)
 ```
 
 **Onay kuralları:**
@@ -217,13 +223,11 @@ tracker.html:     Local takip arayüzü (C:\dev\calon\tracker.html, çift tıkla
 
 ---
 
-## 11. LOCAL TRACKER
+## 11. DURUM TAKİBİ
 
 ```
-tracker.html — C:\dev\calon\tracker.html
-Tarayıcıda çift tıkla, çevrimdışı çalışır, localStorage'a kaydeder.
-Repoya commit edilmez (P10 sonrası silinecek).
-Bu chat faz geçişlerinde tracker için güncel HTML üretir.
+tracker.html ve STATUS.md arşivlenmiştir (docs/archive/).
+Aktif durum belgesi: docs/runtime/REALITY_CHECK.md
 ```
 
 ---

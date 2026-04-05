@@ -1,25 +1,27 @@
 # CALON GIT STRATEGY (PRODUCTION READY)
 
-**Son güncelleme:** 2026-03-18  
+**Son güncelleme:** 2026-03-23
 **Durum:** MANDATORY — Bu strateji tüm contributors için zorunludur
+**Kanonik branch politikası:** docs/runtime/BRANCH_POLICY.md
 
 ---
 
 ## 🎯 AMAÇ
 
-"dev doğru / main yanlış" kaosunu bitirmek ve her zaman tek gerçek repo durumu sağlamak.
+Branch rollerini netleştirmek ve geliştirme disiplinini korumak.
 
 ---
 
 ## 1️⃣ TEMEL PRENSİP
 
-**Production gerçeği = main branch**
+**Geliştirme gerçeği = dev branch, production hedefi = main branch**
 
-- `main` = her zaman deploy edilebilir
-- `main` = her zaman doğru state
-- `main` = dış dünyaya gösterilen gerçek
+- `dev` = aktif geliştirme ve source of truth
+- `main` = production release alanı, manuel onaylı
+- `main`'e doğrudan commit/push YASAK
+- AI ajanları yalnızca `dev` ve `dev`'den türeyen branch'lerde çalışır
 
-💥 Eğer main bozuksa → sistem bozuk kabul edilir
+Detaylı branch politikası: `docs/runtime/BRANCH_POLICY.md`
 
 ---
 
@@ -27,17 +29,17 @@
 
 ### Kullanılacak Branchler:
 
-**🔵 main**
-- Production-ready
-- Deploy edilen branch
-- Her commit "çalışır" olmak zorunda
-- **Default branch**
-
-**🟡 dev**
-- Aktif geliştirme
+**🔵 dev**
+- Aktif geliştirme — source of truth
 - Claude/Codex burada çalışır
 - Feature'lar burada birleşir
-- Test ve deneme alanı
+- Tüm source-of-truth değerlendirmeleri önce dev üzerinden yapılır
+
+**🟢 main**
+- Production release alanı
+- Manuel onaylı merge ile güncellenir
+- Doğrudan commit YASAK
+- AI ajanları main'e dokunamaz
 
 **🔴 feature/***
 - Kısa ömürlü (1-3 gün)
@@ -74,7 +76,7 @@ git merge dev
 git push origin main
 ```
 
-⚠️ **ALTIN KURAL:** dev = geçici çalışma alanı, main = gerçek
+⚠️ **ALTIN KURAL:** dev = aktif geliştirme source of truth, main = production release hedefi
 
 ---
 
@@ -135,30 +137,28 @@ Her release:
 
 ## 8️⃣ HOTFIX MODELİ
 
+> **NOT:** AI ajanları hotfix akışı çalıştıramaz. Hotfix yalnızca insan tarafından yürütülür.
+> Kanonik branch politikası: `docs/runtime/BRANCH_POLICY.md`
+
 Production'da bug çıktı:
 
 ```bash
-# 1. main'den hotfix branch'i aç
-git checkout main
+# 1. dev'den hotfix branch'i aç
+git checkout dev
 git checkout -b hotfix/payment-bug
 
-# 2. Fix yap
-# ... kod ...
+# 2. Fix yap → test et → commit et
 git commit -m "fix: payment webhook validation"
-git push origin hotfix/payment-bug
 
-# 3. main'e merge
-git checkout main
-git merge hotfix/payment-bug
-git push origin main
-
-# 4. dev'e de merge (senkronizasyon)
+# 3. dev'e merge
 git checkout dev
-git merge main
-git push origin dev
+git merge hotfix/payment-bug
+
+# 4. dev → main (insan onaylı release)
+# Bu adım yalnızca insan kararıyla yapılır
 ```
 
-⚠️ **ÇOK KRİTİK:** Hotfix sadece main'den çıkar, dev'den ASLA!
+⚠️ **KURAL:** main'den doğrudan hotfix branch açmak YASAK (bkz. BRANCH_POLICY.md)
 
 ---
 
@@ -182,7 +182,7 @@ git push origin dev
 ❌ "Sonra merge ederiz" demek  
 ❌ main'i unutmak  
 ❌ Farklı gerçeklikler oluşturmak  
-❌ Hotfix'i dev'den yapmak  
+❌ Hotfix'i main'den açmak (dev'den açılır)
 
 ---
 
@@ -274,6 +274,7 @@ Bu strateji başarılıysa:
 
 ---
 
-**SON GÜNCELLEME:** 2026-03-18  
-**GÜNCELLEYEN:** Suat Gökçe — PY denetim raporu sonrası  
+**SON GÜNCELLEME:** 2026-03-23
+**GÜNCELLEYEN:** docs drift cleanup — BRANCH_POLICY.md ile hizalama
 **DURUM:** Mandatory ⚠️
+**Kanonik referans:** docs/runtime/BRANCH_POLICY.md

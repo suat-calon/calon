@@ -1,6 +1,6 @@
 # Production ENV Contract — Calon OS
 
-**Son guncelleme:** 2026-03-15 (P6)
+**Son guncelleme:** 2026-03-23 (infra/provider drift duzeltmesi)
 **Validation:** `apps/api/src/config/env.validation.ts` (Joi schema)
 **Template:** `apps/api/.env.example`
 
@@ -94,8 +94,8 @@
 ```
 [ ] NODE_ENV=production
 [ ] DATABASE_URL → Neon production connection string (calon_app rolu)
-[ ] REDIS_HOST → Cloud Redis production host
-[ ] REDIS_PASSWORD → Cloud Redis sifre
+[ ] REDIS_HOST → Upstash Redis production host
+[ ] REDIS_PASSWORD → Upstash Redis sifre
 [ ] JWT_SECRET → minimum 32 karakter, random (openssl rand -base64 64)
 [ ] IYZICO_API_KEY → gercek merchant key
 [ ] IYZICO_SECRET_KEY → gercek merchant secret
@@ -118,7 +118,7 @@
 |----------|-------------|---------|------------|
 | `NODE_ENV` | development | staging | production |
 | `DATABASE_URL` | localhost calon_dev | Neon staging | Neon production |
-| `REDIS_HOST` | localhost | Cloud Redis staging | Cloud Redis production |
+| `REDIS_HOST` | localhost | Upstash staging | Upstash production |
 | `IYZICO_BASE_URL` | sandbox-api | sandbox-api | api.iyzipay.com |
 | `CORS_ORIGIN` | localhost:3000,3001 | staging domain | production domain'ler |
 | `LOG_LEVEL` | debug | info | info/warn |

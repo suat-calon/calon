@@ -104,7 +104,7 @@ async function main() {
     create: {
       id:           OWNER_USER_ID,
       email:        'owner@demo-salon.com',
-      passwordHash: '$2b$10$demoHashNotRealButValidLength000000000000000000000',
+      passwordHash: '$2b$10$g5f.JHtX2.FIiYDOE4RMbuGHGqnzPqak3M0kSE989NPrYD4qs1UAa', // Demo1234!
       firstName:    'Suat',
       lastName:     'Democu',
       status:       'ACTIVE',

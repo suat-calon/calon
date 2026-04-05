@@ -47,7 +47,7 @@ docker-compose -f docker-compose.yml \
 ```
 
 Production override:
-- Postgres ve Redis servisleri **devre disi** (Neon + Cloud Redis kullanilir)
+- Postgres ve Redis servisleri **devre disi** (Neon + Upstash Redis kullanilir)
 - API: 512MB memory limit, json-file logging
 - Worker: 256MB memory limit, json-file logging
 - `depends_on` kaldirilir (external bagimliliklara bagimli degil)

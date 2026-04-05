@@ -20,13 +20,28 @@ postgresql://user:password@host:5432/calon
 
 # REDIS
 
-REDIS_URL
+REDIS_HOST
 
-Redis connection string used by:
+Upstash (or compatible) Redis endpoint hostname.
 
-- BullMQ
+REDIS_PORT
+
+Redis port. Default: 6379.
+
+REDIS_PASSWORD
+
+Redis authentication password/token. Required in staging and production.
+
+REDIS_TLS
+
+Set to `true` to enable TLS. Required for Upstash (TLS mandatory).
+
+Used by:
+
+- BullMQ (job queue)
 - rate limiting
 - distributed locks
+- idempotency key store
 
 ---
 
