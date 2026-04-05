@@ -115,8 +115,16 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
             {theme === 'dark' ? <Sun className="h-[18px] w-[18px] text-foreground/40" /> : <Moon className="h-[18px] w-[18px] text-foreground/40" />}
             {theme === 'dark' ? 'Açık Tema' : 'Koyu Tema'}
           </button>
-          <Button variant="ghost" size="sm" className="w-full justify-start text-foreground/60 hover:text-foreground text-[13px] h-auto py-[7px] px-3 font-medium" onClick={() => router.push('/calendar')}>
-            <LogOut className="h-[18px] w-[18px] mr-2.5 text-foreground/40" />Panele Dön
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full justify-start text-foreground/60 hover:text-foreground text-[13px] h-auto py-[7px] px-3 font-medium"
+            onClick={async () => {
+              try { await fetch('/api/v1/auth/logout', { method: 'POST', credentials: 'include' }); } catch {}
+              router.push('/login');
+            }}
+          >
+            <LogOut className="h-[18px] w-[18px] mr-2.5 text-foreground/40" />Çıkış Yap
           </Button>
         </div>
       </aside>
