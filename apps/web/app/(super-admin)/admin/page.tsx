@@ -76,15 +76,20 @@ export default function AdminOverviewPage() {
           {growth?.planDistribution && Object.keys(growth.planDistribution).length > 0 && (
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 mb-2.5">Plan Dağılımı</p>
-              <div className="bg-card rounded-lg border p-4">
-                <div className="flex gap-6">
-                  {Object.entries(growth.planDistribution).map(([plan, count]) => (
-                    <div key={plan} className="text-center">
-                      <p className="text-lg font-semibold">{count as number}</p>
-                      <p className="text-[10px] text-muted-foreground uppercase tracking-wide">{plan}</p>
+              <div className="bg-card rounded-lg border p-4 space-y-2.5">
+                {Object.entries(growth.planDistribution).map(([plan, count]) => {
+                  const total = overview?.totalTenants ?? growth?.totalSalons ?? 1;
+                  const pct = Math.min(100, ((count as number) / Math.max(total, 1)) * 100);
+                  return (
+                    <div key={plan} className="flex items-center gap-3">
+                      <span className="text-[12px] font-medium w-24 shrink-0 uppercase tracking-wide">{plan}</span>
+                      <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                        <div className="h-2 bg-primary rounded-full transition-all" style={{ width: `${pct}%` }} />
+                      </div>
+                      <span className="text-[12px] font-semibold tabular-nums w-6 text-right">{count as number}</span>
                     </div>
-                  ))}
-                </div>
+                  );
+                })}
               </div>
             </div>
           )}

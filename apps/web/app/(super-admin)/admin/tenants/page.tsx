@@ -51,8 +51,8 @@ export default function AdminTenantsPage() {
           <span>Veriler yüklenemedi.</span>
         </div>
       ) : isLoading ? (
-        <div className="flex justify-center py-12">
-          <div className="w-5 h-5 animate-spin rounded-full border-2 border-muted border-t-primary" />
+        <div className="flex justify-center py-16">
+          <div className="w-6 h-6 animate-spin rounded-full border-2 border-muted border-t-primary" />
         </div>
       ) : filtered.length === 0 ? (
         <div className="flex flex-col items-center py-14">
