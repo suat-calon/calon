@@ -86,7 +86,7 @@ export interface VersionInfo {
 export function useAdminOverview() {
   return useQuery<AdminOverview, Error>({
     queryKey: ['admin', 'overview'],
-    queryFn: () => apiClient.get('/admin/tenants/overview').then(r => r.data),
+    queryFn: () => apiClient.get('/admin/tenants/overview').then(r => r.data?.data ?? r.data),
     retry: false,
   });
 }
@@ -94,7 +94,16 @@ export function useAdminOverview() {
 export function useAdminTenants() {
   return useQuery<AdminTenant[], Error>({
     queryKey: ['admin', 'tenants'],
-    queryFn: () => apiClient.get('/admin/tenants').then(r => r.data),
+    queryFn: () => apiClient.get('/admin/tenants?limit=100').then(r => {
+      const body = r.data?.data ?? r.data;
+      const items = Array.isArray(body) ? body : (body?.items ?? []);
+      // Normalize: backend returns billing as nested object, flatten status for UI
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return (items as any[]).map((t: any) => ({
+        ...t,
+        status: t.billing?.status ?? t.status ?? 'UNKNOWN',
+      })) as AdminTenant[];
+    }),
     retry: false,
   });
 }
@@ -102,7 +111,7 @@ export function useAdminTenants() {
 export function useAdminTenantDetail(tenantId: string | null) {
   return useQuery<AdminTenantDetail, Error>({
     queryKey: ['admin', 'tenant', tenantId],
-    queryFn: () => apiClient.get(`/admin/tenants/${tenantId}`).then(r => r.data),
+    queryFn: () => apiClient.get(`/admin/tenants/${tenantId}`).then(r => r.data?.data ?? r.data),
     enabled: !!tenantId,
     retry: false,
   });
