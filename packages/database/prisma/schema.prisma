@@ -139,6 +139,7 @@ model Tenant {
   policyPatches              PolicyPatch[]
   recommendationPolicyConfig RecommendationPolicyConfig?
   opsReviewRecords           OpsReviewRecord[]
+  financeMismatchReviews     FinanceMismatchReview[]
 
   @@index([slug])
   @@index([status])
@@ -880,6 +881,66 @@ model OpsReviewRecord {
   @@index([tenantId, decision])
   @@index([tenantId, reviewedAt])
   @@map("ops_review_records")
+}
+
+model FinanceMismatchReview {
+  id                String    @id @default(uuid()) @db.Uuid
+  tenantId          String    @db.Uuid
+
+  // Mismatch identity (from reconciliation read model)
+  mismatchClass     String    // PAYMENT_PAID_LEDGER_MISSING / PAYMENT_REFUNDED_LEDGER_MISSING / etc.
+  priority          String    // HIGH / MEDIUM / LOW
+  referenceType     String    // payment / billing_attempt / webhook_event / ledger
+  referenceId       String    // ID of the referenced object
+
+  // Strict truth snapshot (what reconciliation detected)
+  evidence          String    @db.Text
+  detectedAt        DateTime  @default(now())
+
+  // Operational lifecycle
+  status            String    @default("NEW")
+  // NEW — detected, pending review
+  // UNDER_REVIEW — assigned, being investigated
+  // WAITING_EXTERNAL — waiting for provider response / external resolution
+  // RESOLVED — manually resolved, verified
+  // ESCALATED — escalated to higher authority
+  // CLOSED_FALSE_POSITIVE — determined to be non-issue
+  // CLOSED_NO_ACTION — reviewed, no action needed
+
+  // Ownership
+  owner             String?   // Assigned reviewer
+  decidedBy         String?   // Who made the decision
+  decidedAt         DateTime?
+
+  // Decision
+  decision          String?   // RESOLVE_MANUALLY / ESCALATE / WATCH / NO_ACTION / FALSE_POSITIVE / BLOCKED
+  decisionReason    String?   @db.Text
+  nextReviewDate    DateTime?
+
+  // Manual repair governance
+  manualRepairNeeded  Boolean   @default(false)
+  repairNote          String?   @db.Text
+  repairPerformedBy   String?
+  repairPerformedAt   DateTime?
+  repairVerifiedAt    DateTime?
+
+  // Escalation
+  escalationReason    String?   @db.Text
+  escalatedTo         String?
+
+  // Audit
+  notes               String?   @db.Text
+
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId, status])
+  @@index([tenantId, mismatchClass])
+  @@index([tenantId, priority])
+  @@index([tenantId, nextReviewDate])
+  @@map("finance_mismatch_reviews")
 }
 
 model CommissionLog {

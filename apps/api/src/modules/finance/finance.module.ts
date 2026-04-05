@@ -23,9 +23,10 @@ import { PaymentController }    from './payment.controller';
 import { PrismaPaymentRepository } from './payment.repository';
 import { PAYMENT_REPO }         from './payment.repository.interface';
 import { ReconciliationService } from './reconciliation.service';
+import { FinanceOpsController }  from './finance-ops.controller';
 
 @Module({
-  controllers: [PaymentController],
+  controllers: [PaymentController, FinanceOpsController],
   providers:   [
     LedgerService,
     PaymentService,
