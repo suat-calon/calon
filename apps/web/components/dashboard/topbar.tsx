@@ -46,7 +46,7 @@ export function Topbar() {
 
   return (
     <>
-      <header className="h-16 border-b bg-white flex items-center justify-between px-4 lg:px-6 shrink-0">
+      <header className="h-14 border-b border-border bg-card flex items-center justify-between px-4 lg:px-6 shrink-0">
         {/* Mobile menu toggle */}
         <button
           className="lg:hidden p-2 -ml-2 rounded-md hover:bg-muted"
@@ -57,10 +57,13 @@ export function Topbar() {
 
         {/* Mobile logo */}
         <Link href="/dashboard" className="lg:hidden flex items-center gap-2">
-          <span className="text-xl font-bold text-primary">Calon</span>
+          <div className="w-6 h-6 rounded-md bg-primary flex items-center justify-center">
+            <span className="text-[10px] font-bold text-primary-foreground">C</span>
+          </div>
+          <span className="text-lg font-bold text-foreground">Calon</span>
         </Link>
 
-        {/* Tenant info — Untitled-inspired clean label */}
+        {/* Tenant info */}
         <div className="hidden lg:flex items-center gap-2.5">
           <span className="text-sm font-semibold text-foreground">{tenant?.name ?? '...'}</span>
           {tenant?.plan && (
@@ -81,11 +84,16 @@ export function Topbar() {
       {mobileOpen && (
         <div className="lg:hidden fixed inset-0 z-50 bg-black/40" onClick={() => setMobileOpen(false)}>
           <nav
-            className="w-64 h-full bg-white border-r p-4 space-y-1"
+            className="w-64 h-full bg-card border-r border-border p-4 space-y-1"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-6 flex items-center justify-between">
-              <span className="text-xl font-bold text-primary">Calon</span>
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-md bg-primary flex items-center justify-center">
+                  <span className="text-[10px] font-bold text-primary-foreground">C</span>
+                </div>
+                <span className="text-lg font-bold text-foreground">Calon</span>
+              </div>
               <button onClick={() => setMobileOpen(false)} className="p-1">
                 <X className="h-5 w-5" />
               </button>
@@ -100,13 +108,13 @@ export function Topbar() {
                   href={href}
                   onClick={() => setMobileOpen(false)}
                   className={cn(
-                    'flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium',
+                    'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
                     isActive
-                      ? 'bg-primary/10 text-primary'
-                      : 'text-muted-foreground hover:bg-muted',
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-foreground/70 hover:bg-muted',
                   )}
                 >
-                  <Icon className="h-4 w-4" />
+                  <Icon className={cn('h-4 w-4', isActive ? 'text-primary-foreground' : 'text-foreground/50')} />
                   {label}
                 </Link>
               );

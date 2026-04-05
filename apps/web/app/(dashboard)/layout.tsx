@@ -9,10 +9,6 @@ import { Topbar }     from '@/components/dashboard/topbar';
 
 /**
  * Dashboard route grubu layout — auth guard + shell.
- *
- * Güvenlik (v2):
- *   - GET /auth/me endpoint'i HttpOnly cookie üzerinden oturumu doğrular
- *   - 401 gelirse /login'e yönlendirir
  */
 export default function DashboardLayout({
   children,
@@ -31,9 +27,9 @@ export default function DashboardLayout({
 
   if (!ready) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4 text-muted-foreground">
-          <div className="h-10 w-10 animate-spin rounded-full border-[3px] border-muted border-t-primary" />
+          <div className="w-10 h-10 animate-spin rounded-full border-[3px] border-muted border-t-primary" />
           <div className="text-center">
             <p className="text-sm font-medium text-foreground">Calon</p>
             <p className="text-xs text-muted-foreground mt-0.5">Yükleniyor...</p>
@@ -44,7 +40,7 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="min-h-screen flex bg-slate-50">
+    <div className="min-h-screen flex bg-background">
       <Sidebar />
       <div className="flex-1 flex flex-col min-w-0">
         <Topbar />
