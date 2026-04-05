@@ -76,7 +76,7 @@ export default function StaffPage() {
             const firstWorking = (s.workingHours ?? []).find((w) => w.isWorkingDay);
 
             return (
-              <div key={s.id} className="bg-white rounded-xl border shadow-sm px-4 py-3 flex items-center gap-4 hover:shadow-md transition-shadow group">
+              <div key={s.id} className="bg-card rounded-xl border shadow-sm px-4 py-3 flex items-center gap-4 hover:shadow-md transition-shadow group">
                 <div className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-semibold shrink-0"
                   style={{ backgroundColor: s.colorHex ?? '#6366f1' }}>
                   {s.firstName[0]}{s.lastName[0]}
@@ -169,7 +169,7 @@ function WorkingHoursEditor({ staff, onClose }: { staff: StaffMember; onClose: (
         {hours.map((h, idx) => {
           const day = DAYS.find((d) => d.key === h.dayOfWeek);
           return (
-            <div key={h.dayOfWeek} className={`rounded-lg border p-3 transition-colors ${h.isWorkingDay ? 'bg-white' : 'bg-muted/50'}`}>
+            <div key={h.dayOfWeek} className={`rounded-lg border p-3 transition-colors ${h.isWorkingDay ? 'bg-card' : 'bg-muted/50'}`}>
               <div className="flex items-center gap-3">
                 <label className="flex items-center gap-2 cursor-pointer min-w-[100px]">
                   <input type="checkbox" checked={h.isWorkingDay} onChange={(e) => updateDay(idx, 'isWorkingDay', e.target.checked)}

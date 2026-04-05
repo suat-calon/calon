@@ -135,7 +135,7 @@ export default function ServicesPage() {
       ) : (
         <div className="space-y-2">
           {filtered.map((svc) => (
-            <div key={svc.id} className="bg-white rounded-xl border shadow-sm px-4 py-3 flex items-center gap-4 hover:shadow-md transition-shadow group">
+            <div key={svc.id} className="bg-card rounded-xl border shadow-sm px-4 py-3 flex items-center gap-4 hover:shadow-md transition-shadow group">
               <div className="p-2 rounded-lg bg-primary/8"><Scissors className="h-4 w-4 text-primary" /></div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">

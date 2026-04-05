@@ -477,7 +477,7 @@ export default function DashboardPage() {
                 className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-colors text-sm ${
                   step.done
                     ? 'bg-emerald-50/50 text-emerald-700'
-                    : 'bg-white hover:bg-muted/50 text-foreground shadow-sm border border-border/50'
+                    : 'bg-card hover:bg-muted/50 text-foreground shadow-sm border border-border/50'
                 }`}
               >
                 {step.done ? (
@@ -505,17 +505,17 @@ export default function DashboardPage() {
             {bookingUrl && (
               <button
                 onClick={() => { navigator.clipboard.writeText(bookingUrl); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
-                className="flex items-center gap-2 bg-white rounded-lg px-3 py-2 text-xs font-medium border hover:bg-muted/50 transition-colors"
+                className="flex items-center gap-2 bg-card rounded-lg px-3 py-2 text-xs font-medium border hover:bg-muted/50 transition-colors"
               >
                 {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5 text-muted-foreground" />}
                 Booking Link Kopyala
               </button>
             )}
-            <Link href="/calendar" className="flex items-center gap-2 bg-white rounded-lg px-3 py-2 text-xs font-medium border hover:bg-muted/50 transition-colors">
+            <Link href="/calendar" className="flex items-center gap-2 bg-card rounded-lg px-3 py-2 text-xs font-medium border hover:bg-muted/50 transition-colors">
               <Plus className="h-3.5 w-3.5 text-muted-foreground" />
               Randevu Oluştur
             </Link>
-            <Link href="/customers" className="flex items-center gap-2 bg-white rounded-lg px-3 py-2 text-xs font-medium border hover:bg-muted/50 transition-colors">
+            <Link href="/customers" className="flex items-center gap-2 bg-card rounded-lg px-3 py-2 text-xs font-medium border hover:bg-muted/50 transition-colors">
               <Users className="h-3.5 w-3.5 text-muted-foreground" />
               Müşterileri Gör
             </Link>
@@ -545,7 +545,7 @@ export default function DashboardPage() {
 
       {/* ── Priority Customers ──────────────────────────────────────────── */}
       {priorityCustomers.length > 0 && (
-        <div className="bg-white border rounded-xl p-4 shadow-sm">
+        <div className="bg-card border rounded-xl p-4 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-semibold flex items-center gap-1.5">
               <Users className="h-4 w-4 text-primary" />
@@ -629,7 +629,7 @@ export default function DashboardPage() {
       {/* ── Two-Column: Upcoming + Quick Actions ──────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-5">
         {/* Upcoming */}
-        <div className="bg-white rounded-xl border shadow-sm">
+        <div className="bg-card rounded-xl border shadow-sm">
           <div className="flex items-center justify-between px-5 pt-5 pb-3">
             <div>
               <h2 className="text-sm font-semibold">Yaklaşan Randevular</h2>
@@ -679,7 +679,7 @@ export default function DashboardPage() {
 
       {/* ── Today's Appointments ──────────────────────────────────────────── */}
       {todayAppts.length > 0 && (
-        <div className="bg-white rounded-xl border shadow-sm">
+        <div className="bg-card rounded-xl border shadow-sm">
           <div className="flex items-center justify-between px-5 pt-5 pb-3">
             <div>
               <h2 className="text-sm font-semibold">Bugünkü Randevular</h2>
@@ -727,7 +727,7 @@ function StatCard({
 }) {
   const t = TONE_STYLES[tone];
   return (
-    <div className={`bg-white rounded-xl border shadow-sm p-4 transition-shadow hover:shadow-md ${t.ring}`}>
+    <div className={`bg-card rounded-xl border shadow-sm p-4 transition-shadow hover:shadow-md ${t.ring}`}>
       <div className="flex items-start justify-between">
         <div className={`p-2 rounded-lg ${t.bg}`}>
           <Icon className={`h-4 w-4 ${t.icon}`} />
@@ -818,7 +818,7 @@ function BookingLinkCard({ slug }: { slug: string }) {
           <p className="text-sm font-semibold">Online Randevu Linki</p>
           <p className="text-xs text-muted-foreground mt-0.5">Bu linki müşterilerinizle paylaşarak online randevu almalarını sağlayın.</p>
           <div className="flex items-center gap-2 mt-2.5">
-            <code className="flex-1 text-xs bg-white/80 border rounded-md px-3 py-1.5 truncate font-mono text-foreground/80">
+            <code className="flex-1 text-xs bg-card/80 border rounded-md px-3 py-1.5 truncate font-mono text-foreground/80">
               {bookingUrl}
             </code>
             <Button variant="outline" size="sm" className="shrink-0 h-8 px-2.5 border-primary/30 text-primary hover:bg-primary/10" onClick={handleCopy}>
@@ -853,7 +853,7 @@ function QuickAction({
       className={`flex items-center gap-3 px-4 py-3 rounded-xl border transition-all group ${
         primary
           ? 'bg-primary/5 border-primary/20 hover:bg-primary/10 hover:border-primary/30 shadow-sm'
-          : 'bg-white hover:bg-muted/50 hover:border-muted-foreground/20 shadow-sm'
+          : 'bg-card hover:bg-muted/50 hover:border-muted-foreground/20 shadow-sm'
       }`}
     >
       <div className={`p-2 rounded-lg ${primary ? 'bg-primary/15' : 'bg-muted'}`}>

@@ -232,14 +232,14 @@ export default function CatalogPage() {
         <div className="flex rounded-lg border bg-muted p-0.5 h-9">
           <button
             type="button"
-            className={`flex items-center gap-1 rounded-md px-3 text-xs font-medium transition-colors ${tab === 'services' ? 'bg-white text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+            className={`flex items-center gap-1 rounded-md px-3 text-xs font-medium transition-colors ${tab === 'services' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
             onClick={() => setTab('services')}
           >
             <Scissors className="h-3.5 w-3.5" />Hizmetler
           </button>
           <button
             type="button"
-            className={`flex items-center gap-1 rounded-md px-3 text-xs font-medium transition-colors ${tab === 'products' ? 'bg-white text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+            className={`flex items-center gap-1 rounded-md px-3 text-xs font-medium transition-colors ${tab === 'products' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
             onClick={() => setTab('products')}
           >
             <Package className="h-3.5 w-3.5" />Ürünler
@@ -262,7 +262,7 @@ export default function CatalogPage() {
         ) : (
           <div className="space-y-2">
             {filteredServices.map((svc) => (
-              <div key={svc.id} className="bg-white rounded-xl border shadow-sm px-4 py-3 flex items-center gap-4 hover:shadow-md transition-shadow group">
+              <div key={svc.id} className="bg-card rounded-xl border shadow-sm px-4 py-3 flex items-center gap-4 hover:shadow-md transition-shadow group">
                 <div className="p-2 rounded-lg bg-primary/8">
                   <Scissors className="h-4 w-4 text-primary" />
                 </div>
@@ -303,7 +303,7 @@ export default function CatalogPage() {
               const minStock = Number(prod.minStock);
               const lowStock = stock <= minStock && minStock > 0;
               return (
-                <div key={prod.id} className="bg-white rounded-xl border shadow-sm px-4 py-3 flex items-center gap-4 hover:shadow-md transition-shadow group">
+                <div key={prod.id} className="bg-card rounded-xl border shadow-sm px-4 py-3 flex items-center gap-4 hover:shadow-md transition-shadow group">
                   <div className="p-2 rounded-lg bg-muted">
                     <Package className="h-4 w-4 text-muted-foreground" />
                   </div>

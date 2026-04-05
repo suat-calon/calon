@@ -960,7 +960,7 @@ export default function CalendarPage() {
                             <select
                               value={checkoutMethod}
                               onChange={(e) => setCheckoutMethod(e.target.value as CheckoutPaymentMethod)}
-                              className="w-full h-8 text-sm rounded border border-emerald-300 bg-white px-2 mt-0.5"
+                              className="w-full h-8 text-sm rounded border border-emerald-300 dark:border-emerald-800 bg-card px-2 mt-0.5"
                             >
                               <option value="PAYMENT_CASH">Nakit</option>
                               <option value="PAYMENT_CARD">Kart</option>

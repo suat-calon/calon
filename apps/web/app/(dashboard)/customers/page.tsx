@@ -239,7 +239,7 @@ export default function CustomersPage() {
             const nextAppt = getNextAppointment(c.id);
             const visits   = getTotalVisits(c.id);
             return (
-              <button key={c.id} type="button" className="w-full bg-white rounded-xl border shadow-sm px-4 py-3 flex items-center gap-4 hover:shadow-md transition-shadow text-left group"
+              <button key={c.id} type="button" className="w-full bg-card rounded-xl border shadow-sm px-4 py-3 flex items-center gap-4 hover:shadow-md transition-shadow text-left group"
                 onClick={() => setSelectedCustomer(c)}
               >
                 <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
@@ -420,12 +420,12 @@ function CustomerProfile({ customer: c, appointments: appts }: { customer: Custo
 
   // Badge config — multi-badge, en fazla 3 gösterilir
   const badgeConfig = [
-    { key: 'isVip',       show: signals.isVip,       label: 'VIP',        color: 'text-purple-700',  bg: 'bg-purple-50 border-purple-200' },
-    { key: 'isRisk',      show: signals.isRisk,      label: 'Dikkat',     color: 'text-red-700',     bg: 'bg-red-50 border-red-200' },
-    { key: 'isDormant',   show: signals.isDormant,    label: 'Uzak',       color: 'text-gray-600',    bg: 'bg-gray-50 border-gray-200' },
-    { key: 'isReturning', show: signals.isReturning,  label: 'Tekrar',     color: 'text-emerald-700', bg: 'bg-emerald-50 border-emerald-200' },
-    { key: 'isNew',       show: signals.isNew,        label: 'Yeni',       color: 'text-blue-700',    bg: 'bg-blue-50 border-blue-200' },
-    { key: 'hasUpcoming', show: signals.hasUpcoming,   label: 'Randevulu',  color: 'text-indigo-700',  bg: 'bg-indigo-50 border-indigo-200' },
+    { key: 'isVip',       show: signals.isVip,       label: 'VIP',        color: 'text-purple-700 dark:text-purple-400',  bg: 'bg-purple-50 dark:bg-purple-950/40 border-purple-200 dark:border-purple-800/50' },
+    { key: 'isRisk',      show: signals.isRisk,      label: 'Dikkat',     color: 'text-red-700 dark:text-red-400',     bg: 'bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-800/50' },
+    { key: 'isDormant',   show: signals.isDormant,    label: 'Uzak',       color: 'text-gray-600 dark:text-gray-400',    bg: 'bg-gray-50 dark:bg-gray-800/40 border-gray-200 dark:border-gray-700/50' },
+    { key: 'isReturning', show: signals.isReturning,  label: 'Tekrar',     color: 'text-emerald-700 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800/50' },
+    { key: 'isNew',       show: signals.isNew,        label: 'Yeni',       color: 'text-blue-700 dark:text-blue-400',    bg: 'bg-blue-50 dark:bg-blue-950/40 border-blue-200 dark:border-blue-800/50' },
+    { key: 'hasUpcoming', show: signals.hasUpcoming,   label: 'Randevulu',  color: 'text-indigo-700 dark:text-indigo-400',  bg: 'bg-indigo-50 dark:bg-indigo-950/40 border-indigo-200 dark:border-indigo-800/50' },
     ...(cycleBadge ? [cycleBadge] : []),
   ].filter((b) => b.show).slice(0, 3);
 
@@ -798,7 +798,7 @@ function ApptRow({ a }: { a: Appointment }) {
   const hasAmount = a.status === 'COMPLETED' && a.totalPrice && Number(a.totalPrice) > 0;
   return (
     <Link href={`/calendar?date=${apptDate}`} className="block">
-      <div className="flex items-center gap-2.5 bg-white border rounded-lg px-3 py-2 hover:bg-muted/30 transition-colors cursor-pointer group">
+      <div className="flex items-center gap-2.5 bg-card border rounded-lg px-3 py-2 hover:bg-muted/30 transition-colors cursor-pointer group">
         <Clock className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
         <div className="flex-1 min-w-0">
           <p className="text-xs font-medium truncate">{a.service?.name ?? 'Hizmet'} — {a.staff?.firstName ?? ''}</p>
