@@ -1,6 +1,6 @@
 'use client';
 
-import { Loader2, AlertCircle, CreditCard } from 'lucide-react';
+import { CreditCard, TrendingUp, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useBillingTenants, useBillingMetrics } from '@/hooks/api/use-admin';
 
@@ -12,51 +12,98 @@ export default function AdminBillingPage() {
   const error = tError || mError;
 
   return (
-    <div className="space-y-6 max-w-6xl">
-      <h1 className="text-lg font-semibold tracking-tight">Faturalama</h1>
-      <p className="text-sm text-muted-foreground">Read-only görünüm. Düzenleme bu fazda devre dışı.</p>
+    <div className="space-y-4 max-w-6xl">
+      {/* Page header */}
+      <div className="flex items-center justify-between pb-1 border-b border-border/40">
+        <div>
+          <h1 className="text-lg font-semibold tracking-tight">Faturalama</h1>
+          <p className="text-[11px] text-muted-foreground/70 mt-0.5">Read-only cockpit · Düzenleme bu fazda devre dışı</p>
+        </div>
+      </div>
 
       {error ? (
-        <div className="flex items-center gap-2 text-destructive py-8 justify-center">
-          <AlertCircle className="h-5 w-5" /><span>{error.message.includes('401') ? 'Geçersiz API anahtarı.' : 'Yüklenemedi.'}</span>
+        <div className="flex items-center gap-2 text-destructive py-8 justify-center text-sm">
+          <span>Veriler yüklenemedi.</span>
         </div>
       ) : loading ? (
-        <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+        <div className="flex justify-center py-12">
+          <div className="w-5 h-5 animate-spin rounded-full border-2 border-muted border-t-primary" />
+        </div>
       ) : (
         <>
+          {/* Metrics */}
           {metrics && (
-            <div className="grid grid-cols-3 gap-4">
-              <div className="bg-card rounded-lg border p-4 text-center">
-                <p className="text-2xl font-bold">{metrics.totalActive}</p>
-                <p className="text-xs text-muted-foreground">Aktif Abonelik</p>
-              </div>
-              <div className="bg-card rounded-lg border p-4 text-center">
-                <p className="text-2xl font-bold">{typeof metrics.totalRevenue === 'number' ? `₺${metrics.totalRevenue.toLocaleString('tr-TR')}` : metrics.totalRevenue}</p>
-                <p className="text-xs text-muted-foreground">Toplam Gelir</p>
-              </div>
-              <div className="bg-card rounded-lg border p-4 text-center">
-                <p className="text-2xl font-bold text-amber-600">{metrics.pastDue}</p>
-                <p className="text-xs text-muted-foreground">Gecikmiş</p>
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 mb-2.5">Billing Metrikleri</p>
+              <div className="grid grid-cols-3 gap-2.5">
+                <div className="bg-card rounded-lg border p-3.5">
+                  <div className="flex items-center gap-3">
+                    <div className="p-1.5 rounded-md bg-primary/10">
+                      <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-lg font-semibold leading-none">{metrics.totalActive}</p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">Aktif Abonelik</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-card rounded-lg border p-3.5">
+                  <div className="flex items-center gap-3">
+                    <div className="p-1.5 rounded-md bg-emerald-100 dark:bg-emerald-950/40">
+                      <TrendingUp className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                    </div>
+                    <div>
+                      <p className="text-lg font-semibold leading-none">{typeof metrics.totalRevenue === 'number' ? `₺${metrics.totalRevenue.toLocaleString('tr-TR')}` : metrics.totalRevenue}</p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">Toplam Gelir</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-card rounded-lg border p-3.5">
+                  <div className="flex items-center gap-3">
+                    <div className="p-1.5 rounded-md bg-amber-100 dark:bg-amber-950/40">
+                      <AlertTriangle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+                    </div>
+                    <div>
+                      <p className="text-lg font-semibold leading-none">{metrics.pastDue}</p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">Gecikmiş</p>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           )}
 
-          {tenants && tenants.length > 0 ? (
-            <div className="space-y-2">
-              {tenants.map((t) => (
-                <div key={t.id} className="bg-card rounded-lg border px-4 py-3 flex items-center gap-4">
-                  <CreditCard className="h-4 w-4 text-muted-foreground" />
-                  <div className="flex-1">
-                    <span className="text-sm font-medium">{t.tenantId?.slice(0, 8)}...</span>
+          {/* Tenant billing list */}
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 mb-2.5">Abonelikler</p>
+            {tenants && tenants.length > 0 ? (
+              <div className="bg-card rounded-lg border divide-y divide-border/60">
+                {tenants.map((t: { id: string; tenantId?: string; plan: string; status: string }) => (
+                  <div key={t.id} className="px-4 py-2.5 flex items-center gap-3">
+                    <CreditCard className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <span className="text-[13px] font-medium font-mono">{t.tenantId?.slice(0, 12)}...</span>
+                    </div>
+                    <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4">{t.plan}</Badge>
+                    <Badge
+                      variant={t.status === 'ACTIVE' ? 'success' : t.status === 'TRIAL' ? 'info' : t.status === 'PAST_DUE' ? 'warning' : 'destructive'}
+                      className="text-[9px] px-1.5 py-0 h-4"
+                    >
+                      {t.status}
+                    </Badge>
                   </div>
-                  <Badge variant="secondary" className="text-[9px]">{t.plan}</Badge>
-                  <Badge variant={t.status === 'ACTIVE' ? 'success' : 'secondary'} className="text-[9px]">{t.status}</Badge>
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center py-12">
+                <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center mb-2.5">
+                  <CreditCard className="h-4 w-4 text-muted-foreground/50" />
                 </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground text-center py-8">Billing verisi henüz mevcut değil.</p>
-          )}
+                <p className="text-[13px] text-muted-foreground font-medium">Billing verisi yok</p>
+                <p className="text-[11px] text-muted-foreground/60 mt-0.5">İlk abonelik oluşturulduğunda burada görünecek.</p>
+              </div>
+            )}
+          </div>
         </>
       )}
     </div>

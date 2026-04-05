@@ -9,8 +9,8 @@ export default function AdminOpsPage() {
   const { data: version, isLoading: vLoading } = useVersionInfo();
 
   return (
-    <div className="space-y-6 max-w-4xl">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 max-w-4xl">
+      <div className="flex items-center justify-between pb-1 border-b border-border/40">
         <h1 className="text-lg font-semibold tracking-tight">Operasyon & Sağlık</h1>
         {health && (
           <Badge variant={health.status === 'ready' ? 'success' : 'destructive'} className="text-xs">
@@ -26,7 +26,7 @@ export default function AdminOpsPage() {
       ) : hLoading ? (
         <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
           {/* Health checks */}
           <div className="bg-card rounded-lg border p-5 space-y-3">
             <h3 className="text-sm font-semibold flex items-center gap-2"><Activity className="h-4 w-4" />Altyapı Sağlığı</h3>
@@ -72,7 +72,7 @@ function HealthRow({ name, status, latency }: { name: string; status: string; la
         {up ? <CheckCircle2 className="h-4 w-4 text-emerald-500" /> : <XCircle className="h-4 w-4 text-red-500" />}
         <span className="text-sm">{name}</span>
       </div>
-      <span className={`text-xs font-mono ${up ? 'text-emerald-600' : 'text-red-600'}`}>{latency}ms</span>
+      <span className={`text-[11px] font-mono ${up ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>{latency}ms</span>
     </div>
   );
 }
