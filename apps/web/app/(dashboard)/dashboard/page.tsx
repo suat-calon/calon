@@ -64,25 +64,30 @@ export default function DashboardPage() {
 
   const now = useMemo(() => new Date(), []);
 
-  // ── Impact Engine v1.1 — decision tree, no additive scoring ─────────────
+  // ── Impact Engine v1.2 — decision tree, mini correction ─────────────────
   //
-  // NO sortKey addition. NO tierBase + modifier. NO value-tier matrix.
+  // NO additive scoring. NO value-tier matrix. NO VIP rank driver.
+  //
+  // v1.2 fixes from v1.1:
+  //   - visitCount no longer double-weighted (removed from tie-break sort)
+  //   - relationship band: strong(4+) / some(2-3) / insufficient(1)
+  //   - dormant branch now checks confidence/cycle honesty
+  //   - sort: urgencyOrder desc → overdueDays desc (no visitCount tie-break)
   //
   // Decision tree:
-  //   1. SUPPRESS: hasUpcoming, isNew, none, dueSoon (always — no gate piercing)
+  //   1. SUPPRESS: hasUpcoming, isNew, none, dueSoon (always)
   //   2. URGENCY CLASS: critical > overdue > dormant > slight
-  //   3. RELATIONSHIP CONTINUITY: strong (3+) / weak (1-2) — NOT value proxy
-  //   4. CONFIDENCE CHECK: sufficient (medium/high) / insufficient (low/no cycle)
-  //   5. IMPACT CLASS from decision branches (see tree below)
-  //   6. SORT: urgency class order → overdueDays desc → visitCount desc (tie-break)
+  //   3. RELATIONSHIP CONTINUITY: strong(4+) / some(2-3) / insufficient(1)
+  //   4. CONFIDENCE CHECK: sufficient(medium/high) / insufficient(low/no cycle)
+  //   5. IMPACT CLASS from decision branches
+  //   6. SORT: urgency class → overdueDays desc
   //
   type ImpactLevel = 'veryHigh' | 'high' | 'monitor';
   interface PriorityCustomer {
     id: string;
     name: string;
     urgencyOrder: number; // sort: urgency class (3=critical, 2=overdue/dormant, 1=slight)
-    overdueDays: number;  // sort: depth within class
-    visitCount: number;   // sort: tie-break
+    overdueDays: number;  // sort: depth within class (no visitCount tie-break)
     level: ImpactLevel;
     reason: string;
     actionLabel: string;
@@ -164,30 +169,40 @@ export default function DashboardPage() {
       if (urgency === 'none' || urgency === 'dueSoon') continue;
 
       // ── RELATIONSHIP CONTINUITY (not value proxy) ─────────────────
-      const relationship: 'strong' | 'weak' = visitCount >= 3 ? 'strong' : 'weak';
+      // strong:       4+ completed visits — clear repeat pattern
+      // some:         2-3 completed visits — emerging relationship
+      // insufficient: 1 completed visit — not enough to claim relationship
+      const relationship: 'strong' | 'some' | 'insufficient' =
+        visitCount >= 4 ? 'strong' : visitCount >= 2 ? 'some' : 'insufficient';
       const sufficientConf = confidence === 'medium' || confidence === 'high';
+      // Dormant has no cycle → confidence is always 'low'. Use visit depth as proxy.
+      const dormantRelationshipCredible = relationship === 'strong' && visitCount >= 4;
 
       // ── IMPACT CLASS — decision branches (no additive scoring) ────
       let level: ImpactLevel;
-      let urgencyOrder: number; // for sorting: 3=critical, 2=overdue/dormant, 1=slight
+      let urgencyOrder: number;
 
       if (urgency === 'critical') {
         urgencyOrder = 3;
-        if (relationship === 'strong' && sufficientConf) level = 'veryHigh';
-        else if (relationship === 'strong')              level = 'high'; // insufficient conf → lower claim
-        else                                             level = 'high'; // weak relationship
+        if (relationship === 'strong' && sufficientConf)  level = 'veryHigh';
+        else if (relationship !== 'insufficient')         level = 'high';
+        else                                              level = 'high'; // critical urgency = always at least high
       } else if (urgency === 'overdue') {
         urgencyOrder = 2;
-        if (relationship === 'strong' && sufficientConf) level = 'high';
-        else                                             level = 'monitor'; // weak or low conf
+        if (relationship === 'strong' && sufficientConf)  level = 'high';
+        else if (relationship === 'some' && sufficientConf) level = 'monitor';
+        else                                              level = 'monitor';
       } else if (urgency === 'dormant') {
         urgencyOrder = 2;
-        if (relationship === 'strong')                   level = 'high';
-        else                                             level = 'monitor';
+        // Dormant honesty: no cycle data → confidence is inherently low.
+        // Only promote if strong relationship with enough history to be credible.
+        if (dormantRelationshipCredible)                  level = 'high';
+        else if (relationship !== 'insufficient')         level = 'monitor'; // some evidence
+        else                                              continue; // 1 visit + dormant = not actionable enough
       } else { // slight
         urgencyOrder = 1;
-        if (relationship === 'strong' && sufficientConf) level = 'monitor';
-        else                                             continue; // not actionable
+        if (relationship === 'strong' && sufficientConf)  level = 'monitor';
+        else                                              continue; // not actionable
       }
 
       // ── REASON — dürüst, modelin bildiği şeylerle sınırlı ────────
@@ -201,8 +216,12 @@ export default function DashboardPage() {
       } else {
         parts.push(`ritminin kıyısında (${overdueDays} gün)`);
       }
-      if (relationship === 'strong') parts.push('düzenli gelme örüntüsü var');
+      if (relationship === 'strong') parts.push('düzenli gelme ilişkisi');
+      else if (relationship === 'some') parts.push('tekrar eden ilişki izi');
       if (!sufficientConf && cycleDays) parts.push('sinyal var ama güven sınırlı');
+      if (urgency === 'dormant' && !dormantRelationshipCredible && relationship !== 'insufficient') {
+        parts.push('temkinli geri kazanım adayı');
+      }
       if (noShowCount >= 2) parts.push('no-show geçmişi var');
 
       // ── ACTION — urgency-driven, not value-driven ─────────────────
@@ -220,7 +239,6 @@ export default function DashboardPage() {
         name: `${c.firstName} ${c.lastName}`,
         urgencyOrder,
         overdueDays,
-        visitCount,
         level,
         reason: parts.join(' · '),
         actionLabel,
@@ -228,11 +246,10 @@ export default function DashboardPage() {
       });
     }
 
-    // Sort: urgency class desc → overdueDays desc → visitCount desc (tie-break only)
+    // Sort: urgency class desc → overdueDays desc (no visitCount tie-break)
     return ranked.sort((a, b) =>
       b.urgencyOrder - a.urgencyOrder ||
-      b.overdueDays - a.overdueDays ||
-      b.visitCount - a.visitCount
+      b.overdueDays - a.overdueDays
     ).slice(0, 5);
   }, [customersData, appointments, now]);
 
