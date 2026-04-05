@@ -75,13 +75,13 @@ const STATUS_VARIANT: Record<AppointmentStatus, 'default' | 'success' | 'info' |
 };
 
 const STATUS_BG: Record<AppointmentStatus, string> = {
-  PENDING:    'bg-amber-50 border-amber-200 hover:bg-amber-100',
-  CONFIRMED:  'bg-blue-50 border-blue-200 hover:bg-blue-100',
-  CHECKED_IN: 'bg-indigo-50 border-indigo-200 hover:bg-indigo-100',
-  IN_SERVICE: 'bg-purple-50 border-purple-200 hover:bg-purple-100',
-  COMPLETED:  'bg-emerald-50 border-emerald-200 hover:bg-emerald-100',
-  CANCELLED:  'bg-red-50 border-red-200 hover:bg-red-100',
-  NO_SHOW:    'bg-gray-50 border-gray-200 hover:bg-gray-100',
+  PENDING:    'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800/50 hover:bg-amber-100 dark:hover:bg-amber-900/40',
+  CONFIRMED:  'bg-blue-50 dark:bg-blue-950/40 border-blue-200 dark:border-blue-800/50 hover:bg-blue-100 dark:hover:bg-blue-900/40',
+  CHECKED_IN: 'bg-indigo-50 dark:bg-indigo-950/40 border-indigo-200 dark:border-indigo-800/50 hover:bg-indigo-100 dark:hover:bg-indigo-900/40',
+  IN_SERVICE: 'bg-purple-50 dark:bg-purple-950/40 border-purple-200 dark:border-purple-800/50 hover:bg-purple-100 dark:hover:bg-purple-900/40',
+  COMPLETED:  'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/40',
+  CANCELLED:  'bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-800/50 hover:bg-red-100 dark:hover:bg-red-900/40',
+  NO_SHOW:    'bg-gray-50 dark:bg-gray-800/40 border-gray-200 dark:border-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700/40',
 };
 
 const ACTION_LABEL: Record<AppointmentStatus, string> = {
@@ -242,7 +242,7 @@ export default function CalendarPage() {
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)] overflow-hidden">
       {/* ── Toolbar — Untitled-inspired grouped sections ──────────────────── */}
-      <div className="border-b bg-white shrink-0">
+      <div className="border-b border-border bg-card shrink-0">
         {/* Primary row: title + navigation + date */}
         <div className="flex items-center justify-between px-4 pt-3 pb-2">
           <div className="flex items-center gap-3">
@@ -278,14 +278,14 @@ export default function CalendarPage() {
             <div className="flex items-center rounded-lg border bg-muted/40 p-0.5 hidden sm:flex">
               <button
                 type="button"
-                className={cn('px-2.5 py-1 text-xs rounded-md font-medium transition-all', viewMode === 'day' ? 'bg-white text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground')}
+                className={cn('px-2.5 py-1 text-xs rounded-md font-medium transition-all', viewMode === 'day' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground')}
                 onClick={() => { setViewMode('day'); setSelectedDay(new Date()); }}
               >
                 Gün
               </button>
               <button
                 type="button"
-                className={cn('px-2.5 py-1 text-xs rounded-md font-medium transition-all', viewMode === 'week' ? 'bg-white text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground')}
+                className={cn('px-2.5 py-1 text-xs rounded-md font-medium transition-all', viewMode === 'week' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground')}
                 onClick={() => setViewMode('week')}
               >
                 Hafta
@@ -330,8 +330,8 @@ export default function CalendarPage() {
               <div className="hidden lg:flex items-center gap-2 text-xs">
                 <span className="text-muted-foreground">Bugün:</span>
                 <span className="font-medium">{todayApts.length}</span>
-                {pending > 0 && <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-amber-700 ring-1 ring-inset ring-amber-600/20">{pending} bekleyen</span>}
-                {active > 0 && <span className="inline-flex items-center rounded-full bg-purple-50 px-2 py-0.5 text-purple-700 ring-1 ring-inset ring-purple-600/20">{active} aktif</span>}
+                {pending > 0 && <span className="inline-flex items-center rounded-full bg-amber-50 dark:bg-amber-950/50 px-2 py-0.5 text-amber-700 dark:text-amber-400 ring-1 ring-inset ring-amber-600/20">{pending} bekleyen</span>}
+                {active > 0 && <span className="inline-flex items-center rounded-full bg-purple-50 dark:bg-purple-950/50 px-2 py-0.5 text-purple-700 dark:text-purple-400 ring-1 ring-inset ring-purple-600/20">{active} aktif</span>}
               </div>
             );
           })()}
@@ -352,18 +352,18 @@ export default function CalendarPage() {
         <div className="flex-1 overflow-auto relative">
           {/* Activation-aware empty state overlay */}
           {(appointments ?? []).length === 0 && (
-            <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/80 backdrop-blur-sm">
+            <div className="absolute inset-0 z-20 flex items-center justify-center bg-background/80 backdrop-blur-sm">
               <div className="text-center max-w-sm mx-auto p-6">
                 {!(services ?? []).some(s => !s.isDeleted) ? (
                   <>
-                    <div className="p-3 rounded-xl bg-amber-50 inline-block mb-3"><Scissors className="h-6 w-6 text-amber-500" /></div>
+                    <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 inline-block mb-3"><Scissors className="h-6 w-6 text-amber-500" /></div>
                     <p className="text-sm font-medium">Önce hizmet ekleyin</p>
                     <p className="text-xs text-muted-foreground mt-1">Randevu oluşturabilmek için en az bir hizmet gerekli.</p>
                     <Button size="sm" className="mt-3" asChild><Link href="/services">Hizmet Ekle</Link></Button>
                   </>
                 ) : !(staffList.length > 0) ? (
                   <>
-                    <div className="p-3 rounded-xl bg-amber-50 inline-block mb-3"><User className="h-6 w-6 text-amber-500" /></div>
+                    <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 inline-block mb-3"><User className="h-6 w-6 text-amber-500" /></div>
                     <p className="text-sm font-medium">Personel ekleyin</p>
                     <p className="text-xs text-muted-foreground mt-1">Randevu oluşturabilmek için en az bir personel gerekli.</p>
                     <Button size="sm" className="mt-3" asChild><Link href="/staff">Personel Ekle</Link></Button>
@@ -393,7 +393,7 @@ export default function CalendarPage() {
             return (
               <div className="min-w-[300px]">
                 {/* Day header */}
-                <div className="border-b bg-white sticky top-0 z-10 px-4 py-3">
+                <div className="border-b border-border bg-card sticky top-0 z-10 px-4 py-3">
                   <div className="flex items-center justify-between">
                     <h2 className="text-base font-semibold">{format(selectedDay, 'd MMMM yyyy, EEEE', { locale: tr })}</h2>
                     <span className="text-sm text-muted-foreground">{dayApts.length} randevu</span>
@@ -467,7 +467,7 @@ export default function CalendarPage() {
           {/* ── WEEK VIEW ─────────────────────────────────────────────── */}
           {viewMode === 'week' && <div className="min-w-[700px]">
             {/* Day headers */}
-            <div className="grid grid-cols-[56px_repeat(7,1fr)] border-b bg-white sticky top-0 z-10">
+            <div className="grid grid-cols-[56px_repeat(7,1fr)] border-b border-border bg-card sticky top-0 z-10">
               <div className="border-r" />
               {weekDays.map((day) => {
                 const isToday = isSameDay(day, new Date());
@@ -747,10 +747,10 @@ export default function CalendarPage() {
                       return <Badge variant="success" className="text-xs bg-emerald-100 text-emerald-700 border-emerald-200">Ödendi</Badge>;
                     }
                     if (dp > 0 && sp > dp) {
-                      return <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-200">{(sp - dp).toLocaleString('tr-TR')}₺ kalan</Badge>;
+                      return <Badge variant="outline" className="text-xs bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800/50">{(sp - dp).toLocaleString('tr-TR')}₺ kalan</Badge>;
                     }
                     if (dp > 0) {
-                      return <Badge variant="outline" className="text-xs bg-emerald-50 text-emerald-700 border-emerald-200">Depozito: {dp.toLocaleString('tr-TR')}₺</Badge>;
+                      return <Badge variant="outline" className="text-xs bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/50">Depozito: {dp.toLocaleString('tr-TR')}₺</Badge>;
                     }
                     if (sp > 0 && detailApt.status !== 'CANCELLED' && detailApt.status !== 'NO_SHOW') {
                       return <Badge variant="outline" className="text-xs bg-gray-50 text-gray-600">{sp.toLocaleString('tr-TR')}₺</Badge>;
@@ -887,7 +887,7 @@ export default function CalendarPage() {
                           💰 Tahsilatı Kapat
                         </Button>
                       ) : (
-                        <div className="space-y-2.5 bg-emerald-50 rounded-lg p-3 border border-emerald-200">
+                        <div className="space-y-2.5 bg-emerald-50 dark:bg-emerald-950/30 rounded-lg p-3 border border-emerald-200 dark:border-emerald-800/50">
                           {/* ── Order summary ── */}
                           <div className="text-xs space-y-0.5">
                             <div className="flex justify-between text-emerald-800">
