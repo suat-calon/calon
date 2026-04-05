@@ -205,7 +205,38 @@ export default function DashboardPage() {
         else                                              continue; // not actionable
       }
 
-      // ── REASON — dürüst, modelin bildiği şeylerle sınırlı ────────
+      // ── ACTION CONTRACT — mode × hardness (separate from impact) ──
+      //
+      // action mode:     RECOVER / REBOOK / REVIEW / MONITOR
+      // action hardness: STRONG / MODERATE / SOFT
+      //
+      // Confidence discipline:
+      //   insufficient → never RECOVER, never STRONG
+      //   insufficient → max REVIEW+MODERATE or MONITOR+SOFT
+      //
+      type ActionMode = 'recover' | 'rebook' | 'review' | 'monitor';
+      type ActionHardness = 'strong' | 'moderate' | 'soft';
+      let actionMode: ActionMode;
+      let hardness: ActionHardness;
+
+      if (level === 'veryHigh' && sufficientConf) {
+        actionMode = 'recover'; hardness = 'strong';
+      } else if (level === 'veryHigh') {
+        // veryHigh but low confidence → can't strongly recommend
+        actionMode = 'review'; hardness = 'moderate';
+      } else if (level === 'high' && urgency === 'dormant' && dormantRelationshipCredible) {
+        actionMode = 'recover'; hardness = 'moderate';
+      } else if (level === 'high' && sufficientConf) {
+        actionMode = 'rebook'; hardness = 'moderate';
+      } else if (level === 'high') {
+        // high but low confidence
+        actionMode = 'review'; hardness = 'soft';
+      } else {
+        // monitor
+        actionMode = 'monitor'; hardness = 'soft';
+      }
+
+      // ── REASON — urgency fact + relationship + confidence + action rationale
       const parts: string[] = [];
       if (urgency === 'critical') {
         parts.push(`tekrar ritminin ciddi dışına çıktı (+${overdueDays} gün)`);
@@ -219,19 +250,22 @@ export default function DashboardPage() {
       if (relationship === 'strong') parts.push('düzenli gelme ilişkisi');
       else if (relationship === 'some') parts.push('tekrar eden ilişki izi');
       if (!sufficientConf && cycleDays) parts.push('sinyal var ama güven sınırlı');
-      if (urgency === 'dormant' && !dormantRelationshipCredible && relationship !== 'insufficient') {
-        parts.push('temkinli geri kazanım adayı');
-      }
+      if (actionMode === 'recover' && urgency === 'dormant') parts.push('geri kazanım için uygun');
+      if (actionMode === 'review') parts.push('önce kontrol önerilir');
       if (noShowCount >= 2) parts.push('no-show geçmişi var');
 
-      // ── ACTION — urgency-driven, not value-driven ─────────────────
+      // ── CTA — mode × hardness × service context ──────────────────
       let actionLabel: string;
-      if (level === 'veryHigh') {
-        actionLabel = topSvc ? `${topSvc} planla` : 'Randevu planla';
-      } else if (level === 'high') {
-        actionLabel = 'Randevu oluştur';
+      if (actionMode === 'recover' && hardness === 'strong') {
+        actionLabel = topSvc ? `${topSvc} planla` : 'Geri kazanım planla';
+      } else if (actionMode === 'recover') {
+        actionLabel = 'Tekrar randevu planla';
+      } else if (actionMode === 'rebook') {
+        actionLabel = 'Yeniden planla';
+      } else if (actionMode === 'review') {
+        actionLabel = hardness === 'moderate' ? 'Durumu incele' : 'İncele';
       } else {
-        actionLabel = 'İncele';
+        actionLabel = 'Takip et';
       }
 
       ranked.push({
