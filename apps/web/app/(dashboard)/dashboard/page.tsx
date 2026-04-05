@@ -64,30 +64,25 @@ export default function DashboardPage() {
 
   const now = useMemo(() => new Date(), []);
 
-  // ── Impact Engine v1 — urgency × value, impact-first ───────────────────
+  // ── Impact Engine v1.1 — decision tree, no additive scoring ─────────────
   //
-  // Impact = urgency tier × value tier (matrix, not linear sum)
+  // NO sortKey addition. NO tierBase + modifier. NO value-tier matrix.
   //
-  // Urgency tiers (gate): critical > overdue > dormant > slight > dueSoon > none
-  // Value tiers (modifier): vip(5+) > returning(3+) > basic(1+)
-  //
-  // Impact matrix:
-  //   urgency\value │ VIP(5+)    │ Returning(3+) │ Basic(1+)
-  //   ──────────────┼────────────┼───────────────┼──────────
-  //   critical      │ Çok Kritik │ Çok Kritik    │ Kritik
-  //   overdue       │ Çok Kritik │ Kritik        │ Kritik
-  //   dormant       │ Kritik     │ Kritik        │ İzlenmeli
-  //   slight        │ Kritik     │ İzlenmeli     │ İzlenmeli
-  //   dueSoon       │ İzlenmeli  │ (excluded)    │ (excluded)
-  //
-  // Within same impact level: sorted by overdueDays depth
-  // Modifiers: risk +2 sortKey, low confidence -3 sortKey
+  // Decision tree:
+  //   1. SUPPRESS: hasUpcoming, isNew, none, dueSoon (always — no gate piercing)
+  //   2. URGENCY CLASS: critical > overdue > dormant > slight
+  //   3. RELATIONSHIP CONTINUITY: strong (3+) / weak (1-2) — NOT value proxy
+  //   4. CONFIDENCE CHECK: sufficient (medium/high) / insufficient (low/no cycle)
+  //   5. IMPACT CLASS from decision branches (see tree below)
+  //   6. SORT: urgency class order → overdueDays desc → visitCount desc (tie-break)
   //
   type ImpactLevel = 'veryHigh' | 'high' | 'monitor';
   interface PriorityCustomer {
     id: string;
     name: string;
-    sortKey: number;
+    urgencyOrder: number; // sort: urgency class (3=critical, 2=overdue/dormant, 1=slight)
+    overdueDays: number;  // sort: depth within class
+    visitCount: number;   // sort: tie-break
     level: ImpactLevel;
     reason: string;
     actionLabel: string;
@@ -107,7 +102,6 @@ export default function DashboardPage() {
 
     const nowMs = now.getTime();
     const DAY = 1000 * 60 * 60 * 24;
-    const DEPTH_CAP = 30; // max overdueDays contribution to sortKey
     const ranked: PriorityCustomer[] = [];
 
     for (const c of customers) {
@@ -117,26 +111,24 @@ export default function DashboardPage() {
       const noShowCount = appts.filter((a) => a.status === 'NO_SHOW').length;
       const hasUpcoming = appts.some((a) => new Date(a.startTime).getTime() >= nowMs && a.status !== 'CANCELLED' && a.status !== 'NO_SHOW');
 
-      // ── Gate 1: Hard suppress ──────────────────────────────────────
+      // ── SUPPRESS ──────────────────────────────────────────────────
       if (hasUpcoming) continue;
       if (visitCount === 0) continue;
 
-      const isVip = visitCount >= 5;
-      const isRisk = noShowCount >= 2;
       const lastVisitMs = Math.max(...completed.map((a) => new Date(a.startTime).getTime()));
       const daysSince = Math.floor((nowMs - lastVisitMs) / DAY);
 
-      // Top service (for contextual action)
+      // Top service (for contextual CTA only, not ranking)
       const svcMap: Record<string, { n: string; c: number }> = {};
       for (const a of completed) { const s = a.service?.name; if (s) { if (!svcMap[s]) svcMap[s] = { n: s, c: 0 }; svcMap[s].c++; } }
       const topSvc = Object.values(svcMap).sort((a, b) => b.c - a.c)[0]?.n ?? null;
 
-      // Cycle (median, variance-aware confidence)
+      // Cycle + confidence (median, variance-aware)
       let cycleDays: number | null = null;
       let confidence: 'low' | 'medium' | 'high' = 'low';
       let overdueDays = 0;
-      type UT = 'critical' | 'overdue' | 'slight' | 'dormant' | 'dueSoon' | 'none';
-      let urgency: UT = 'none';
+      type UC = 'critical' | 'overdue' | 'slight' | 'dormant';
+      let urgency: UC | 'dueSoon' | 'none' = 'none';
 
       if (visitCount >= 2) {
         const sorted = completed.map((a) => new Date(a.startTime).getTime()).sort((a, b) => a - b);
@@ -152,7 +144,7 @@ export default function DashboardPage() {
         }
       }
 
-      // ── Gate 2: Urgency tier ───────────────────────────────────────
+      // ── URGENCY CLASS ─────────────────────────────────────────────
       if (cycleDays && cycleDays > 0) {
         const ratio = daysSince / cycleDays;
         overdueDays = Math.max(daysSince - cycleDays, 0);
@@ -163,87 +155,60 @@ export default function DashboardPage() {
         else                                        urgency = 'none';
       } else if (daysSince > 90) {
         urgency = 'dormant';
-        overdueDays = daysSince; // unified depth: total absence days
+        overdueDays = daysSince;
       } else if (daysSince > 60) {
         urgency = 'dueSoon';
       }
 
-      // ── Gate 3: Actionability ──────────────────────────────────────
-      if (urgency === 'none') continue;
-      if (urgency === 'dueSoon' && !isVip && !isRisk) continue;
+      // ── SUPPRESS: dueSoon always excluded (no gate piercing) ──────
+      if (urgency === 'none' || urgency === 'dueSoon') continue;
 
-      // ── Impact matrix: urgency × value → impact level ─────────────
-      //
-      // Value tier (safe, visit-count based — no approximate revenue)
-      const valueTier: 'vip' | 'returning' | 'basic' =
-        isVip ? 'vip' : visitCount >= 3 ? 'returning' : 'basic';
+      // ── RELATIONSHIP CONTINUITY (not value proxy) ─────────────────
+      const relationship: 'strong' | 'weak' = visitCount >= 3 ? 'strong' : 'weak';
+      const sufficientConf = confidence === 'medium' || confidence === 'high';
 
-      // Impact level from matrix (urgency × value)
+      // ── IMPACT CLASS — decision branches (no additive scoring) ────
       let level: ImpactLevel;
-      let tierBase: number;
+      let urgencyOrder: number; // for sorting: 3=critical, 2=overdue/dormant, 1=slight
 
       if (urgency === 'critical') {
-        // critical urgency: VIP/returning → veryHigh, basic → high
-        level = valueTier !== 'basic' ? 'veryHigh' : 'high';
-        tierBase = level === 'veryHigh' ? 300 : 250;
+        urgencyOrder = 3;
+        if (relationship === 'strong' && sufficientConf) level = 'veryHigh';
+        else if (relationship === 'strong')              level = 'high'; // insufficient conf → lower claim
+        else                                             level = 'high'; // weak relationship
       } else if (urgency === 'overdue') {
-        // overdue: VIP → veryHigh, returning → high, basic → high
-        level = valueTier === 'vip' ? 'veryHigh' : 'high';
-        tierBase = level === 'veryHigh' ? 240 : 180;
+        urgencyOrder = 2;
+        if (relationship === 'strong' && sufficientConf) level = 'high';
+        else                                             level = 'monitor'; // weak or low conf
       } else if (urgency === 'dormant') {
-        // dormant: VIP/returning → high, basic → monitor
-        level = valueTier !== 'basic' ? 'high' : 'monitor';
-        tierBase = level === 'high' ? 160 : 100;
-      } else if (urgency === 'slight') {
-        // slight: VIP → high, returning/basic → monitor
-        level = valueTier === 'vip' ? 'high' : 'monitor';
-        tierBase = level === 'high' ? 120 : 70;
-      } else {
-        // dueSoon (only VIP/risk reach here)
-        level = 'monitor';
-        tierBase = 40;
+        urgencyOrder = 2;
+        if (relationship === 'strong')                   level = 'high';
+        else                                             level = 'monitor';
+      } else { // slight
+        urgencyOrder = 1;
+        if (relationship === 'strong' && sufficientConf) level = 'monitor';
+        else                                             continue; // not actionable
       }
 
-      // Within same impact level: depth ordering + small modifiers
-      const depthBonus = Math.min(overdueDays, DEPTH_CAP);
-      let sortKey = tierBase + depthBonus;
-      if (isRisk) sortKey += 2;
-      if (confidence === 'low' && cycleDays) sortKey -= 3;
-
-      // ── Reason — impact-first: why this matters → urgency context ──
+      // ── REASON — dürüst, modelin bildiği şeylerle sınırlı ────────
       const parts: string[] = [];
-
-      // Impact significance
-      if (level === 'veryHigh' && isVip) {
-        parts.push('değerli müşteri kaybediliyor');
-      } else if (level === 'veryHigh') {
-        parts.push('düzenli müşteri ciddi gecikmiş');
-      } else if (level === 'high' && urgency === 'dormant') {
-        parts.push('uzun süredir görünmüyor');
-      } else if (level === 'high') {
-        parts.push('tekrar zamanını geçti');
-      } else {
-        parts.push('takip edilmeli');
-      }
-
-      // Urgency context
-      if (urgency === 'critical' || urgency === 'overdue') {
-        parts.push(`+${overdueDays} gün`);
+      if (urgency === 'critical') {
+        parts.push(`tekrar ritminin ciddi dışına çıktı (+${overdueDays} gün)`);
+      } else if (urgency === 'overdue') {
+        parts.push(`gelme ritmini geçti (+${overdueDays} gün)`);
       } else if (urgency === 'dormant') {
-        parts.push(`${daysSince} gündür gelmedi`);
-      } else if (urgency === 'slight') {
-        parts.push(`${overdueDays} gün geçti`);
+        parts.push(`${daysSince} gündür görünmüyor`);
+      } else {
+        parts.push(`ritminin kıyısında (${overdueDays} gün)`);
       }
+      if (relationship === 'strong') parts.push('düzenli gelme örüntüsü var');
+      if (!sufficientConf && cycleDays) parts.push('sinyal var ama güven sınırlı');
+      if (noShowCount >= 2) parts.push('no-show geçmişi var');
 
-      // Additional context
-      if (isRisk) parts.push('dikkat gerekli');
-      if (confidence === 'low' && cycleDays) parts.push('sınırlı veri');
-      if (topSvc && level === 'veryHigh') parts.push(topSvc);
-
-      // ── Action — impact-aware ──────────────────────────────────────
+      // ── ACTION — urgency-driven, not value-driven ─────────────────
       let actionLabel: string;
       if (level === 'veryHigh') {
-        actionLabel = topSvc ? `${topSvc} planla` : 'Hemen planla';
+        actionLabel = topSvc ? `${topSvc} planla` : 'Randevu planla';
       } else if (level === 'high') {
         actionLabel = 'Randevu oluştur';
       } else {
@@ -253,7 +218,9 @@ export default function DashboardPage() {
       ranked.push({
         id: c.id,
         name: `${c.firstName} ${c.lastName}`,
-        sortKey,
+        urgencyOrder,
+        overdueDays,
+        visitCount,
         level,
         reason: parts.join(' · '),
         actionLabel,
@@ -261,7 +228,12 @@ export default function DashboardPage() {
       });
     }
 
-    return ranked.sort((a, b) => b.sortKey - a.sortKey).slice(0, 5);
+    // Sort: urgency class desc → overdueDays desc → visitCount desc (tie-break only)
+    return ranked.sort((a, b) =>
+      b.urgencyOrder - a.urgencyOrder ||
+      b.overdueDays - a.overdueDays ||
+      b.visitCount - a.visitCount
+    ).slice(0, 5);
   }, [customersData, appointments, now]);
 
   const todayAppts = useMemo(() => {
