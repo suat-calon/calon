@@ -18,7 +18,7 @@ import {
 } from '@nestjs/common';
 import { JwtService }     from '@nestjs/jwt';
 import { Prisma }         from '@prisma/client';
-import * as bcrypt        from 'bcrypt';
+import * as bcrypt        from 'bcryptjs';
 import * as crypto        from 'crypto';
 
 import { PrismaService }        from '../../common/prisma.service';

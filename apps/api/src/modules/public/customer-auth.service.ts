@@ -21,7 +21,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import * as bcrypt    from 'bcrypt';
+import * as bcrypt    from 'bcryptjs';
 import { PrismaService } from '../../common/prisma.service';
 
 const OTP_EXPIRY_MS   = 5 * 60 * 1000; // 5 dakika

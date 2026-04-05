@@ -1,4 +1,5 @@
 import { PrismaClient } from '../generated/client';
+import * as bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
@@ -9,6 +10,9 @@ const CATEGORY_ID    = '00000000-0000-4000-a000-000000000020';
 
 const OWNER_USER_ID  = '00000000-0000-4000-a000-000000000100';
 const OWNER_UT_ID    = '00000000-0000-4000-a000-000000000101';
+
+const ADMIN_USER_ID  = '00000000-0000-4000-a000-000000000900';
+const ADMIN_UT_ID    = '00000000-0000-4000-a000-000000000901';
 
 const STAFF_IDS = [
   '00000000-0000-4000-a000-000000000200', // Ayşe Kuaför
@@ -122,6 +126,32 @@ async function main() {
       role:     'TENANT_OWNER',
     },
   });
+
+  // ── 3b. Super Admin User ─────────────────────────────────────────────────
+  const adminHash = await bcrypt.hash('Admin1234!', 10);
+  await prisma.user.upsert({
+    where:  { id: ADMIN_USER_ID },
+    update: {},
+    create: {
+      id:           ADMIN_USER_ID,
+      email:        'admin@calon.com.tr',
+      passwordHash: adminHash,
+      firstName:    'Platform',
+      lastName:     'Admin',
+      status:       'ACTIVE',
+    },
+  });
+  await prisma.userTenant.upsert({
+    where:  { id: ADMIN_UT_ID },
+    update: {},
+    create: {
+      id:       ADMIN_UT_ID,
+      userId:   ADMIN_USER_ID,
+      tenantId,
+      role:     'SUPER_ADMIN',
+    },
+  });
+  console.log('  super admin: admin@calon.com.tr (SUPER_ADMIN)');
 
   // ── 4. Location ───────────────────────────────────────────────────────────
   await prisma.location.upsert({
