@@ -53,7 +53,14 @@ export default function LoginPage() {
       // withCredentials: true → HttpOnly calon_access / calon_refresh cookie'leri alır
       await axios.post('/api/v1/auth/login', values, { withCredentials: true });
 
-      router.push('/calendar');
+      // Role-aware redirect: SUPER_ADMIN → /admin, others → /calendar
+      try {
+        const me = await axios.get('/api/v1/auth/me', { withCredentials: true });
+        const role = me.data?.role ?? me.data?.userRole ?? '';
+        router.push(role === 'SUPER_ADMIN' ? '/admin' : '/calendar');
+      } catch {
+        router.push('/calendar');
+      }
     } catch (err: unknown) {
       const message =
         axios.isAxiosError(err)

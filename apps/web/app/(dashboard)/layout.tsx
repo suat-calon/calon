@@ -18,7 +18,15 @@ export default function DashboardLayout({
   useEffect(() => {
     apiClient
       .get('/auth/me')
-      .then(() => setReady(true))
+      .then((res) => {
+        const role = res.data?.role ?? res.data?.userRole ?? '';
+        if (role === 'SUPER_ADMIN') {
+          // SUPER_ADMIN has no business on tenant surface — redirect to admin cockpit
+          router.replace('/admin');
+        } else {
+          setReady(true);
+        }
+      })
       .catch(() => router.replace('/login'));
   }, [router]);
 
