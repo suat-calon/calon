@@ -14,6 +14,7 @@ import {
 import { Badge }  from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useTenant } from '@/hooks/api/use-auth';
+import apiClient from '@/lib/api-client';
 import { useServices } from '@/hooks/api/use-services';
 import { useStaff } from '@/hooks/api/use-staff';
 import { useCustomers } from '@/hooks/api/use-customers';
@@ -287,111 +288,46 @@ export default function DashboardPage() {
     ).slice(0, 5);
   }, [customersData, appointments, now]);
 
-  // ── Decision Feedback — frontend-only observation ───────────────────
+  // ── Decision Feedback — durable server-side observation ─────────────
   //
   // Tracks: recommendation shown → operator action → booking outcome
-  // Storage: localStorage 'calon.impact.observations'
-  // Window: 14 days per observation
+  // Storage: backend RecommendationObservation table (tenant-safe, queryable)
+  // Frontend: fire-and-forget POST to backend on exposure + action
+  // Outcome: server-side observation via booking events (not client-render)
   // Attribution: "observed after" only, never "caused by"
   //
-  const OBS_KEY = 'calon.impact.observations';
-  const OBS_WINDOW_DAYS = 14;
-  const OBS_MAX_ACTIVE = 20;
 
-  interface ObservationEntry {
-    customerId:   string;
-    shownAt:      string; // ISO
-    impactClass:  string;
-    actionMode:   string;
-    hardness:     string;
-    ctaLabel:     string;
-    operatorAction: 'none' | 'cta_clicked' | 'customer_opened';
-    actedAt:      string | null;
-    outcome:      'pending' | 'booking_observed' | 'no_change' | 'expired';
-    outcomeAt:    string | null;
-  }
-
-  // Load observations
-  const getObservations = useCallback((): Record<string, ObservationEntry> => {
-    try {
-      const raw = typeof window !== 'undefined' ? localStorage.getItem(OBS_KEY) : null;
-      return raw ? JSON.parse(raw) : {};
-    } catch { return {}; }
-  }, []);
-
-  const saveObservations = useCallback((obs: Record<string, ObservationEntry>) => {
-    try {
-      // Prune expired + limit size
-      const nowIso = new Date().toISOString();
-      const cutoff = new Date(Date.now() - OBS_WINDOW_DAYS * 24 * 60 * 60 * 1000).toISOString();
-      const pruned: Record<string, ObservationEntry> = {};
-      const entries = Object.entries(obs).filter(([, v]) => v.shownAt > cutoff);
-      for (const [k, v] of entries.slice(-OBS_MAX_ACTIVE)) pruned[k] = v;
-      localStorage.setItem(OBS_KEY, JSON.stringify(pruned));
-    } catch { /* localStorage full or unavailable */ }
-  }, []);
-
-  // Record recommendation exposure on render
+  // Record recommendation snapshots on render (fire-and-forget)
   useEffect(() => {
     if (priorityCustomers.length === 0) return;
-    const obs = getObservations();
-    const nowIso = new Date().toISOString();
-    let changed = false;
+    const dateKey = format(now, 'yyyy-MM-dd');
 
     for (const pc of priorityCustomers) {
-      if (!obs[pc.id] || obs[pc.id].outcome !== 'pending') {
-        obs[pc.id] = {
-          customerId: pc.id,
-          shownAt: nowIso,
-          impactClass: pc.level,
-          actionMode: 'unknown', // will be enriched below
-          hardness: 'unknown',
-          ctaLabel: pc.actionLabel,
-          operatorAction: 'none',
-          actedAt: null,
-          outcome: 'pending',
-          outcomeAt: null,
-        };
-        changed = true;
-      }
+      const fingerprint = `${pc.id}:${dateKey}`;
+      apiClient.post('/recommendations/snapshot', {
+        customerId:       pc.id,
+        fingerprint,
+        impactClass:      pc.level,
+        actionMode:       'unknown', // enriched by action contract but not in PriorityCustomer type
+        actionHardness:   'unknown',
+        urgencyClass:     String(pc.urgencyOrder),
+        confidenceBand:   'unknown',
+        relationshipBand: 'unknown',
+        reasonText:       pc.reason,
+        ctaLabel:         pc.actionLabel,
+      }).catch(() => { /* fire-and-forget, never blocks UI */ });
     }
+  }, [priorityCustomers, now]);
 
-    // Check outcomes: did any observed customer get a booking?
-    if (appointments) {
-      for (const [cid, entry] of Object.entries(obs)) {
-        if (entry.outcome !== 'pending') continue;
-        const custApts = appointments.filter(
-          (a) => a.customer?.id === cid &&
-          a.createdAt > entry.shownAt &&
-          a.status !== 'CANCELLED'
-        );
-        if (custApts.length > 0) {
-          entry.outcome = 'booking_observed';
-          entry.outcomeAt = new Date().toISOString();
-          changed = true;
-        }
-        // Check window expiry
-        const windowEnd = new Date(new Date(entry.shownAt).getTime() + OBS_WINDOW_DAYS * 24 * 60 * 60 * 1000);
-        if (new Date() > windowEnd && entry.outcome === 'pending') {
-          entry.outcome = 'no_change';
-          entry.outcomeAt = new Date().toISOString();
-          changed = true;
-        }
-      }
-    }
-
-    if (changed) saveObservations(obs);
-  }, [priorityCustomers, appointments, getObservations, saveObservations]);
-
-  // Operator action recorder
+  // Operator action recorder (fire-and-forget)
   const recordAction = useCallback((customerId: string, action: 'cta_clicked' | 'customer_opened') => {
-    const obs = getObservations();
-    if (obs[customerId] && obs[customerId].outcome === 'pending') {
-      obs[customerId].operatorAction = action;
-      obs[customerId].actedAt = new Date().toISOString();
-      saveObservations(obs);
-    }
-  }, [getObservations, saveObservations]);
+    const dateKey = format(now, 'yyyy-MM-dd');
+    const fingerprint = `${customerId}:${dateKey}`;
+    apiClient.post('/recommendations/action', {
+      fingerprint,
+      actionType: action,
+    }).catch(() => { /* fire-and-forget */ });
+  }, [now]);
 
   const todayAppts = useMemo(() => {
     if (!appointments) return [];

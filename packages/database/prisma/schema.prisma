@@ -134,6 +134,9 @@ model Tenant {
   notificationPreferences NotificationPreference[]
   notificationUsages     NotificationUsage[]
 
+  // Decision feedback
+  recommendationObservations RecommendationObservation[]
+
   @@index([slug])
   @@index([status])
   @@map("tenants")
@@ -535,6 +538,9 @@ model Customer {
   referralsMade     Referral[] @relation("ReferralReferrer")
   referralsReceived Referral[] @relation("ReferralReferred")
 
+  // Decision feedback
+  recommendationObservations RecommendationObservation[]
+
   @@index([tenantId, phone])
   @@index([tenantId, email])
   @@map("customers")
@@ -719,6 +725,43 @@ model TransactionLedger {
   @@index([tenantId, processedAt])
   @@index([appointmentId])
   @@map("transaction_ledger")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// RECOMMENDATION OBSERVATION — Decision feedback measurement
+// ═══════════════════════════════════════════════════════════════════════════════
+// Tracks: recommendation shown → operator action → booking outcome
+// Durable, tenant-safe, queryable. Not causal — observed-only semantics.
+
+model RecommendationObservation {
+  id                      String   @id @default(uuid()) @db.Uuid
+  tenantId                String   @db.Uuid
+  customerId              String   @db.Uuid
+  fingerprint             String   // deterministic key: customerId + urgencyClass + date
+  generatedAt             DateTime @default(now())
+  impactClass             String   // veryHigh / high / monitor
+  actionMode              String   // recover / rebook / review / monitor
+  actionHardness          String   // strong / moderate / soft
+  urgencyClass            String   // critical / overdue / dormant / slight
+  confidenceBand          String   // low / medium / high
+  relationshipBand        String   // strong / some / insufficient
+  reasonText              String
+  ctaLabel                String
+  status                  String   @default("ACTIVE") // ACTIVE / ACTED / RESOLVED / EXPIRED / SUPERSEDED
+  operatorAction          String?  // cta_clicked / customer_opened
+  operatorActedAt         DateTime?
+  outcomeType             String?  // booking_created / booking_completed / no_change
+  outcomeObservedAt       DateTime?
+  linkedBookingId         String?  @db.Uuid
+  windowDays              Int      @default(14)
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id])
+  customer Customer @relation(fields: [customerId], references: [id])
+
+  @@index([tenantId, status])
+  @@index([tenantId, customerId, status])
+  @@unique([tenantId, fingerprint])
+  @@map("recommendation_observations")
 }
 
 model CommissionLog {
