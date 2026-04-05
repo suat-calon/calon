@@ -241,28 +241,85 @@ export default function CalendarPage() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)] overflow-hidden">
-      {/* ── Header ────────────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between px-4 py-3 border-b bg-white shrink-0">
-        <div className="flex items-center gap-3">
-          <h1 className="text-lg font-semibold hidden sm:block">Randevular</h1>
-          <div className="flex items-center gap-1">
-            <Button variant="outline" size="icon" className="h-8 w-8" onClick={prevPeriod}>
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button variant="outline" size="sm" className="h-8 px-3 text-xs" onClick={goToday}>
-              Bugün
-            </Button>
-            <Button variant="outline" size="icon" className="h-8 w-8" onClick={nextPeriod}>
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+      {/* ── Toolbar — Untitled-inspired grouped sections ──────────────────── */}
+      <div className="border-b bg-white shrink-0">
+        {/* Primary row: title + navigation + date */}
+        <div className="flex items-center justify-between px-4 pt-3 pb-2">
+          <div className="flex items-center gap-3">
+            <h1 className="text-lg font-semibold hidden sm:block">Randevular</h1>
+            <div className="h-5 w-px bg-border hidden sm:block" />
+            <div className="flex items-center gap-1">
+              <Button variant="outline" size="icon" className="h-8 w-8" onClick={prevPeriod}>
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button variant="outline" size="sm" className="h-8 px-3 text-xs font-medium" onClick={goToday}>
+                Bugün
+              </Button>
+              <Button variant="outline" size="icon" className="h-8 w-8" onClick={nextPeriod}>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+            <span className="text-sm text-muted-foreground hidden md:inline">
+              {viewMode === 'week'
+                ? `${format(weekDays[0], 'd MMM', { locale: tr })} — ${format(weekDays[6], 'd MMM yyyy', { locale: tr })}`
+                : format(selectedDay, 'd MMMM yyyy, EEEE', { locale: tr })
+              }
+            </span>
           </div>
-          <span className="text-sm text-muted-foreground hidden md:inline">
-            {viewMode === 'week'
-              ? `${format(weekDays[0], 'd MMM', { locale: tr })} — ${format(weekDays[6], 'd MMM yyyy', { locale: tr })}`
-              : format(selectedDay, 'd MMMM yyyy, EEEE', { locale: tr })
-            }
-          </span>
-          {/* Today summary badge */}
+          <Button size="sm" onClick={() => setDialogOpen(true)}>
+            <Plus className="mr-1 h-4 w-4" />
+            <span className="hidden sm:inline">Yeni Randevu</span>
+          </Button>
+        </div>
+        {/* Secondary row: filters + view toggle + today summary */}
+        <div className="flex items-center justify-between px-4 pb-2.5 gap-3">
+          <div className="flex items-center gap-2">
+            {/* View mode toggle */}
+            <div className="flex items-center rounded-lg border bg-muted/40 p-0.5 hidden sm:flex">
+              <button
+                type="button"
+                className={cn('px-2.5 py-1 text-xs rounded-md font-medium transition-all', viewMode === 'day' ? 'bg-white text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground')}
+                onClick={() => { setViewMode('day'); setSelectedDay(new Date()); }}
+              >
+                Gün
+              </button>
+              <button
+                type="button"
+                className={cn('px-2.5 py-1 text-xs rounded-md font-medium transition-all', viewMode === 'week' ? 'bg-white text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground')}
+                onClick={() => setViewMode('week')}
+              >
+                Hafta
+              </button>
+            </div>
+            <div className="h-5 w-px bg-border hidden sm:block" />
+            {/* Staff filter */}
+            <Select value={staffFilter} onValueChange={setStaffFilter}>
+              <SelectTrigger className="h-8 w-[140px] text-xs hidden md:flex">
+                <SelectValue placeholder="Personel" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tüm Personel</SelectItem>
+                {staffList.map((s) => <SelectItem key={s.id} value={s.id}>{s.firstName} {s.lastName}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            {/* Status filter */}
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="h-8 w-[120px] text-xs hidden md:flex">
+                <SelectValue placeholder="Durum" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tüm Durum</SelectItem>
+                <SelectItem value="PENDING">Bekliyor</SelectItem>
+                <SelectItem value="CONFIRMED">Onaylı</SelectItem>
+                <SelectItem value="CHECKED_IN">Geldi</SelectItem>
+                <SelectItem value="IN_SERVICE">Hizmette</SelectItem>
+                <SelectItem value="COMPLETED">Tamamlandı</SelectItem>
+                <SelectItem value="CANCELLED">İptal</SelectItem>
+                <SelectItem value="NO_SHOW">Gelmedi</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          {/* Today summary */}
           {(() => {
             const todayKey = format(new Date(), 'yyyy-MM-dd');
             const todayApts = appointmentsByDay.get(todayKey) ?? [];
@@ -270,62 +327,14 @@ export default function CalendarPage() {
             const active = todayApts.filter(a => a.status === 'CHECKED_IN' || a.status === 'IN_SERVICE').length;
             if (todayApts.length === 0) return null;
             return (
-              <span className="text-xs text-muted-foreground hidden lg:inline ml-2">
-                Bugün: {todayApts.length} randevu
-                {pending > 0 && <span className="text-amber-600 ml-1">({pending} bekleyen)</span>}
-                {active > 0 && <span className="text-purple-600 ml-1">({active} aktif)</span>}
-              </span>
+              <div className="hidden lg:flex items-center gap-2 text-xs">
+                <span className="text-muted-foreground">Bugün:</span>
+                <span className="font-medium">{todayApts.length}</span>
+                {pending > 0 && <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-amber-700 ring-1 ring-inset ring-amber-600/20">{pending} bekleyen</span>}
+                {active > 0 && <span className="inline-flex items-center rounded-full bg-purple-50 px-2 py-0.5 text-purple-700 ring-1 ring-inset ring-purple-600/20">{active} aktif</span>}
+              </div>
             );
           })()}
-        </div>
-        <div className="flex items-center gap-2">
-          {/* View mode toggle */}
-          <div className="flex items-center rounded-md border hidden sm:flex">
-            <button
-              type="button"
-              className={cn('px-2.5 py-1 text-xs rounded-l-md transition-colors', viewMode === 'day' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted')}
-              onClick={() => { setViewMode('day'); setSelectedDay(new Date()); }}
-            >
-              Gün
-            </button>
-            <button
-              type="button"
-              className={cn('px-2.5 py-1 text-xs rounded-r-md transition-colors', viewMode === 'week' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted')}
-              onClick={() => setViewMode('week')}
-            >
-              Hafta
-            </button>
-          </div>
-          {/* Staff filter */}
-          <Select value={staffFilter} onValueChange={setStaffFilter}>
-            <SelectTrigger className="h-8 w-[140px] text-xs hidden md:flex">
-              <SelectValue placeholder="Personel" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tüm Personel</SelectItem>
-              {staffList.map((s) => <SelectItem key={s.id} value={s.id}>{s.firstName} {s.lastName}</SelectItem>)}
-            </SelectContent>
-          </Select>
-          {/* Status filter */}
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="h-8 w-[120px] text-xs hidden md:flex">
-              <SelectValue placeholder="Durum" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tüm Durum</SelectItem>
-              <SelectItem value="PENDING">Bekliyor</SelectItem>
-              <SelectItem value="CONFIRMED">Onaylı</SelectItem>
-              <SelectItem value="CHECKED_IN">Geldi</SelectItem>
-              <SelectItem value="IN_SERVICE">Hizmette</SelectItem>
-              <SelectItem value="COMPLETED">Tamamlandı</SelectItem>
-              <SelectItem value="CANCELLED">İptal</SelectItem>
-              <SelectItem value="NO_SHOW">Gelmedi</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button size="sm" onClick={() => setDialogOpen(true)}>
-            <Plus className="mr-1 h-4 w-4" />
-            <span className="hidden sm:inline">Yeni Randevu</span>
-          </Button>
         </div>
       </div>
 
@@ -721,9 +730,9 @@ export default function CalendarPage() {
                 </SheetDescription>
               </SheetHeader>
 
-              <div className="mt-6 space-y-4">
-                {/* ── Quick status + payment summary bar ── */}
-                <div className="flex items-center gap-2 flex-wrap">
+              <div className="mt-5 space-y-3">
+                {/* ── Status bar — Untitled-inspired pill row ── */}
+                <div className="flex items-center gap-1.5 flex-wrap">
                   <Badge variant={STATUS_VARIANT[detailApt.status]}>
                     {STATUS_LABEL[detailApt.status]}
                   </Badge>
@@ -750,8 +759,8 @@ export default function CalendarPage() {
                   })()}
                 </div>
 
-                <Separator />
-
+                {/* ── Appointment details card ── */}
+                <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
                 <div className="flex items-center gap-3">
                   <Clock className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm">
@@ -801,6 +810,7 @@ export default function CalendarPage() {
                     {detailApt.staff ? `${detailApt.staff.firstName} ${detailApt.staff.lastName}` : detailApt.staffId.slice(0, 8) + '...'}
                   </span>
                 </div>
+                </div>{/* close details card */}
 
                 {/* ── Ekonomik Özet ──────────────────────────────── */}
                 {(() => {

@@ -197,35 +197,39 @@ export function BookingWidget({ salon, services, staff, initialReferralCode }: B
   return (
     <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
 
-      {/* ── İlerleme çubuğu ─────────────────────────────────────────── */}
+      {/* ── Progress stepper — Untitled-inspired clean hierarchy ──────── */}
       {step !== 'confirm' && (
-        <div className="px-6 pt-6 pb-4">
-          <div className="flex items-center gap-1 mb-1">
+        <div className="px-6 pt-5 pb-3">
+          <div className="flex items-center gap-1">
             {STEPS.filter((s) => s.id !== 'confirm').map((s, i) => (
               <React.Fragment key={s.id}>
-                <div
-                  className={cn(
-                    'flex items-center gap-1.5 text-xs font-medium transition-colors',
-                    i <= currentIdx ? 'text-brand-700' : 'text-gray-400',
-                  )}
-                >
+                <div className="flex items-center gap-1.5">
                   <div
                     className={cn(
-                      'w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold transition-all',
+                      'w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold transition-all',
                       i < currentIdx
-                        ? 'bg-brand-600 text-white'
+                        ? 'bg-brand-600 text-white shadow-sm'
                         : i === currentIdx
-                          ? 'bg-brand-100 text-brand-700 ring-2 ring-brand-500'
+                          ? 'bg-brand-50 text-brand-700 ring-2 ring-brand-500/50 shadow-sm'
                           : 'bg-gray-100 text-gray-400',
                     )}
                   >
-                    {i < currentIdx ? '✓' : i + 1}
+                    {i < currentIdx ? (
+                      <CheckCircle className="w-3.5 h-3.5" />
+                    ) : (
+                      i + 1
+                    )}
                   </div>
-                  <span className="hidden sm:inline">{s.label}</span>
+                  <span className={cn(
+                    'hidden sm:inline text-xs font-medium transition-colors',
+                    i <= currentIdx ? 'text-gray-900' : 'text-gray-400',
+                  )}>
+                    {s.label}
+                  </span>
                 </div>
                 {i < STEPS.filter((s) => s.id !== 'confirm').length - 1 && (
                   <div className={cn(
-                    'flex-1 h-0.5 rounded transition-colors',
+                    'flex-1 h-[2px] rounded-full mx-1 transition-colors',
                     i < currentIdx ? 'bg-brand-500' : 'bg-gray-200',
                   )} />
                 )}
@@ -289,8 +293,12 @@ export function BookingWidget({ salon, services, staff, initialReferralCode }: B
             </p>
 
             {filteredStaff.length === 0 ? (
-              <div className="text-center py-8 text-gray-400 text-sm">
-                Bu hizmet için müsait personel bulunamadı.
+              <div className="text-center py-10">
+                <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
+                  <User className="w-5 h-5 text-gray-400" />
+                </div>
+                <p className="text-gray-600 text-sm font-medium">Bu hizmet için müsait personel yok</p>
+                <p className="text-gray-400 text-xs mt-1">Farklı bir hizmet seçmeyi deneyin.</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -383,13 +391,17 @@ export function BookingWidget({ salon, services, staff, initialReferralCode }: B
             </p>
 
             {loadingSlots ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-6 h-6 text-brand-500 animate-spin" />
+              <div className="flex flex-col items-center justify-center py-14 gap-3">
+                <div className="w-8 h-8 rounded-full border-[3px] border-gray-200 border-t-brand-500 animate-spin" />
+                <p className="text-gray-400 text-xs">Müsait saatler yükleniyor...</p>
               </div>
             ) : slots.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-gray-500 text-sm">Bu tarihte müsait slot bulunamadı.</p>
-                <p className="text-gray-400 text-xs mt-1">Farklı bir tarih seçmeyi deneyin.</p>
+              <div className="text-center py-10">
+                <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
+                  <Clock className="w-5 h-5 text-gray-400" />
+                </div>
+                <p className="text-gray-600 text-sm font-medium">Bu tarihte müsait saat yok</p>
+                <p className="text-gray-400 text-xs mt-1">Farklı bir tarih veya personel seçmeyi deneyin.</p>
               </div>
             ) : (
               <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
@@ -519,9 +531,12 @@ export function BookingWidget({ salon, services, staff, initialReferralCode }: B
             </div>
 
             {error && (
-              <div className="flex items-center gap-2 mt-4 p-3 bg-red-50 rounded-xl text-red-700 text-sm">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                {error}
+              <div className="flex items-start gap-2.5 mt-4 p-3.5 bg-red-50 rounded-xl border border-red-100">
+                <AlertCircle className="w-4 h-4 shrink-0 text-red-500 mt-0.5" />
+                <div>
+                  <p className="text-red-800 text-sm font-medium">Bir hata oluştu</p>
+                  <p className="text-red-600 text-xs mt-0.5">{error}</p>
+                </div>
               </div>
             )}
 
@@ -555,10 +570,9 @@ export function BookingWidget({ salon, services, staff, initialReferralCode }: B
 
         {/* ══ ADIM 6: ONAY ════════════════════════════════════════════ */}
         {step === 'confirm' && result && (
-          <div className="py-4 text-center step-enter">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center
-                            mx-auto mb-4">
-              <CheckCircle className="w-8 h-8 text-green-600" />
+          <div className="py-6 text-center step-enter">
+            <div className="w-14 h-14 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-4 ring-4 ring-green-100">
+              <CheckCircle className="w-7 h-7 text-green-600" />
             </div>
             <h3 className="text-xl font-bold text-gray-900 mb-1">
               Randevunuz Oluşturuldu!
@@ -567,7 +581,7 @@ export function BookingWidget({ salon, services, staff, initialReferralCode }: B
               Aşağıdaki bilgilerle randevunuz kaydedildi.
             </p>
 
-            <div className="bg-gray-50 rounded-2xl p-5 text-left max-w-sm mx-auto space-y-3">
+            <div className="bg-gray-50 rounded-2xl p-5 text-left max-w-sm mx-auto space-y-3 border border-gray-100">
               <Detail icon={<Scissors />} label="Hizmet"   value={result.service.name} />
               <Detail
                 icon={<User />}

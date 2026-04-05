@@ -32,9 +32,12 @@ export default function DashboardLayout({
   if (!ready) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="flex flex-col items-center gap-3 text-muted-foreground">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-          <p className="text-sm">Yükleniyor...</p>
+        <div className="flex flex-col items-center gap-4 text-muted-foreground">
+          <div className="h-10 w-10 animate-spin rounded-full border-[3px] border-muted border-t-primary" />
+          <div className="text-center">
+            <p className="text-sm font-medium text-foreground">Calon</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Yükleniyor...</p>
+          </div>
         </div>
       </div>
     );

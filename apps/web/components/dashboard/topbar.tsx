@@ -60,11 +60,11 @@ export function Topbar() {
           <span className="text-xl font-bold text-primary">Calon</span>
         </Link>
 
-        {/* Tenant info */}
-        <div className="hidden lg:flex items-center gap-2">
-          <span className="text-sm font-medium">{tenant?.name ?? '...'}</span>
+        {/* Tenant info — Untitled-inspired clean label */}
+        <div className="hidden lg:flex items-center gap-2.5">
+          <span className="text-sm font-semibold text-foreground">{tenant?.name ?? '...'}</span>
           {tenant?.plan && (
-            <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+            <span className="inline-flex items-center rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary ring-1 ring-inset ring-primary/20">
               {tenant.plan}
             </span>
           )}
