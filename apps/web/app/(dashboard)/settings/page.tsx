@@ -99,7 +99,7 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6 max-w-3xl">
-      <h1 className="text-2xl font-bold tracking-tight">Salon Ayarları</h1>
+      <h1 className="text-lg font-semibold tracking-tight">Salon Ayarları</h1>
 
       {/* ── Profile Card ──────────────────────────────────────────────────── */}
       <div className="bg-card rounded-lg border p-5">

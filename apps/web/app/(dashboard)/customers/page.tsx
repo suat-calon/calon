@@ -119,7 +119,7 @@ export default function CustomersPage() {
     <div className="space-y-5 max-w-5xl">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">Müşteriler</h1>
+        <h1 className="text-lg font-semibold tracking-tight">Müşteriler</h1>
         <div className="flex items-center gap-3">
           <span className="text-sm text-muted-foreground">{data ? `${data.total} müşteri` : ''}</span>
           <Button size="sm" onClick={() => { setNewFirst(''); setNewLast(''); setNewPhone(''); setNewEmail(''); setNewNotes(''); setNewConsent(false); setCreateOpen(true); }}>

@@ -439,13 +439,13 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-5 max-w-5xl">
-      {/* ── Header ────────────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between">
+      {/* ── Page Header ──────────────────────────────────────────────────── */}
+      <div className="flex items-center justify-between pb-1 border-b border-border/40">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight">
+          <h1 className="text-lg font-semibold tracking-tight text-foreground">
             {tenant?.name ?? 'Özet'}
           </h1>
-          <p className="text-muted-foreground text-xs mt-0.5">
+          <p className="text-muted-foreground/70 text-[11px] mt-0.5">
             {format(now, 'd MMMM yyyy, EEEE', { locale: tr })}
           </p>
         </div>
@@ -545,10 +545,10 @@ export default function DashboardPage() {
 
       {/* ── Priority Customers ──────────────────────────────────────────── */}
       {priorityCustomers.length > 0 && (
-        <div className="bg-card border rounded-xl p-4 shadow-sm">
+        <div className="bg-card border border-primary/15 rounded-lg p-4">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold flex items-center gap-1.5">
-              <Users className="h-4 w-4 text-primary" />
+            <h2 className="text-[13px] font-semibold flex items-center gap-1.5">
+              <Users className="h-3.5 w-3.5 text-primary" />
               Dikkat Gereken Müşteriler
             </h2>
             <Link href="/customers" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
@@ -588,7 +588,9 @@ export default function DashboardPage() {
       )}
 
       {/* ── Stat Cards ────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div>
+        <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 mb-2.5">Bugünkü Durum</p>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
         <StatCard
           icon={CalendarDays}
           label="Bugün Toplam"
@@ -621,19 +623,22 @@ export default function DashboardPage() {
           loading={isLoading}
           tone={stats.cancelled > 0 ? 'destructive' : 'default'}
         />
+        </div>
       </div>
 
       {/* ── Booking Link ───────────────────────────────────────────────────── */}
       {tenant?.slug && <BookingLinkCard slug={tenant.slug} />}
 
       {/* ── Two-Column: Upcoming + Quick Actions ──────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-5">
+      <div>
+        <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 mb-2.5">Randevular</p>
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_260px] gap-4">
         {/* Upcoming */}
         <div className="bg-card rounded-lg border">
-          <div className="flex items-center justify-between px-5 pt-5 pb-3">
+          <div className="flex items-center justify-between px-4 pt-4 pb-2.5">
             <div>
-              <h2 className="text-sm font-semibold">Yaklaşan Randevular</h2>
-              <p className="text-xs text-muted-foreground mt-0.5">Sıradaki {upcoming.length} randevu</p>
+              <h2 className="text-[13px] font-semibold text-foreground">Yaklaşan Randevular</h2>
+              <p className="text-[11px] text-muted-foreground/70 mt-0.5">Sıradaki {upcoming.length} randevu</p>
             </div>
             <Button variant="ghost" size="sm" asChild className="text-xs text-muted-foreground hover:text-foreground">
               <Link href="/calendar">
@@ -641,7 +646,7 @@ export default function DashboardPage() {
               </Link>
             </Button>
           </div>
-          <div className="px-5 pb-5">
+          <div className="px-4 pb-4">
             {error ? (
               <div className="flex items-center gap-2 text-destructive text-sm py-6">
                 <AlertCircle className="h-4 w-4" />
@@ -675,18 +680,19 @@ export default function DashboardPage() {
           <QuickAction href="/catalog" icon={Plus} label="Katalog" description="Hizmet & ürün ekle" />
           <QuickAction href="/settings" icon={Settings} label="Ayarlar" description="Salon profili" />
         </div>
+        </div>
       </div>
 
       {/* ── Today's Appointments ──────────────────────────────────────────── */}
       {todayAppts.length > 0 && (
         <div className="bg-card rounded-lg border">
-          <div className="flex items-center justify-between px-5 pt-5 pb-3">
+          <div className="flex items-center justify-between px-4 pt-4 pb-2.5">
             <div>
-              <h2 className="text-sm font-semibold">Bugünkü Randevular</h2>
-              <p className="text-xs text-muted-foreground mt-0.5">{todayAppts.length} randevu</p>
+              <h2 className="text-[13px] font-semibold text-foreground">Bugünkü Randevular</h2>
+              <p className="text-[11px] text-muted-foreground/70 mt-0.5">{todayAppts.length} randevu</p>
             </div>
           </div>
-          <div className="px-5 pb-5 space-y-1.5">
+          <div className="px-4 pb-4 space-y-1.5">
             {todayAppts.slice(0, 6).map((apt) => (
               <AppointmentRow key={apt.id} appointment={apt} />
             ))}

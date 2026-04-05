@@ -109,7 +109,7 @@ export default function ServicesPage() {
   return (
     <div className="space-y-5 max-w-5xl">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">Hizmetler</h1>
+        <h1 className="text-lg font-semibold tracking-tight">Hizmetler</h1>
         <Button size="sm" className="shadow-sm" onClick={openCreate}>
           <Plus className="mr-1 h-4 w-4" />Yeni Hizmet
         </Button>

@@ -215,9 +215,9 @@ export default function CatalogPage() {
   return (
     <div className="space-y-5 max-w-5xl">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">Katalog</h1>
-        <Button size="sm" className="shadow-sm" onClick={tab === 'services' ? openCreateService : openCreateProduct}>
+      <div className="flex items-center justify-between pb-1 border-b border-border/40">
+        <h1 className="text-lg font-semibold tracking-tight">Katalog</h1>
+        <Button size="sm" onClick={tab === 'services' ? openCreateService : openCreateProduct}>
           <Plus className="mr-1 h-4 w-4" />
           {tab === 'services' ? 'Yeni Hizmet' : 'Yeni Ürün'}
         </Button>

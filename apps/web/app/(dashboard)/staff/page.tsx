@@ -53,7 +53,7 @@ export default function StaffPage() {
   return (
     <div className="space-y-5 max-w-5xl">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">Personel</h1>
+        <h1 className="text-lg font-semibold tracking-tight">Personel</h1>
         <span className="text-sm text-muted-foreground">{data ? `${data.total} personel` : ''}</span>
       </div>
 
