@@ -46,7 +46,7 @@ export function Topbar() {
 
   return (
     <>
-      <header className="h-14 border-b border-border bg-card flex items-center justify-between px-4 lg:px-6 shrink-0">
+      <header className="h-14 border-b border-border/60 bg-card/50 dark:bg-card/30 flex items-center justify-between px-4 lg:px-5 shrink-0 backdrop-blur-sm">
         {/* Mobile menu toggle */}
         <button
           className="lg:hidden p-2 -ml-2 rounded-md hover:bg-muted"
@@ -60,42 +60,44 @@ export function Topbar() {
           <div className="w-6 h-6 rounded-md bg-primary flex items-center justify-center">
             <span className="text-[10px] font-bold text-primary-foreground">C</span>
           </div>
-          <span className="text-lg font-bold text-foreground">Calon</span>
+          <span className="text-base font-semibold text-foreground">Calon</span>
         </Link>
 
         {/* Tenant info */}
-        <div className="hidden lg:flex items-center gap-2.5">
-          <span className="text-sm font-semibold text-foreground">{tenant?.name ?? '...'}</span>
-          {tenant?.plan && (
-            <span className="inline-flex items-center rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary ring-1 ring-inset ring-primary/20">
-              {tenant.plan}
-            </span>
-          )}
+        <div className="hidden lg:flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold text-foreground">{tenant?.name ?? '...'}</span>
+            {tenant?.plan && (
+              <span className="inline-flex items-center rounded-full bg-primary/8 px-2 py-0.5 text-[10px] font-semibold text-primary ring-1 ring-inset ring-primary/15">
+                {tenant.plan}
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Logout */}
-        <Button variant="ghost" size="sm" onClick={handleLogout} disabled={loggingOut}>
-          <LogOut className="mr-2 h-4 w-4" />
-          <span className="hidden sm:inline">{loggingOut ? 'Çıkılıyor...' : 'Çıkış'}</span>
+        <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground" onClick={handleLogout} disabled={loggingOut}>
+          <LogOut className="mr-2 h-3.5 w-3.5" />
+          <span className="hidden sm:inline text-xs">{loggingOut ? 'Çıkılıyor...' : 'Çıkış'}</span>
         </Button>
       </header>
 
       {/* Mobile nav overlay */}
       {mobileOpen && (
-        <div className="lg:hidden fixed inset-0 z-50 bg-black/40" onClick={() => setMobileOpen(false)}>
+        <div className="lg:hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-sm" onClick={() => setMobileOpen(false)}>
           <nav
-            className="w-64 h-full bg-card border-r border-border p-4 space-y-1"
+            className="w-64 h-full bg-card border-r border-border p-4 space-y-1 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="mb-6 flex items-center justify-between">
+            <div className="mb-5 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="w-6 h-6 rounded-md bg-primary flex items-center justify-center">
                   <span className="text-[10px] font-bold text-primary-foreground">C</span>
                 </div>
-                <span className="text-lg font-bold text-foreground">Calon</span>
+                <span className="text-base font-semibold text-foreground">Calon</span>
               </div>
-              <button onClick={() => setMobileOpen(false)} className="p-1">
-                <X className="h-5 w-5" />
+              <button onClick={() => setMobileOpen(false)} className="p-1 rounded hover:bg-muted">
+                <X className="h-4 w-4 text-muted-foreground" />
               </button>
             </div>
             {MOBILE_NAV.map(({ href, label, icon: Icon }) => {
@@ -108,13 +110,13 @@ export function Topbar() {
                   href={href}
                   onClick={() => setMobileOpen(false)}
                   className={cn(
-                    'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                    'flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors',
                     isActive
                       ? 'bg-primary text-primary-foreground'
-                      : 'text-foreground/70 hover:bg-muted',
+                      : 'text-foreground/60 hover:bg-muted hover:text-foreground',
                   )}
                 >
-                  <Icon className={cn('h-4 w-4', isActive ? 'text-primary-foreground' : 'text-foreground/50')} />
+                  <Icon className={cn('h-4 w-4', isActive ? 'text-primary-foreground' : 'text-foreground/40')} />
                   {label}
                 </Link>
               );

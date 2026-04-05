@@ -7,9 +7,6 @@ import apiClient      from '@/lib/api-client';
 import { Sidebar }    from '@/components/dashboard/sidebar';
 import { Topbar }     from '@/components/dashboard/topbar';
 
-/**
- * Dashboard route grubu layout — auth guard + shell.
- */
 export default function DashboardLayout({
   children,
 }: {
@@ -29,10 +26,10 @@ export default function DashboardLayout({
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4 text-muted-foreground">
-          <div className="w-10 h-10 animate-spin rounded-full border-[3px] border-muted border-t-primary" />
+          <div className="w-8 h-8 animate-spin rounded-full border-2 border-muted border-t-primary" />
           <div className="text-center">
-            <p className="text-sm font-medium text-foreground">Calon</p>
-            <p className="text-xs text-muted-foreground mt-0.5">Yükleniyor...</p>
+            <p className="text-sm font-semibold text-foreground tracking-tight">Calon</p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">Yükleniyor...</p>
           </div>
         </div>
       </div>
@@ -40,12 +37,14 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="min-h-screen flex bg-background">
+    <div className="min-h-screen flex bg-muted/40 dark:bg-background">
       <Sidebar />
       <div className="flex-1 flex flex-col min-w-0">
         <Topbar />
-        <main className="flex-1 overflow-y-auto p-4 lg:p-6">
-          {children}
+        <main className="flex-1 overflow-y-auto">
+          <div className="px-4 lg:px-6 py-4 lg:py-5">
+            {children}
+          </div>
         </main>
       </div>
     </div>
