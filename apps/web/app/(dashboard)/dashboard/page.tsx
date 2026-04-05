@@ -438,20 +438,20 @@ export default function DashboardPage() {
   }, [appointments, now]);
 
   return (
-    <div className="space-y-6 max-w-5xl">
+    <div className="space-y-5 max-w-5xl">
       {/* ── Header ────────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">
+          <h1 className="text-xl font-semibold tracking-tight">
             {tenant?.name ?? 'Özet'}
           </h1>
-          <p className="text-muted-foreground text-sm mt-1">
+          <p className="text-muted-foreground text-xs mt-0.5">
             {format(now, 'd MMMM yyyy, EEEE', { locale: tr })}
           </p>
         </div>
-        <Button asChild size="sm" className="shadow-sm">
+        <Button asChild size="sm" variant="outline" className="text-xs h-8">
           <Link href="/calendar">
-            <CalendarDays className="mr-2 h-4 w-4" />
+            <CalendarDays className="mr-1.5 h-3.5 w-3.5" />
             Takvime Git
           </Link>
         </Button>
@@ -629,7 +629,7 @@ export default function DashboardPage() {
       {/* ── Two-Column: Upcoming + Quick Actions ──────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-5">
         {/* Upcoming */}
-        <div className="bg-card rounded-xl border shadow-sm">
+        <div className="bg-card rounded-lg border">
           <div className="flex items-center justify-between px-5 pt-5 pb-3">
             <div>
               <h2 className="text-sm font-semibold">Yaklaşan Randevular</h2>
@@ -667,8 +667,8 @@ export default function DashboardPage() {
         </div>
 
         {/* Quick Actions */}
-        <div className="space-y-3">
-          <h2 className="text-sm font-semibold px-1">Hızlı İşlemler</h2>
+        <div className="space-y-1.5">
+          <h2 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground px-1 pb-1">Hızlı İşlemler</h2>
           <QuickAction href="/calendar" icon={CalendarDays} label="Takvim" description="Haftalık takvim" primary />
           <QuickAction href="/customers" icon={Users} label="Müşteriler" description="Müşteri listesi" />
           <QuickAction href="/services" icon={Scissors} label="Hizmetler" description="Hizmet yönetimi" />
@@ -679,7 +679,7 @@ export default function DashboardPage() {
 
       {/* ── Today's Appointments ──────────────────────────────────────────── */}
       {todayAppts.length > 0 && (
-        <div className="bg-card rounded-xl border shadow-sm">
+        <div className="bg-card rounded-lg border">
           <div className="flex items-center justify-between px-5 pt-5 pb-3">
             <div>
               <h2 className="text-sm font-semibold">Bugünkü Randevular</h2>
@@ -727,22 +727,19 @@ function StatCard({
 }) {
   const t = TONE_STYLES[tone];
   return (
-    <div className={`bg-card rounded-xl border shadow-sm p-4 transition-shadow hover:shadow-md ${t.ring}`}>
-      <div className="flex items-start justify-between">
-        <div className={`p-2 rounded-lg ${t.bg}`}>
-          <Icon className={`h-4 w-4 ${t.icon}`} />
+    <div className={`bg-card rounded-lg border p-3.5 transition-colors ${t.ring}`}>
+      <div className="flex items-center gap-3">
+        <div className={`p-1.5 rounded-md ${t.bg}`}>
+          <Icon className={`h-3.5 w-3.5 ${t.icon}`} />
         </div>
-      </div>
-      <div className="mt-3">
-        {loading ? (
-          <div className="h-7 w-14 bg-muted animate-pulse rounded" />
-        ) : (
-          <p className="text-2xl font-bold tracking-tight">{value}</p>
-        )}
-        <p className="text-xs text-muted-foreground mt-0.5">{label}</p>
-        {!loading && (
-          <p className="text-[10px] text-muted-foreground/60 mt-0.5">{subtitle}</p>
-        )}
+        <div className="flex-1 min-w-0">
+          {loading ? (
+            <div className="h-5 w-10 bg-muted animate-pulse rounded" />
+          ) : (
+            <p className="text-lg font-semibold tracking-tight leading-none">{value}</p>
+          )}
+          <p className="text-[11px] text-muted-foreground mt-0.5">{label}</p>
+        </div>
       </div>
     </div>
   );
@@ -850,20 +847,20 @@ function QuickAction({
   return (
     <Link
       href={href}
-      className={`flex items-center gap-3 px-4 py-3 rounded-xl border transition-all group ${
+      className={`flex items-center gap-2.5 px-3 py-2 rounded-lg border transition-all group ${
         primary
-          ? 'bg-primary/5 border-primary/20 hover:bg-primary/10 hover:border-primary/30 shadow-sm'
-          : 'bg-card hover:bg-muted/50 hover:border-muted-foreground/20 shadow-sm'
+          ? 'bg-primary/5 border-primary/15 hover:bg-primary/10'
+          : 'bg-card hover:bg-muted/50'
       }`}
     >
-      <div className={`p-2 rounded-lg ${primary ? 'bg-primary/15' : 'bg-muted'}`}>
-        <Icon className={`h-4 w-4 ${primary ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground'} transition-colors`} />
+      <div className={`p-1.5 rounded-md ${primary ? 'bg-primary/15' : 'bg-muted'}`}>
+        <Icon className={`h-3.5 w-3.5 ${primary ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground'} transition-colors`} />
       </div>
       <div className="min-w-0">
-        <p className={`text-sm font-medium ${primary ? 'text-primary' : ''}`}>{label}</p>
-        <p className="text-[11px] text-muted-foreground">{description}</p>
+        <p className={`text-[13px] font-medium ${primary ? 'text-primary' : ''}`}>{label}</p>
+        <p className="text-[10px] text-muted-foreground leading-none">{description}</p>
       </div>
-      <ArrowRight className={`h-3.5 w-3.5 ml-auto opacity-0 group-hover:opacity-60 transition-opacity shrink-0 ${primary ? 'text-primary' : 'text-muted-foreground'}`} />
+      <ArrowRight className={`h-3 w-3 ml-auto opacity-0 group-hover:opacity-60 transition-opacity shrink-0 ${primary ? 'text-primary' : 'text-muted-foreground'}`} />
     </Link>
   );
 }

@@ -76,7 +76,7 @@ export default function StaffPage() {
             const firstWorking = (s.workingHours ?? []).find((w) => w.isWorkingDay);
 
             return (
-              <div key={s.id} className="bg-card rounded-xl border shadow-sm px-4 py-3 flex items-center gap-4 hover:shadow-md transition-shadow group">
+              <div key={s.id} className="bg-card rounded-lg border px-3.5 py-2.5 flex items-center gap-4 hover:shadow-md transition-shadow group">
                 <div className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-semibold shrink-0"
                   style={{ backgroundColor: s.colorHex ?? '#6366f1' }}>
                   {s.firstName[0]}{s.lastName[0]}

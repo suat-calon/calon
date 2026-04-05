@@ -262,7 +262,7 @@ export default function CatalogPage() {
         ) : (
           <div className="space-y-2">
             {filteredServices.map((svc) => (
-              <div key={svc.id} className="bg-card rounded-xl border shadow-sm px-4 py-3 flex items-center gap-4 hover:shadow-md transition-shadow group">
+              <div key={svc.id} className="bg-card rounded-lg border px-3.5 py-2.5 flex items-center gap-4 hover:shadow-md transition-shadow group">
                 <div className="p-2 rounded-lg bg-primary/8">
                   <Scissors className="h-4 w-4 text-primary" />
                 </div>
@@ -303,7 +303,7 @@ export default function CatalogPage() {
               const minStock = Number(prod.minStock);
               const lowStock = stock <= minStock && minStock > 0;
               return (
-                <div key={prod.id} className="bg-card rounded-xl border shadow-sm px-4 py-3 flex items-center gap-4 hover:shadow-md transition-shadow group">
+                <div key={prod.id} className="bg-card rounded-lg border px-3.5 py-2.5 flex items-center gap-4 hover:shadow-md transition-shadow group">
                   <div className="p-2 rounded-lg bg-muted">
                     <Package className="h-4 w-4 text-muted-foreground" />
                   </div>

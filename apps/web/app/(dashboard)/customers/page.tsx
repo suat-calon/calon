@@ -239,7 +239,7 @@ export default function CustomersPage() {
             const nextAppt = getNextAppointment(c.id);
             const visits   = getTotalVisits(c.id);
             return (
-              <button key={c.id} type="button" className="w-full bg-card rounded-xl border shadow-sm px-4 py-3 flex items-center gap-4 hover:shadow-md transition-shadow text-left group"
+              <button key={c.id} type="button" className="w-full bg-card rounded-lg border px-3.5 py-2.5 flex items-center gap-4 hover:shadow-md transition-shadow text-left group"
                 onClick={() => setSelectedCustomer(c)}
               >
                 <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">

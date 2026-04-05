@@ -102,7 +102,7 @@ export default function SettingsPage() {
       <h1 className="text-2xl font-bold tracking-tight">Salon Ayarları</h1>
 
       {/* ── Profile Card ──────────────────────────────────────────────────── */}
-      <div className="bg-card rounded-xl border shadow-sm p-6">
+      <div className="bg-card rounded-lg border p-5">
         <div className="flex items-start gap-4 mb-5">
           <div className="p-3 rounded-xl bg-primary/10 shrink-0">
             <Building2 className="h-6 w-6 text-primary" />
@@ -181,7 +181,7 @@ export default function SettingsPage() {
       )}
 
       {/* ── Storefront Content ──────────────────────────────────────────── */}
-      <div className="bg-card rounded-xl border shadow-sm p-6">
+      <div className="bg-card rounded-lg border p-5">
         <div className="flex items-start gap-4 mb-5">
           <div className="p-3 rounded-xl bg-purple-100 shrink-0">
             <FileText className="h-6 w-6 text-purple-600" />
@@ -211,7 +211,7 @@ export default function SettingsPage() {
       </div>
 
       {/* ── Announcement ─────────────────────────────────────────────────── */}
-      <div className="bg-card rounded-xl border shadow-sm p-6">
+      <div className="bg-card rounded-lg border p-5">
         <div className="flex items-start gap-4 mb-5">
           <div className="p-3 rounded-xl bg-amber-100 shrink-0">
             <Megaphone className="h-6 w-6 text-amber-600" />
@@ -258,7 +258,7 @@ export default function SettingsPage() {
       </div>
 
       {/* ── Gallery ──────────────────────────────────────────────────────── */}
-      <div className="bg-card rounded-xl border shadow-sm p-6">
+      <div className="bg-card rounded-lg border p-5">
         <div className="flex items-start gap-4 mb-5">
           <div className="p-3 rounded-xl bg-emerald-100 shrink-0">
             <ImageIcon className="h-6 w-6 text-emerald-600" />
