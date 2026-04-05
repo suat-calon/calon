@@ -117,6 +117,8 @@ type AppointmentForm = z.infer<typeof appointmentSchema>;
 export default function CalendarPage() {
   const router = useRouter();
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
+  const [viewMode, setViewMode] = useState<'week' | 'day'>('week');
+  const [selectedDay, setSelectedDay] = useState(() => new Date());
   const [dialogOpen, setDialogOpen]     = useState(false);
   const [calPopoverOpen, setCalPopoverOpen] = useState(false);
   const [detailApt, setDetailApt]       = useState<Appointment | null>(null);
@@ -189,9 +191,18 @@ export default function CalendarPage() {
     return map;
   }, [appointments, weekDays]);
 
-  function prevWeek() { setWeekStart(addDays(weekStart, -7)); }
-  function nextWeek() { setWeekStart(addDays(weekStart, 7)); }
-  function goToday()  { setWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 })); }
+  function prevPeriod() {
+    if (viewMode === 'week') setWeekStart(addDays(weekStart, -7));
+    else setSelectedDay(addDays(selectedDay, -1));
+  }
+  function nextPeriod() {
+    if (viewMode === 'week') setWeekStart(addDays(weekStart, 7));
+    else setSelectedDay(addDays(selectedDay, 1));
+  }
+  function goToday() {
+    setWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }));
+    setSelectedDay(new Date());
+  }
 
   // ── Create form ──────────────────────────────────────────────────────────────
   const form = useForm<AppointmentForm>({
@@ -235,21 +246,56 @@ export default function CalendarPage() {
         <div className="flex items-center gap-3">
           <h1 className="text-lg font-semibold hidden sm:block">Randevular</h1>
           <div className="flex items-center gap-1">
-            <Button variant="outline" size="icon" className="h-8 w-8" onClick={prevWeek}>
+            <Button variant="outline" size="icon" className="h-8 w-8" onClick={prevPeriod}>
               <ChevronLeft className="h-4 w-4" />
             </Button>
             <Button variant="outline" size="sm" className="h-8 px-3 text-xs" onClick={goToday}>
               Bugün
             </Button>
-            <Button variant="outline" size="icon" className="h-8 w-8" onClick={nextWeek}>
+            <Button variant="outline" size="icon" className="h-8 w-8" onClick={nextPeriod}>
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
           <span className="text-sm text-muted-foreground hidden md:inline">
-            {format(weekDays[0], 'd MMM', { locale: tr })} — {format(weekDays[6], 'd MMM yyyy', { locale: tr })}
+            {viewMode === 'week'
+              ? `${format(weekDays[0], 'd MMM', { locale: tr })} — ${format(weekDays[6], 'd MMM yyyy', { locale: tr })}`
+              : format(selectedDay, 'd MMMM yyyy, EEEE', { locale: tr })
+            }
           </span>
+          {/* Today summary badge */}
+          {(() => {
+            const todayKey = format(new Date(), 'yyyy-MM-dd');
+            const todayApts = appointmentsByDay.get(todayKey) ?? [];
+            const pending = todayApts.filter(a => a.status === 'PENDING' || a.status === 'CONFIRMED').length;
+            const active = todayApts.filter(a => a.status === 'CHECKED_IN' || a.status === 'IN_SERVICE').length;
+            if (todayApts.length === 0) return null;
+            return (
+              <span className="text-xs text-muted-foreground hidden lg:inline ml-2">
+                Bugün: {todayApts.length} randevu
+                {pending > 0 && <span className="text-amber-600 ml-1">({pending} bekleyen)</span>}
+                {active > 0 && <span className="text-purple-600 ml-1">({active} aktif)</span>}
+              </span>
+            );
+          })()}
         </div>
         <div className="flex items-center gap-2">
+          {/* View mode toggle */}
+          <div className="flex items-center rounded-md border hidden sm:flex">
+            <button
+              type="button"
+              className={cn('px-2.5 py-1 text-xs rounded-l-md transition-colors', viewMode === 'day' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted')}
+              onClick={() => { setViewMode('day'); setSelectedDay(new Date()); }}
+            >
+              Gün
+            </button>
+            <button
+              type="button"
+              className={cn('px-2.5 py-1 text-xs rounded-r-md transition-colors', viewMode === 'week' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted')}
+              onClick={() => setViewMode('week')}
+            >
+              Hafta
+            </button>
+          </div>
           {/* Staff filter */}
           <Select value={staffFilter} onValueChange={setStaffFilter}>
             <SelectTrigger className="h-8 w-[140px] text-xs hidden md:flex">
@@ -269,8 +315,11 @@ export default function CalendarPage() {
               <SelectItem value="all">Tüm Durum</SelectItem>
               <SelectItem value="PENDING">Bekliyor</SelectItem>
               <SelectItem value="CONFIRMED">Onaylı</SelectItem>
+              <SelectItem value="CHECKED_IN">Geldi</SelectItem>
+              <SelectItem value="IN_SERVICE">Hizmette</SelectItem>
               <SelectItem value="COMPLETED">Tamamlandı</SelectItem>
               <SelectItem value="CANCELLED">İptal</SelectItem>
+              <SelectItem value="NO_SHOW">Gelmedi</SelectItem>
             </SelectContent>
           </Select>
           <Button size="sm" onClick={() => setDialogOpen(true)}>
@@ -280,7 +329,7 @@ export default function CalendarPage() {
         </div>
       </div>
 
-      {/* ── Weekly Grid ───────────────────────────────────────────────────── */}
+      {/* ── Calendar Grid ─────────────────────────────────────────────────── */}
       {error ? (
         <div className="flex items-center justify-center flex-1 gap-2 text-destructive">
           <AlertCircle className="h-5 w-5" />
@@ -325,7 +374,89 @@ export default function CalendarPage() {
               </div>
             </div>
           )}
-          <div className="min-w-[700px]">
+          {/* ── DAY VIEW ──────────────────────────────────────────────── */}
+          {viewMode === 'day' && (() => {
+            const dayKey = format(selectedDay, 'yyyy-MM-dd');
+            const dayApts = (appointments ?? []).filter(a => {
+              try { return format(parseISO(a.startTime), 'yyyy-MM-dd') === dayKey; } catch { return false; }
+            }).sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+
+            return (
+              <div className="min-w-[300px]">
+                {/* Day header */}
+                <div className="border-b bg-white sticky top-0 z-10 px-4 py-3">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-base font-semibold">{format(selectedDay, 'd MMMM yyyy, EEEE', { locale: tr })}</h2>
+                    <span className="text-sm text-muted-foreground">{dayApts.length} randevu</span>
+                  </div>
+                </div>
+                {/* Day appointment list — agenda style for speed */}
+                <div className="divide-y">
+                  {dayApts.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-16 text-center">
+                      <CalendarIcon className="h-8 w-8 text-muted-foreground/30 mb-2" />
+                      <p className="text-sm text-muted-foreground">Bu gün için randevu yok</p>
+                    </div>
+                  ) : dayApts.map((apt) => {
+                    const servicePrice = Number(apt.service?.price ?? apt.totalPrice ?? 0);
+                    const depositPaid = Number(apt.depositPaid ?? 0);
+                    const isPaid = apt.status === 'COMPLETED';
+                    const hasPendingBalance = servicePrice > 0 && depositPaid < servicePrice && !isPaid;
+
+                    return (
+                      <button
+                        key={apt.id}
+                        type="button"
+                        className={cn(
+                          'w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-muted/50 transition-colors',
+                          apt.status === 'CANCELLED' && 'opacity-50',
+                          apt.status === 'NO_SHOW' && 'opacity-50',
+                        )}
+                        onClick={() => setDetailApt(apt)}
+                      >
+                        {/* Time block */}
+                        <div className="w-16 shrink-0 text-center">
+                          <div className="text-sm font-semibold">{format(parseISO(apt.startTime), 'HH:mm')}</div>
+                          <div className="text-[10px] text-muted-foreground">{format(parseISO(apt.endTime), 'HH:mm')}</div>
+                        </div>
+                        {/* Staff color dot */}
+                        {(apt.staff as { colorHex?: string } | undefined)?.colorHex && (
+                          <div className="w-1 h-8 rounded-full shrink-0" style={{ backgroundColor: (apt.staff as { colorHex?: string }).colorHex }} />
+                        )}
+                        {/* Main content */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium truncate">
+                              {apt.customer ? `${apt.customer.firstName} ${apt.customer.lastName}` : '—'}
+                            </span>
+                            <Badge variant={STATUS_VARIANT[apt.status]} className="text-[10px] h-5 shrink-0">
+                              {STATUS_LABEL[apt.status]}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                            <span className="truncate">{apt.service?.name ?? ''}</span>
+                            {apt.staff && <span>· {apt.staff.firstName}</span>}
+                            {apt.notes && <span title={apt.notes}>📝</span>}
+                          </div>
+                        </div>
+                        {/* Payment signal */}
+                        <div className="shrink-0 text-right">
+                          {servicePrice > 0 && (
+                            <div className="text-sm font-medium">{servicePrice}₺</div>
+                          )}
+                          {isPaid && <div className="text-[10px] text-emerald-600">✓ Ödendi</div>}
+                          {hasPendingBalance && <div className="text-[10px] text-amber-600">{(servicePrice - depositPaid)}₺ kalan</div>}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* ── WEEK VIEW ─────────────────────────────────────────────── */}
+          {viewMode === 'week' && <div className="min-w-[700px]">
             {/* Day headers */}
             <div className="grid grid-cols-[56px_repeat(7,1fr)] border-b bg-white sticky top-0 z-10">
               <div className="border-r" />
@@ -402,6 +533,13 @@ export default function CalendarPage() {
                         : '';
                       const serviceName = apt.service?.name ?? '';
 
+                      // Payment indicator: quick glance for front-desk
+                      const servicePrice = Number(apt.service?.price ?? apt.totalPrice ?? 0);
+                      const depositPaid  = Number(apt.depositPaid ?? 0);
+                      const isPaid = apt.status === 'COMPLETED';
+                      const hasPendingBalance = servicePrice > 0 && depositPaid < servicePrice && !isPaid;
+                      const hasNotes = !!apt.notes;
+
                       return (
                         <div
                           key={apt.id}
@@ -412,8 +550,12 @@ export default function CalendarPage() {
                           style={{ top, height }}
                           onClick={() => setDetailApt(apt)}
                         >
-                          <div className="text-[10px] font-semibold truncate">
-                            {format(start, 'HH:mm')} {serviceName}
+                          <div className="flex items-center gap-1 text-[10px] font-semibold truncate">
+                            <span className="truncate">{format(start, 'HH:mm')} {serviceName}</span>
+                            {/* Payment indicator */}
+                            {isPaid && <span className="shrink-0 text-emerald-600" title="Ödendi">✓</span>}
+                            {hasPendingBalance && <span className="shrink-0 text-amber-600" title="Bakiye var">₺</span>}
+                            {hasNotes && <span className="shrink-0 text-blue-400" title="Not var">📝</span>}
                           </div>
                           {height > 30 && (
                             <div className="text-[10px] text-muted-foreground truncate">
@@ -421,8 +563,11 @@ export default function CalendarPage() {
                             </div>
                           )}
                           {height > 48 && (
-                            <div className="text-[9px] text-muted-foreground truncate">
-                              {apt.staff ? `${apt.staff.firstName} ${apt.staff.lastName}` : ''}
+                            <div className="flex items-center gap-1 text-[9px] text-muted-foreground truncate">
+                              <span className="truncate">{apt.staff ? `${apt.staff.firstName} ${apt.staff.lastName}` : ''}</span>
+                              {servicePrice > 0 && height > 55 && (
+                                <span className="shrink-0 font-medium">{servicePrice}₺</span>
+                              )}
                             </div>
                           )}
                         </div>
@@ -447,7 +592,7 @@ export default function CalendarPage() {
                 );
               })}
             </div>
-          </div>
+          </div>}
         </div>
       )}
 
@@ -561,21 +706,48 @@ export default function CalendarPage() {
           {detailApt && (
             <>
               <SheetHeader>
-                <SheetTitle>Randevu Detayı</SheetTitle>
+                <SheetTitle>
+                  {detailApt.customer
+                    ? `${detailApt.customer.firstName} ${detailApt.customer.lastName}`
+                    : 'Randevu Detayı'}
+                  {detailApt.service?.name && (
+                    <span className="text-sm font-normal text-muted-foreground ml-2">— {detailApt.service.name}</span>
+                  )}
+                </SheetTitle>
                 <SheetDescription>
                   {format(parseISO(detailApt.startTime), 'd MMMM yyyy, EEEE', { locale: tr })}
+                  {' · '}
+                  {format(parseISO(detailApt.startTime), 'HH:mm')}–{format(parseISO(detailApt.endTime), 'HH:mm')}
                 </SheetDescription>
               </SheetHeader>
 
               <div className="mt-6 space-y-4">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">Durum:</span>
+                {/* ── Quick status + payment summary bar ── */}
+                <div className="flex items-center gap-2 flex-wrap">
                   <Badge variant={STATUS_VARIANT[detailApt.status]}>
                     {STATUS_LABEL[detailApt.status]}
                   </Badge>
                   {detailApt.source === 'ONLINE' && (
-                    <Badge variant="outline" className="text-xs">Online Booking</Badge>
+                    <Badge variant="outline" className="text-xs">Online</Badge>
                   )}
+                  {/* Payment quick indicator */}
+                  {(() => {
+                    const sp = Number(detailApt.service?.price ?? detailApt.totalPrice ?? 0);
+                    const dp = Number(detailApt.depositPaid ?? 0);
+                    if (detailApt.status === 'COMPLETED') {
+                      return <Badge variant="success" className="text-xs bg-emerald-100 text-emerald-700 border-emerald-200">Ödendi</Badge>;
+                    }
+                    if (dp > 0 && sp > dp) {
+                      return <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-200">{(sp - dp).toLocaleString('tr-TR')}₺ kalan</Badge>;
+                    }
+                    if (dp > 0) {
+                      return <Badge variant="outline" className="text-xs bg-emerald-50 text-emerald-700 border-emerald-200">Depozito: {dp.toLocaleString('tr-TR')}₺</Badge>;
+                    }
+                    if (sp > 0 && detailApt.status !== 'CANCELLED' && detailApt.status !== 'NO_SHOW') {
+                      return <Badge variant="outline" className="text-xs bg-gray-50 text-gray-600">{sp.toLocaleString('tr-TR')}₺</Badge>;
+                    }
+                    return null;
+                  })()}
                 </div>
 
                 <Separator />
@@ -872,23 +1044,69 @@ export default function CalendarPage() {
                 {(detailApt.status === 'PENDING' || detailApt.status === 'CONFIRMED') && (
                   <div className="space-y-2">
                     <span className="text-xs text-muted-foreground font-medium">Yeniden Planla</span>
-                    {!rescheduleOpen ? (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="w-full"
-                        onClick={() => {
-                          setRescheduleDate(format(parseISO(detailApt.startTime), 'yyyy-MM-dd'));
-                          setRescheduleStart(format(parseISO(detailApt.startTime), 'HH:mm'));
-                          setRescheduleEnd(format(parseISO(detailApt.endTime), 'HH:mm'));
-                          setRescheduleReason('');
-                          setRescheduleOpen(true);
-                        }}
-                      >
-                        <Clock className="mr-1 h-3 w-3" /> Saati Değiştir
-                      </Button>
-                    ) : (
-                      <div className="space-y-2 bg-muted/50 rounded-lg p-3">
+                    {/* Quick move buttons — 1-click reschedule */}
+                    {!rescheduleOpen && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {[
+                          { label: '+30dk', addMin: 30 },
+                          { label: '+1sa', addMin: 60 },
+                          { label: 'Yarın', addDays: 1, addMin: 0 },
+                        ].map((move) => (
+                          <Button
+                            key={move.label}
+                            size="sm"
+                            variant="outline"
+                            className="text-xs h-7 px-2"
+                            disabled={rescheduleAppointment.isPending}
+                            onClick={async () => {
+                              try {
+                                const origStart = parseISO(detailApt.startTime);
+                                const origEnd = parseISO(detailApt.endTime);
+                                const durationMs = origEnd.getTime() - origStart.getTime();
+                                let newStart: Date;
+                                if (move.addDays) {
+                                  newStart = addDays(origStart, move.addDays);
+                                } else {
+                                  newStart = new Date(origStart.getTime() + (move.addMin ?? 0) * 60000);
+                                }
+                                const newEnd = new Date(newStart.getTime() + durationMs);
+                                const updated = await rescheduleAppointment.mutateAsync({
+                                  appointmentId: detailApt.id,
+                                  newStartTime: newStart.toISOString(),
+                                  newEndTime: newEnd.toISOString(),
+                                  reason: `Hızlı kaydırma: ${move.label}`,
+                                });
+                                setDetailApt({ ...detailApt, startTime: updated.startTime, endTime: updated.endTime, updatedAt: updated.updatedAt });
+                                toast({ title: 'Kaydırıldı', description: `${move.label} ileri alındı` });
+                              } catch (err: unknown) {
+                                const msg = err && typeof err === 'object' && 'response' in err
+                                  ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
+                                  : 'Kaydırma başarısız.';
+                                toast({ variant: 'destructive', title: 'Hata', description: msg ?? 'Kaydırma başarısız.' });
+                              }
+                            }}
+                          >
+                            {move.label}
+                          </Button>
+                        ))}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-xs h-7 px-2"
+                          onClick={() => {
+                            setRescheduleDate(format(parseISO(detailApt.startTime), 'yyyy-MM-dd'));
+                            setRescheduleStart(format(parseISO(detailApt.startTime), 'HH:mm'));
+                            setRescheduleEnd(format(parseISO(detailApt.endTime), 'HH:mm'));
+                            setRescheduleReason('');
+                            setRescheduleOpen(true);
+                          }}
+                        >
+                          <Clock className="mr-1 h-3 w-3" /> Özel
+                        </Button>
+                      </div>
+                    )}
+                    {rescheduleOpen && (
+                      <div className="space-y-2 bg-muted/50 rounded-lg p-3 mt-2">
                         <div className="grid grid-cols-3 gap-2">
                           <div>
                             <label className="text-xs text-muted-foreground">Tarih</label>
