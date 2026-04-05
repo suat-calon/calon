@@ -3,6 +3,8 @@ import { AuthService }      from './auth.service';
 import { AuthController }   from './auth.controller';
 import { TenantController } from './tenant.controller';
 import { RecommendationController } from './recommendation.controller';
+import { PolicyPatchController }    from './policy-patch.controller';
+import { OpsReviewController }      from './ops-review.controller';
 
 /**
  * IAM Module — Kimlik ve Erişim Yönetimi
@@ -13,7 +15,7 @@ import { RecommendationController } from './recommendation.controller';
  *   - ConfigModule : @nestjs/config (global, AppModule'de kayıtlı)
  */
 @Module({
-  controllers: [AuthController, TenantController, RecommendationController],
+  controllers: [AuthController, TenantController, RecommendationController, PolicyPatchController, OpsReviewController],
   providers:   [AuthService],
   exports:     [AuthService],
 })

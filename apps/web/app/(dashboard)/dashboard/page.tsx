@@ -65,6 +65,47 @@ export default function DashboardPage() {
 
   const now = useMemo(() => new Date(), []);
 
+  // ── Policy Config — tenant-scoped, config-driven safe overrides ─────────
+  //
+  // Phase 06.2: Consumer integration.
+  // Fetches effective config from backend (RecommendationPolicyConfig + defaults).
+  // Config absent = stable defaults. No shadow policy — single source of truth.
+  //
+  // FROZEN areas (urgency gate, confidence honesty, relationship bands)
+  // remain hardcoded. Only safe patchable fields are config-driven.
+  //
+  interface PolicyConfig {
+    lowConfidenceMinVisits: number;
+    monitorProportionCap: number;
+    reviewProportionCap: number;
+    observationWindowDays: number;
+  }
+
+  const POLICY_DEFAULTS: PolicyConfig = {
+    lowConfidenceMinVisits: 4,
+    monitorProportionCap: 0.60,
+    reviewProportionCap: 0.50,
+    observationWindowDays: 14,
+  };
+
+  const [policyConfig, setPolicyConfig] = useState<PolicyConfig>(POLICY_DEFAULTS);
+
+  useEffect(() => {
+    apiClient.get('/recommendations/effective-config')
+      .then((res) => {
+        const eff = res.data?.effective;
+        if (eff) {
+          setPolicyConfig({
+            lowConfidenceMinVisits: eff.lowConfidenceMinVisits ?? POLICY_DEFAULTS.lowConfidenceMinVisits,
+            monitorProportionCap:   eff.monitorProportionCap ?? POLICY_DEFAULTS.monitorProportionCap,
+            reviewProportionCap:    eff.reviewProportionCap ?? POLICY_DEFAULTS.reviewProportionCap,
+            observationWindowDays:  eff.observationWindowDays ?? POLICY_DEFAULTS.observationWindowDays,
+          });
+        }
+      })
+      .catch(() => { /* fallback to defaults — never breaks UI */ });
+  }, []);
+
   // ── Impact Engine v1.2 — decision tree, mini correction ─────────────────
   //
   // NO additive scoring. NO value-tier matrix. NO VIP rank driver.
@@ -82,22 +123,32 @@ export default function DashboardPage() {
   //   4. CONFIDENCE CHECK: sufficient(medium/high) / insufficient(low/no cycle)
   //   5. IMPACT CLASS from decision branches
   //   6. SORT: urgency class → overdueDays desc
+  //   7. POST-FILTER: monitor/review proportion caps (config-driven)
   //
   type ImpactLevel = 'veryHigh' | 'high' | 'monitor';
+  type ActionMode = 'recover' | 'rebook' | 'review' | 'monitor';
+  type ActionHardness = 'strong' | 'moderate' | 'soft';
+  type ConfidenceBand = 'low' | 'medium' | 'high';
+  type RelationshipBand = 'strong' | 'some' | 'insufficient';
   interface PriorityCustomer {
     id: string;
     name: string;
-    urgencyOrder: number; // sort: urgency class (3=critical, 2=overdue/dormant, 1=slight)
-    overdueDays: number;  // sort: depth within class (no visitCount tie-break)
+    urgencyOrder: number;
+    overdueDays: number;
     level: ImpactLevel;
+    actionMode: ActionMode;
+    actionHardness: ActionHardness;
+    confidenceBand: ConfidenceBand;
+    relationshipBand: RelationshipBand;
     reason: string;
     actionLabel: string;
     actionHref: string;
   }
 
   const priorityCustomers = useMemo<PriorityCustomer[]>(() => {
-    const customers = (customersData?.data ?? []).filter((c) => !c.isDeleted);
+    const customers = (customersData?.data ?? []).filter((c: { isDeleted?: boolean }) => !c.isDeleted);
     if (!customers.length || !appointments) return [];
+    const cfg = policyConfig; // config-driven safe overrides
 
     const custAppts: Record<string, Appointment[]> = {};
     for (const a of appointments) {
@@ -145,8 +196,9 @@ export default function DashboardPage() {
           cycleDays = si[Math.floor(si.length / 2)];
           const spread = si[si.length - 1] - si[0];
           const norm = cycleDays > 0 ? spread / cycleDays : 0;
-          if (intervals.length >= 4)      confidence = norm > 1.0 ? 'medium' : 'high';
-          else if (intervals.length >= 2) confidence = norm > 1.0 ? 'low' : 'medium';
+          // lowConfidenceMinVisits: config-driven (default 4). FROZEN: variance norm threshold (1.0).
+          if (intervals.length >= cfg.lowConfidenceMinVisits) confidence = norm > 1.0 ? 'medium' : 'high';
+          else if (intervals.length >= 2)                     confidence = norm > 1.0 ? 'low' : 'medium';
         }
       }
 
@@ -215,8 +267,6 @@ export default function DashboardPage() {
       //   insufficient → never RECOVER, never STRONG
       //   insufficient → max REVIEW+MODERATE or MONITOR+SOFT
       //
-      type ActionMode = 'recover' | 'rebook' | 'review' | 'monitor';
-      type ActionHardness = 'strong' | 'moderate' | 'soft';
       let actionMode: ActionMode;
       let hardness: ActionHardness;
 
@@ -275,6 +325,10 @@ export default function DashboardPage() {
         urgencyOrder,
         overdueDays,
         level,
+        actionMode,
+        actionHardness: hardness,
+        confidenceBand: confidence,
+        relationshipBand: relationship,
         reason: parts.join(' · '),
         actionLabel,
         actionHref: `/customers?highlight=${c.id}`,
@@ -282,11 +336,38 @@ export default function DashboardPage() {
     }
 
     // Sort: urgency class desc → overdueDays desc (no visitCount tie-break)
-    return ranked.sort((a, b) =>
+    ranked.sort((a, b) =>
       b.urgencyOrder - a.urgencyOrder ||
       b.overdueDays - a.overdueDays
-    ).slice(0, 5);
-  }, [customersData, appointments, now]);
+    );
+
+    // ── POST-FILTER: monitor/review proportion caps (config-driven) ──────
+    // If monitor or review mode exceeds configured proportion cap,
+    // suppress excess from the tail (lowest priority first).
+    // This prevents recommendation fatigue without changing the decision tree.
+    if (ranked.length > 0) {
+      const maxMonitor = Math.max(1, Math.ceil(ranked.length * cfg.monitorProportionCap));
+      const maxReview  = Math.max(1, Math.ceil(ranked.length * cfg.reviewProportionCap));
+
+      let monitorSeen = 0;
+      let reviewSeen = 0;
+      const filtered = ranked.filter((r) => {
+        if (r.actionMode === 'monitor') {
+          monitorSeen++;
+          return monitorSeen <= maxMonitor;
+        }
+        if (r.actionMode === 'review') {
+          reviewSeen++;
+          return reviewSeen <= maxReview;
+        }
+        return true; // recover/rebook always pass
+      });
+
+      return filtered.slice(0, 5);
+    }
+
+    return ranked.slice(0, 5);
+  }, [customersData, appointments, now, policyConfig]);
 
   // ── Decision Feedback — durable server-side observation ─────────────
   //
@@ -308,11 +389,11 @@ export default function DashboardPage() {
         customerId:       pc.id,
         fingerprint,
         impactClass:      pc.level,
-        actionMode:       'unknown', // enriched by action contract but not in PriorityCustomer type
-        actionHardness:   'unknown',
+        actionMode:       pc.actionMode,
+        actionHardness:   pc.actionHardness,
         urgencyClass:     String(pc.urgencyOrder),
-        confidenceBand:   'unknown',
-        relationshipBand: 'unknown',
+        confidenceBand:   pc.confidenceBand,
+        relationshipBand: pc.relationshipBand,
         reasonText:       pc.reason,
         ctaLabel:         pc.actionLabel,
       }).catch(() => { /* fire-and-forget, never blocks UI */ });

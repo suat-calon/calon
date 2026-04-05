@@ -23,6 +23,8 @@ import { PushDeliveryProcessor }  from './processors/push-delivery.processor';
 import { RecoveryProcessor }      from './processors/recovery.processor';
 import { ArchiveService }              from './archive.service';
 import { PlatformMetricsProcessor }   from './processors/platform-metrics.processor';
+import { RecommendationLifecycleService } from './recommendation-lifecycle.service';
+import { PaymentRecoveryService }         from './payment-recovery.service';
 
 @Module({
   imports: [
@@ -46,6 +48,8 @@ import { PlatformMetricsProcessor }   from './processors/platform-metrics.proces
     RecoveryProcessor,
     ArchiveService,
     PlatformMetricsProcessor,   // Faz 5: Super Admin metrik snapshot (5dk)
+    RecommendationLifecycleService, // 03.2: Outcome observation + window expiry + supersede
+    PaymentRecoveryService,         // CHECKOUT-LEDGER-02: Stale payment/billing recovery
   ],
 })
 export class WorkerModule {}

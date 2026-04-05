@@ -136,6 +136,9 @@ model Tenant {
 
   // Decision feedback
   recommendationObservations RecommendationObservation[]
+  policyPatches              PolicyPatch[]
+  recommendationPolicyConfig RecommendationPolicyConfig?
+  opsReviewRecords           OpsReviewRecord[]
 
   @@index([slug])
   @@index([status])
@@ -762,6 +765,121 @@ model RecommendationObservation {
   @@index([tenantId, customerId, status])
   @@unique([tenantId, fingerprint])
   @@map("recommendation_observations")
+}
+
+model RecommendationPolicyConfig {
+  id        String @id @default(uuid()) @db.Uuid
+  tenantId  String @unique @db.Uuid
+
+  // ── SAFE PATCHABLE FIELDS (mutation surface) ──────────────────────────
+  // These fields can be modified by approved policy patches.
+
+  lowConfidenceMinVisits    Int   @default(4)     // Min visits to exit low-confidence band
+  monitorProportionCap      Float @default(0.60)  // Max proportion of monitor recommendations
+  reviewProportionCap       Float @default(0.50)  // Max proportion of review recommendations
+  observationWindowDays     Int   @default(14)    // Default outcome observation window
+  noiseSuppressExpiredRate  Float @default(0.80)  // Suppress if group expired rate exceeds this
+
+  // ── FROZEN FIELDS (read-only reference, NOT patchable) ───────────────
+  // These exist for documentation/audit. They reflect the hardcoded
+  // decision tree values. Policy patches CANNOT modify them.
+  // Constitution gate enforces this.
+
+  criticalRatio                Float @default(1.8)   // FROZEN — urgency gate
+  criticalOverdueDays          Int   @default(14)    // FROZEN — urgency gate
+  overdueRatio                 Float @default(1.3)   // FROZEN — urgency gate
+  overdueOverdueDays           Int   @default(7)     // FROZEN — urgency gate
+  dormantDays                  Int   @default(90)    // FROZEN — urgency gate
+  confidenceVarianceThreshold  Float @default(1.0)   // FROZEN — confidence honesty
+  strongRelationshipMinVisits  Int   @default(4)     // FROZEN — relationship band
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@map("recommendation_policy_configs")
+}
+
+model PolicyPatch {
+  id                    String    @id @default(uuid()) @db.Uuid
+  tenantId              String    @db.Uuid
+  patchType             String    // POLICY_FILTER / ACTION_BALANCE / MESSAGING / VALIDATION_CONFIG / NOOP
+  sourceCandidateType   String    // Which impact-04 candidate triggered this
+  status                String    @default("DRAFT")
+  // DRAFT — patch created, pending review
+  // APPROVED — human approved, pending apply
+  // CONSTITUTION_FAILED — blocked by constitutional gate
+  // APPLIED — patch executed
+  // ROLLED_BACK — patch reverted
+  // REJECTED — human rejected
+
+  safetyClass           String    // SAFE_TO_TRY / REVIEW_REQUIRED / FORBIDDEN
+  affectedArea          String    // Description of mutation surface
+  proposedChange        Json      // Structured patch payload
+  previousState         Json?     // Snapshot before patch (for rollback)
+  evidenceSummary       String    @db.Text
+  constitutionVerdict   String    // PASS / FAIL / NEEDS_REVIEW
+  constitutionDetails   Json      // Full 6-check result
+  rollbackStrategy      String    @db.Text // How to reverse this patch
+
+  approvedBy            String?   // Actor who approved
+  approvedAt            DateTime?
+  appliedBy             String?   // Actor who applied
+  appliedAt             DateTime?
+  rolledBackBy          String?   // Actor who rolled back
+  rolledBackAt          DateTime?
+  rejectedBy            String?   // Actor who rejected
+  rejectedAt            DateTime?
+  notes                 String?   @db.Text
+
+  // Phase OPS-01: Operational review tracking
+  reviewStatus          String?   // PENDING_REVIEW / UNDER_WATCH / REVIEWED
+  watchUntil            DateTime? // Post-apply observation window end
+  nextReviewDate        DateTime? // When this patch should be re-evaluated
+
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId, status])
+  @@index([tenantId, patchType])
+  @@index([tenantId, reviewStatus])
+  @@map("policy_patches")
+}
+
+model OpsReviewRecord {
+  id                String   @id @default(uuid()) @db.Uuid
+  tenantId          String   @db.Uuid
+  reviewType        String   // HEALTH_READ / REFINEMENT_REVIEW / GOVERNANCE_REVIEW / CANDIDATE_DECISION / PATCH_AFTERMATH
+  cadence           String   // WEEKLY / BIWEEKLY / MONTHLY / AD_HOC
+  reviewedBy        String   // Actor who performed the review
+  reviewedAt        DateTime @default(now())
+
+  // Decision
+  decision          String   // APPLY / WAIT_FOR_MORE_EVIDENCE / REJECT / ROLLBACK / ESCALATE / NO_CHANGE / STABLE / DEGRADING
+  decisionReason    String   @db.Text
+  confidenceOfRead  String   // HIGH / MEDIUM / LOW / INSUFFICIENT
+
+  // Linkage
+  linkedPatchId     String?  @db.Uuid  // If this review is about a specific patch
+  linkedCandidateType String? // If this review is about a candidate type
+
+  // Context
+  evidenceSummary   String   @db.Text  // What was observed
+  constitutionalNote String? @db.Text  // Any constitutional concern
+  nextReviewDate    DateTime?           // When to revisit
+  watchItems        String?  @db.Text  // Items to monitor before next review
+
+  createdAt         DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId, reviewType])
+  @@index([tenantId, decision])
+  @@index([tenantId, reviewedAt])
+  @@map("ops_review_records")
 }
 
 model CommissionLog {
