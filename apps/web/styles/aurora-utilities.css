@@ -1,18 +1,10 @@
 /* ──────────────────────────────────────────────
-   CALON Aurora — Global utility layer
-   Tüm yüzeylerde kullanılabilir.
+   CALON Teal — Global utility layer
    ────────────────────────────────────────────── */
 
 /* ── Arka plan ── */
 .aurora-bg {
-  background: linear-gradient(
-    135deg,
-    #F5F1FF 0%,
-    #ECE3FF 25%,
-    #E7F0FF 50%,
-    #F6E8FF 75%,
-    #F5F1FF 100%
-  );
+  background: linear-gradient(135deg, #F0FDFF 0%, #ECFEFF 30%, #E0F7FA 60%, #F0FDFF 100%);
   min-height: 100vh;
   position: relative;
   overflow: hidden;
@@ -23,35 +15,26 @@
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(ellipse 80% 60% at 20% 30%, rgba(109, 76, 255, 0.06) 0%, transparent 70%),
-    radial-gradient(ellipse 60% 80% at 80% 70%, rgba(200, 107, 255, 0.05) 0%, transparent 70%),
-    radial-gradient(ellipse 70% 50% at 50% 10%, rgba(126, 215, 255, 0.04) 0%, transparent 70%);
+    radial-gradient(ellipse 80% 60% at 20% 30%, rgba(8, 145, 178, 0.07) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 80% at 80% 70%, rgba(6, 182, 212, 0.05) 0%, transparent 70%);
   pointer-events: none;
   z-index: 0;
 }
 
 .dark .aurora-bg {
-  background: linear-gradient(
-    135deg,
-    #0F0B1A 0%,
-    #151126 30%,
-    #1B1633 60%,
-    #171D33 80%,
-    #0F0B1A 100%
-  );
+  background: linear-gradient(135deg, #071519 0%, #0C2030 35%, #0A2535 65%, #071519 100%);
 }
 
 .dark .aurora-bg::before {
   background:
-    radial-gradient(ellipse 80% 60% at 20% 30%, rgba(138, 92, 255, 0.10) 0%, transparent 70%),
-    radial-gradient(ellipse 60% 80% at 80% 70%, rgba(200, 107, 255, 0.07) 0%, transparent 70%),
-    radial-gradient(ellipse 70% 50% at 50% 10%, rgba(126, 215, 255, 0.05) 0%, transparent 70%);
+    radial-gradient(ellipse 80% 60% at 20% 30%, rgba(34, 211, 238, 0.10) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 80% at 80% 70%, rgba(6, 182, 212, 0.07) 0%, transparent 70%);
 }
 
-/* ── Glass yüzeyler ── */
+/* ── Glass ── */
 .aurora-glass {
-  background: rgba(255, 255, 255, 0.42);
-  border: 1px solid rgba(255, 255, 255, 0.50);
+  background: rgba(255, 255, 255, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.55);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
 }
@@ -64,8 +47,8 @@
 }
 
 .aurora-glass-strong {
-  background: rgba(255, 255, 255, 0.56);
-  border: 1px solid rgba(255, 255, 255, 0.55);
+  background: rgba(255, 255, 255, 0.60);
+  border: 1px solid rgba(255, 255, 255, 0.60);
   backdrop-filter: blur(32px);
   -webkit-backdrop-filter: blur(32px);
 }
@@ -93,22 +76,22 @@
 
 /* ── Input ── */
 .aurora-input {
-  background: rgba(255, 255, 255, 0.50);
-  border: 1px solid rgba(255, 255, 255, 0.55);
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.60);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   transition: all 0.2s ease;
 }
 
 .aurora-input:hover {
-  border-color: rgba(109, 76, 255, 0.20);
-  background: rgba(255, 255, 255, 0.60);
+  border-color: rgba(8, 145, 178, 0.25);
+  background: rgba(255, 255, 255, 0.65);
 }
 
 .aurora-input:focus {
-  border-color: rgba(109, 76, 255, 0.40);
-  box-shadow: 0 0 0 3px rgba(109, 76, 255, 0.08);
-  background: rgba(255, 255, 255, 0.70);
+  border-color: rgba(8, 145, 178, 0.50);
+  box-shadow: 0 0 0 3px rgba(8, 145, 178, 0.12);
+  background: rgba(255, 255, 255, 0.75);
   outline: none;
 }
 
@@ -118,48 +101,43 @@
 }
 
 .dark .aurora-input:hover {
-  border-color: rgba(138, 92, 255, 0.30);
+  border-color: rgba(34, 211, 238, 0.30);
   background: rgba(255, 255, 255, 0.09);
 }
 
 .dark .aurora-input:focus {
-  border-color: rgba(138, 92, 255, 0.50);
-  box-shadow: 0 0 0 3px rgba(138, 92, 255, 0.15);
+  border-color: rgba(34, 211, 238, 0.55);
+  box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.18);
   background: rgba(255, 255, 255, 0.10);
   outline: none;
 }
 
-/* ── Butonlar ── */
+/* ── Buton ── */
 .aurora-btn-primary {
-  background: linear-gradient(135deg, #6D4CFF 0%, #8A5CFF 100%);
+  background: linear-gradient(135deg, #0891B2 0%, #06B6D4 100%);
   color: #fff;
   border: none;
   transition: all 0.2s ease;
 }
 
 .aurora-btn-primary:hover {
-  box-shadow: 0 4px 20px rgba(109, 76, 255, 0.30);
+  box-shadow: 0 4px 20px rgba(8, 145, 178, 0.35);
   transform: translateY(-1px);
 }
 
-.aurora-btn-primary:active {
-  transform: translateY(0);
-  box-shadow: 0 2px 10px rgba(109, 76, 255, 0.20);
-}
-
 .aurora-btn-social {
-  background: rgba(255, 255, 255, 0.50);
-  border: 1px solid rgba(255, 255, 255, 0.55);
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.60);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   transition: all 0.2s ease;
 }
 
 .aurora-btn-social:hover {
-  background: rgba(255, 255, 255, 0.70);
-  border-color: rgba(109, 76, 255, 0.18);
+  background: rgba(255, 255, 255, 0.75);
+  border-color: rgba(8, 145, 178, 0.22);
   transform: translateY(-1px);
-  box-shadow: 0 2px 12px rgba(109, 76, 255, 0.10);
+  box-shadow: 0 2px 12px rgba(8, 145, 178, 0.12);
 }
 
 .dark .aurora-btn-social {
@@ -169,14 +147,14 @@
 
 .dark .aurora-btn-social:hover {
   background: rgba(255, 255, 255, 0.09);
-  border-color: rgba(138, 92, 255, 0.30);
-  box-shadow: 0 2px 12px rgba(138, 92, 255, 0.15);
+  border-color: rgba(34, 211, 238, 0.32);
+  box-shadow: 0 2px 12px rgba(34, 211, 238, 0.18);
 }
 
 /* ── Kart ── */
 .aurora-card {
-  background: rgba(255, 255, 255, 0.38);
-  border: 1px solid rgba(255, 255, 255, 0.48);
+  background: rgba(255, 255, 255, 0.42);
+  border: 1px solid rgba(255, 255, 255, 0.52);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-radius: 20px;
@@ -184,8 +162,8 @@
 }
 
 .aurora-card:hover {
-  background: rgba(255, 255, 255, 0.48);
-  box-shadow: 0 4px 24px rgba(109, 76, 255, 0.08);
+  background: rgba(255, 255, 255, 0.55);
+  box-shadow: 0 4px 24px rgba(8, 145, 178, 0.12);
   transform: translateY(-2px);
 }
 
@@ -196,32 +174,8 @@
 
 .dark .aurora-card:hover {
   background: rgba(255, 255, 255, 0.08);
-  box-shadow: 0 4px 24px rgba(138, 92, 255, 0.18);
+  box-shadow: 0 4px 24px rgba(34, 211, 238, 0.20);
   transform: translateY(-2px);
-}
-
-/* ── Ayırıcı ── */
-.aurora-divider {
-  width: 1px;
-  background: linear-gradient(
-    180deg,
-    transparent 0%,
-    rgba(109, 76, 255, 0.10) 20%,
-    rgba(109, 76, 255, 0.14) 50%,
-    rgba(109, 76, 255, 0.10) 80%,
-    transparent 100%
-  );
-}
-
-.dark .aurora-divider {
-  background: linear-gradient(
-    180deg,
-    transparent 0%,
-    rgba(138, 92, 255, 0.20) 20%,
-    rgba(138, 92, 255, 0.25) 50%,
-    rgba(138, 92, 255, 0.20) 80%,
-    transparent 100%
-  );
 }
 
 /* ── Sidebar öğesi ── */
@@ -229,32 +183,46 @@
   transition: all 0.2s ease;
   border-radius: 10px;
   padding: 8px 12px;
-  color: #4B7A5F;             /* yeşil metin — normal hal */
+  color: #0E7490;             /* teal-700 */
 }
 
 .aurora-sidebar-item:hover {
-  background: rgba(109, 76, 255, 0.07);
-  color: #14532D;             /* koyu yeşil hover */
+  background: rgba(8, 145, 178, 0.08);
+  color: #083344;
 }
 
 .aurora-sidebar-item.active {
-  background: rgba(109, 76, 255, 0.12);
-  color: #16A34A;             /* aktif: parlak yeşil */
+  background: rgba(8, 145, 178, 0.14);
+  color: #0891B2;
   font-weight: 500;
 }
 
 .dark .aurora-sidebar-item {
-  color: #86EFAC;             /* dark: açık yeşil metin */
+  color: #67E8F9;             /* cyan-300 */
 }
 
 .dark .aurora-sidebar-item:hover {
-  background: rgba(138, 92, 255, 0.10);
-  color: #DCFCE7;             /* dark hover: çok açık yeşil */
+  background: rgba(34, 211, 238, 0.10);
+  color: #CFFAFE;
 }
 
 .dark .aurora-sidebar-item.active {
-  background: rgba(138, 92, 255, 0.18);
-  color: #4ADE80;             /* dark aktif: bright yeşil */
+  background: rgba(34, 211, 238, 0.18);
+  color: #22D3EE;
+}
+
+/* ── Divider ── */
+.aurora-divider {
+  width: 1px;
+  background: linear-gradient(180deg,
+    transparent 0%, rgba(8, 145, 178, 0.12) 20%,
+    rgba(8, 145, 178, 0.18) 50%, rgba(8, 145, 178, 0.12) 80%, transparent 100%);
+}
+
+.dark .aurora-divider {
+  background: linear-gradient(180deg,
+    transparent 0%, rgba(34, 211, 238, 0.22) 20%,
+    rgba(34, 211, 238, 0.28) 50%, rgba(34, 211, 238, 0.22) 80%, transparent 100%);
 }
 
 /* ── Animasyonlar ── */
@@ -262,21 +230,15 @@
   0%, 100% { opacity: 0.4; }
   50% { opacity: 0.7; }
 }
-
 @keyframes aurora-float {
-  0%, 100% { transform: translateY(0px); }
+  0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-4px); }
 }
 
-.aurora-glow-dot {
-  animation: aurora-pulse 3s ease-in-out infinite;
-}
+.aurora-glow-dot { animation: aurora-pulse 3s ease-in-out infinite; }
+.aurora-float    { animation: aurora-float 6s ease-in-out infinite; }
 
-.aurora-float {
-  animation: aurora-float 6s ease-in-out infinite;
-}
-
-/* ── KPI kart hover shimmer ── */
+/* ── KPI kart ── */
 .aurora-kpi-card {
   position: relative;
   overflow: hidden;
@@ -285,9 +247,9 @@
 
 .aurora-kpi-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 32px rgba(109, 76, 255, 0.12);
+  box-shadow: 0 8px 32px rgba(8, 145, 178, 0.15);
 }
 
 .dark .aurora-kpi-card:hover {
-  box-shadow: 0 8px 32px rgba(138, 92, 255, 0.22);
+  box-shadow: 0 8px 32px rgba(34, 211, 238, 0.24);
 }
