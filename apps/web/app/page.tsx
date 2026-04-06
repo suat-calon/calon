@@ -15,36 +15,36 @@ export const metadata = {
 
 function Hero() {
   return (
-    <section className="relative overflow-hidden bg-gradient-to-b from-white via-purple-50/30 to-white dark:from-background dark:via-purple-950/10 dark:to-background">
-      <div className="mx-auto max-w-7xl px-6 pt-16 pb-14 lg:pt-24 lg:pb-20">
-        <div className="max-w-4xl">
-          <div className="inline-flex items-center gap-2 rounded-full border border-purple-200/60 bg-purple-50/60 px-4 py-1.5 text-sm font-medium text-purple-700 dark:border-purple-800/40 dark:bg-purple-950/30 dark:text-purple-300 mb-6">
-            <Sparkles className="h-4 w-4" />
+    <section className="relative overflow-hidden bg-gradient-to-b from-white via-purple-50/30 to-white dark:from-background dark:via-purple-950/20 dark:to-background">
+      <div className="mx-auto max-w-[1440px] 2xl:max-w-[1520px] px-8 pt-20 pb-16 lg:pt-28 lg:pb-24">
+        <div className="max-w-[820px]">
+          <div className="inline-flex items-center gap-2.5 rounded-full border border-purple-200/60 bg-purple-50/60 px-5 py-2 text-base font-medium text-purple-700 dark:border-purple-700/50 dark:bg-purple-950/40 dark:text-purple-300 mb-7">
+            <Sparkles className="h-4.5 w-4.5" />
             Beauty & Wellness Business OS
           </div>
 
-          <h1 className="text-5xl font-bold tracking-tight text-foreground lg:text-6xl lg:leading-[1.1]">
+          <h1 className="text-6xl font-bold tracking-tight text-foreground xl:text-7xl xl:leading-[1.08]">
             Salonunuzu tek sistemden yönetin
           </h1>
 
-          <p className="mt-5 text-xl text-muted-foreground leading-relaxed max-w-2xl">
+          <p className="mt-6 text-xl text-muted-foreground leading-relaxed max-w-[640px] xl:text-2xl xl:leading-relaxed">
             Randevu, ekip, müşteri, ödeme — hepsi tek yerden.
             Calon, güzellik ve wellness işletmeleri için tasarlanmış işletme yönetim sistemidir.
           </p>
 
-          <div className="mt-8 flex flex-wrap items-center gap-4">
-            <Button asChild size="lg" className="h-13 px-8 text-base font-semibold">
+          <div className="mt-9 flex flex-wrap items-center gap-4">
+            <Button asChild size="lg" className="h-14 px-9 text-lg font-semibold">
               <Link href="/register">
                 Demo Talep Et
-                <ArrowRight className="ml-2 h-4.5 w-4.5" />
+                <ArrowRight className="ml-2.5 h-5 w-5" />
               </Link>
             </Button>
-            <Button asChild variant="outline" size="lg" className="h-13 px-8 text-base font-medium">
+            <Button asChild variant="outline" size="lg" className="h-14 px-9 text-lg font-medium">
               <a href="#urun">Ürünü İncele</a>
             </Button>
           </div>
 
-          <p className="mt-5 text-sm text-muted-foreground/70">
+          <p className="mt-5 text-base text-muted-foreground/70">
             Kredi kartı gerekmez · 5 dakikada kurulum · Ücretsiz deneme
           </p>
         </div>
@@ -64,12 +64,12 @@ function TrustBand() {
   ];
 
   return (
-    <section className="border-y border-border/50 bg-muted/30 dark:bg-card/30">
-      <div className="mx-auto max-w-7xl px-6 py-4">
-        <div className="flex flex-wrap items-center justify-center gap-x-12 gap-y-3">
+    <section className="border-y border-border/50 bg-muted/30 dark:bg-card/40">
+      <div className="mx-auto max-w-[1440px] 2xl:max-w-[1520px] px-8 py-5">
+        <div className="flex flex-wrap items-center justify-center gap-x-14 gap-y-3">
           {signals.map((s) => (
-            <div key={s.text} className="flex items-center gap-2.5 text-sm font-medium text-muted-foreground">
-              <s.icon className="h-4.5 w-4.5 text-primary/70" />
+            <div key={s.text} className="flex items-center gap-2.5 text-base font-medium text-muted-foreground">
+              <s.icon className="h-5 w-5 text-primary/70" />
               {s.text}
             </div>
           ))}
@@ -102,25 +102,25 @@ function CoreValue() {
 
   return (
     <section className="bg-background">
-      <div className="mx-auto max-w-7xl px-6 py-16 lg:py-20">
-        <div className="text-center mb-12">
-          <p className="text-xs font-semibold uppercase tracking-widest text-primary/70 mb-3">Neden Calon?</p>
-          <h2 className="text-3xl font-bold tracking-tight lg:text-4xl">
+      <div className="mx-auto max-w-[1440px] 2xl:max-w-[1520px] px-8 py-20 lg:py-24">
+        <div className="text-center mb-14">
+          <p className="text-sm font-semibold uppercase tracking-widest text-primary/70 mb-3">Neden Calon?</p>
+          <h2 className="text-4xl font-bold tracking-tight xl:text-5xl">
             Salonunuzun ihtiyacı olan her şey, tek yerde
           </h2>
-          <p className="mt-3 text-muted-foreground max-w-2xl mx-auto text-base">
+          <p className="mt-4 text-muted-foreground max-w-2xl mx-auto text-lg">
             Dağınık araçları bırakın. Randevudan müşteri takibine, ekipten rapora — tek sistem.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-7">
           {values.map((v) => (
-            <div key={v.title} className="rounded-xl border border-border/60 bg-card p-6 space-y-3">
-              <div className="w-11 h-11 rounded-lg bg-primary/10 flex items-center justify-center">
-                <v.icon className="h-5 w-5 text-primary" />
+            <div key={v.title} className="rounded-2xl border border-border/70 dark:border-border/50 bg-card p-8 space-y-4">
+              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                <v.icon className="h-6 w-6 text-primary" />
               </div>
-              <h3 className="text-base font-semibold">{v.title}</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">{v.desc}</p>
+              <h3 className="text-xl font-semibold">{v.title}</h3>
+              <p className="text-base text-muted-foreground leading-relaxed">{v.desc}</p>
             </div>
           ))}
         </div>
@@ -139,8 +139,8 @@ function ProductProof() {
       title: 'Müşterileriniz kendi randevusunu alsın',
       desc: 'Markalı rezervasyon sayfanız 7/24 açık. Hizmet seçimi, personel tercihi, uygun saat bulma — müşteri deneyimi sizin kontrolünüzde.',
       features: ['Hizmet ve personel seçimi', 'Otomatik uygunluk kontrolü', 'Mobil uyumlu rezervasyon', 'Salon vitrini ve tanıtım'],
-      accent: 'bg-blue-50 dark:bg-blue-950/30 border-blue-200/60 dark:border-blue-800/40',
-      iconAccent: 'bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400',
+      accent: 'bg-blue-50 dark:bg-blue-950/50 border-blue-200/70 dark:border-blue-700/50',
+      iconAccent: 'bg-blue-100 dark:bg-blue-900/60 text-blue-600 dark:text-blue-400',
     },
     {
       icon: Monitor,
@@ -148,8 +148,8 @@ function ProductProof() {
       title: 'Günlük operasyonu tek ekrandan yönetin',
       desc: 'Takvim görünümü, randevu detayları, müşteri notları, ödeme takibi — salon sahiplerinin günlük komuta merkezi.',
       features: ['Günlük/haftalık takvim', 'Personel bazlı görünüm', 'Müşteri geçmişi ve notlar', 'Ödeme ve kasa takibi'],
-      accent: 'bg-purple-50 dark:bg-purple-950/30 border-purple-200/60 dark:border-purple-800/40',
-      iconAccent: 'bg-purple-100 dark:bg-purple-900/50 text-purple-600 dark:text-purple-400',
+      accent: 'bg-purple-50 dark:bg-purple-950/50 border-purple-200/70 dark:border-purple-700/50',
+      iconAccent: 'bg-purple-100 dark:bg-purple-900/60 text-purple-600 dark:text-purple-400',
     },
     {
       icon: Layers,
@@ -157,39 +157,39 @@ function ProductProof() {
       title: 'Küçük başlayın, sınırsız büyüyün',
       desc: 'Tek şubeden çoklu lokasyona, birkaç hizmetten geniş kataloğa. Altyapı sizi yavaşlatmaz — büyümenizi destekler.',
       features: ['Çoklu şube desteği', 'Hizmet ve katalog düzeni', 'Ekip ölçeklendirme', 'Platform seviyesinde kontrol'],
-      accent: 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200/60 dark:border-emerald-800/40',
-      iconAccent: 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400',
+      accent: 'bg-emerald-50 dark:bg-emerald-950/50 border-emerald-200/70 dark:border-emerald-700/50',
+      iconAccent: 'bg-emerald-100 dark:bg-emerald-900/60 text-emerald-600 dark:text-emerald-400',
     },
   ];
 
   return (
-    <section id="urun" className="bg-muted/20 dark:bg-card/20 border-y border-border/30">
-      <div className="mx-auto max-w-7xl px-6 py-16 lg:py-20">
-        <div className="text-center mb-12">
-          <p className="text-xs font-semibold uppercase tracking-widest text-primary/70 mb-3">Ürün</p>
-          <h2 className="text-3xl font-bold tracking-tight lg:text-4xl">
+    <section id="urun" className="bg-muted/20 dark:bg-card/30 border-y border-border/40 dark:border-border/30">
+      <div className="mx-auto max-w-[1440px] 2xl:max-w-[1520px] px-8 py-20 lg:py-24">
+        <div className="text-center mb-14">
+          <p className="text-sm font-semibold uppercase tracking-widest text-primary/70 mb-3">Ürün</p>
+          <h2 className="text-4xl font-bold tracking-tight xl:text-5xl">
             Gerçek ürün, gerçek yüzeyler
           </h2>
-          <p className="mt-3 text-muted-foreground max-w-2xl mx-auto text-base">
+          <p className="mt-4 text-muted-foreground max-w-2xl mx-auto text-lg">
             Calon bir konsept değil — çalışan, kullanılan, her gün işletmelere değer üreten bir sistem.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-7">
           {surfaces.map((s) => (
-            <div key={s.label} className={`rounded-xl border p-7 space-y-4 ${s.accent}`}>
-              <div className={`w-11 h-11 rounded-lg flex items-center justify-center ${s.iconAccent}`}>
-                <s.icon className="h-5 w-5" />
+            <div key={s.label} className={`rounded-2xl border p-8 space-y-5 ${s.accent}`}>
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${s.iconAccent}`}>
+                <s.icon className="h-6 w-6" />
               </div>
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/70 mb-1.5">{s.label}</p>
-                <h3 className="text-lg font-bold tracking-tight">{s.title}</h3>
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70 mb-2">{s.label}</p>
+                <h3 className="text-xl font-bold tracking-tight">{s.title}</h3>
               </div>
-              <p className="text-sm text-muted-foreground leading-relaxed">{s.desc}</p>
-              <ul className="space-y-2 pt-1">
+              <p className="text-base text-muted-foreground leading-relaxed">{s.desc}</p>
+              <ul className="space-y-2.5 pt-1">
                 {s.features.map((f) => (
-                  <li key={f} className="flex items-center gap-2.5 text-sm text-foreground/80">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+                  <li key={f} className="flex items-center gap-2.5 text-base text-foreground/80">
+                    <CheckCircle2 className="h-4.5 w-4.5 text-emerald-500 shrink-0" />
                     {f}
                   </li>
                 ))}
@@ -225,22 +225,22 @@ function WhoItsFor() {
 
   return (
     <section className="bg-background">
-      <div className="mx-auto max-w-7xl px-6 py-16 lg:py-20">
-        <div className="text-center mb-12">
-          <p className="text-xs font-semibold uppercase tracking-widest text-primary/70 mb-3">Kimin İçin?</p>
-          <h2 className="text-3xl font-bold tracking-tight lg:text-4xl">
+      <div className="mx-auto max-w-[1440px] 2xl:max-w-[1520px] px-8 py-20 lg:py-24">
+        <div className="text-center mb-14">
+          <p className="text-sm font-semibold uppercase tracking-widest text-primary/70 mb-3">Kimin İçin?</p>
+          <h2 className="text-4xl font-bold tracking-tight xl:text-5xl">
             Her ölçekte salon için
           </h2>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-7">
           {segments.map((s) => (
-            <div key={s.title} className="rounded-xl border border-border/60 bg-card p-6 space-y-3 text-center">
-              <div className="w-11 h-11 rounded-lg bg-primary/10 flex items-center justify-center mx-auto">
-                <s.icon className="h-5 w-5 text-primary" />
+            <div key={s.title} className="rounded-2xl border border-border/70 dark:border-border/50 bg-card p-8 space-y-4 text-center">
+              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto">
+                <s.icon className="h-6 w-6 text-primary" />
               </div>
-              <h3 className="text-base font-semibold">{s.title}</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">{s.desc}</p>
+              <h3 className="text-xl font-semibold">{s.title}</h3>
+              <p className="text-base text-muted-foreground leading-relaxed">{s.desc}</p>
             </div>
           ))}
         </div>
@@ -253,27 +253,27 @@ function WhoItsFor() {
 
 function FinalCTA() {
   return (
-    <section className="bg-primary/5 dark:bg-primary/10 border-t border-border/40">
-      <div className="mx-auto max-w-4xl px-6 py-16 lg:py-20 text-center">
-        <h2 className="text-3xl font-bold tracking-tight lg:text-4xl">
+    <section className="bg-primary/5 dark:bg-primary/15 border-t border-border/40">
+      <div className="mx-auto max-w-[900px] px-8 py-20 lg:py-24 text-center">
+        <h2 className="text-4xl font-bold tracking-tight xl:text-5xl">
           Salonunuzu Calon'a taşıyın
         </h2>
-        <p className="mt-4 text-muted-foreground max-w-xl mx-auto text-base">
+        <p className="mt-5 text-muted-foreground max-w-xl mx-auto text-lg">
           5 dakikada kurun. Hizmetlerinizi, ekibinizi ve takviminizi ekleyin.
           Müşterileriniz hemen online randevu almaya başlasın.
         </p>
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
-          <Button asChild size="lg" className="h-13 px-8 text-base font-semibold">
+        <div className="mt-9 flex flex-wrap items-center justify-center gap-4">
+          <Button asChild size="lg" className="h-14 px-9 text-lg font-semibold">
             <Link href="/register">
               Demo Talep Et
-              <ArrowRight className="ml-2 h-4.5 w-4.5" />
+              <ArrowRight className="ml-2.5 h-5 w-5" />
             </Link>
           </Button>
-          <Button asChild variant="outline" size="lg" className="h-13 px-8 text-base font-medium">
+          <Button asChild variant="outline" size="lg" className="h-14 px-9 text-lg font-medium">
             <a href="#urun">Ürünü İncele</a>
           </Button>
         </div>
-        <p className="mt-4 text-sm text-muted-foreground/60">
+        <p className="mt-5 text-base text-muted-foreground/60">
           Kredi kartı gerekmez · Ücretsiz deneme
         </p>
       </div>
@@ -286,22 +286,22 @@ function FinalCTA() {
 function Footer() {
   return (
     <footer className="border-t border-border/40 bg-background">
-      <div className="mx-auto max-w-7xl px-6 py-8">
+      <div className="mx-auto max-w-[1440px] 2xl:max-w-[1520px] px-8 py-10">
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-              <span className="text-primary-foreground text-sm font-bold">C</span>
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center">
+              <span className="text-primary-foreground text-base font-bold">C</span>
             </div>
-            <span className="text-base font-semibold tracking-tight">Calon</span>
-            <span className="text-xs text-muted-foreground/60">Salon Operating System</span>
+            <span className="text-lg font-semibold tracking-tight">Calon</span>
+            <span className="text-sm text-muted-foreground/60">Salon Operating System</span>
           </div>
-          <div className="flex items-center gap-6 text-sm text-muted-foreground">
+          <div className="flex items-center gap-8 text-base text-muted-foreground">
             <Link href="/login" className="hover:text-foreground transition-colors">Giriş Yap</Link>
             <Link href="/register" className="hover:text-foreground transition-colors">Kayıt Ol</Link>
           </div>
         </div>
-        <div className="mt-6 pt-4 border-t border-border/30 text-center">
-          <p className="text-xs text-muted-foreground/50">
+        <div className="mt-6 pt-5 border-t border-border/30 text-center">
+          <p className="text-sm text-muted-foreground/50">
             © {new Date().getFullYear()} Calon. Tüm hakları saklıdır.
           </p>
         </div>
@@ -316,18 +316,18 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-sm">
-        <div className="mx-auto max-w-7xl px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-              <span className="text-primary-foreground text-sm font-bold">C</span>
-            </div>
-            <span className="text-base font-semibold tracking-tight">Calon</span>
-          </div>
+        <div className="mx-auto max-w-[1440px] 2xl:max-w-[1520px] px-8 h-[72px] flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Button asChild variant="ghost" className="text-sm">
+            <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center">
+              <span className="text-primary-foreground text-base font-bold">C</span>
+            </div>
+            <span className="text-lg font-semibold tracking-tight">Calon</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <Button asChild variant="ghost" className="text-base">
               <Link href="/login">Giriş Yap</Link>
             </Button>
-            <Button asChild className="text-sm">
+            <Button asChild className="text-base px-6">
               <Link href="/register">Demo Talep Et</Link>
             </Button>
           </div>
