@@ -40,7 +40,7 @@ export default function AdminMetricsPage() {
             <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 mb-2.5">Büyüme Metrikleri</p>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
               <StatCard icon={Building2} label="Toplam Salon" value={metrics.totalSalons} />
-              <StatCard icon={Users} label="Aktif Salon" value={metrics.activeSalons} accent />
+              <StatCard icon={Users} label="Aktif Salon" value={metrics.activeSalons ?? 0} accent />
               <StatCard icon={TrendingUp} label="Bu Ay Yeni" value={metrics.newSalonsThisMonth} />
               <StatCard icon={Calendar} label="Bugünkü Randevu" value={metrics.bookingsToday} />
             </div>
@@ -56,7 +56,7 @@ export default function AdminMetricsPage() {
                 </div>
                 <div>
                   <p className="text-lg font-semibold leading-none">
-                    ₺{(metrics.monthlyRecurringRevenue ?? 0).toLocaleString('tr-TR')}
+                    ₺{(metrics.estimatedMRR ?? metrics.monthlyRecurringRevenue ?? 0).toLocaleString('tr-TR')}
                   </p>
                   <p className="text-[11px] text-muted-foreground mt-0.5">Tahmini Aylık Gelir (MRR)</p>
                 </div>

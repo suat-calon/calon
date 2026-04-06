@@ -39,12 +39,14 @@ export interface AdminTenantDetail extends AdminTenant {
 }
 
 export interface GrowthMetrics {
-  totalSalons:          number;
-  activeSalons:         number;
-  newSalonsThisMonth:   number;
-  bookingsToday:        number;
-  monthlyRecurringRevenue: number;
-  planDistribution:     Record<string, number>;
+  totalSalons:              number;
+  activeSalons?:            number;  // Not returned by API — derived if needed
+  newSalonsThisMonth:       number;
+  bookingsToday:            number;
+  activationRateThisMonth?: number;
+  estimatedMRR?:            number;  // API field name (was monthlyRecurringRevenue)
+  monthlyRecurringRevenue?: number;  // Alias kept for backward compat
+  planDistribution?:        Record<string, number>;  // Not returned by growth endpoint
 }
 
 export interface BillingTenant {
@@ -134,9 +136,21 @@ export function useBillingTenants() {
 }
 
 export function useBillingMetrics() {
+  // Billing KPI'ları tenant listesinden client-side derive edilir.
+  // /admin/billing/metrics endpoint'i platform ops metrikleri dönüyor (requestMetrics, queueStats),
+  // billing summary (totalActive, totalRevenue, pastDue) için ayrı endpoint yok.
   return useQuery<BillingMetrics, Error>({
     queryKey: ['admin', 'billing', 'metrics'],
-    queryFn: () => apiClient.get('/admin/billing/metrics').then(r => r.data),
+    queryFn: async () => {
+      const r = await apiClient.get('/admin/billing/tenants');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const tenants: any[] = Array.isArray(r.data) ? r.data : (r.data?.data ?? []);
+      return {
+        totalActive: tenants.filter(t => t.status === 'ACTIVE').length,
+        totalRevenue: 0, // No revenue tracking endpoint yet
+        pastDue: tenants.filter(t => t.status === 'PAST_DUE').length,
+      };
+    },
     retry: false,
   });
 }
