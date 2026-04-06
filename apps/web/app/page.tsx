@@ -26,9 +26,9 @@ function Hero() {
   return (
     <section className="relative overflow-hidden">
       {/* Ambient glow */}
-      <div className="absolute inset-0 bg-gradient-to-b from-purple-50/30 via-amber-50/10 to-transparent dark:from-purple-950/15 dark:via-amber-950/5 dark:to-transparent pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-b from-purple-50/30 via-purple-50/10 to-transparent dark:from-purple-950/15 dark:via-purple-950/5 dark:to-transparent pointer-events-none" />
       <div className="absolute top-20 -left-40 w-[600px] h-[600px] rounded-full bg-purple-200/20 dark:bg-purple-500/5 blur-3xl pointer-events-none" />
-      <div className="absolute top-40 right-0 w-[500px] h-[500px] rounded-full bg-amber-200/10 dark:bg-amber-500/3 blur-3xl pointer-events-none" />
+      <div className="absolute top-40 right-0 w-[500px] h-[500px] rounded-full bg-purple-200/10 dark:bg-purple-500/5 blur-3xl pointer-events-none" />
 
       <div className={`${shell} relative pt-20 pb-16 lg:pt-28 lg:pb-24`}>
         <div className="max-w-[860px]">
@@ -96,7 +96,7 @@ function TrustBand() {
         <div className="flex flex-wrap items-center justify-center gap-x-14 gap-y-3">
           {signals.map((s) => (
             <div key={s.text} className="flex items-center gap-2.5 text-[15px] font-medium text-muted-foreground">
-              <s.icon className="h-5 w-5 text-primary/60 dark:text-purple-400/60" />
+              <s.icon className="h-5 w-5 text-primary/60" />
               {s.text}
             </div>
           ))}
@@ -133,7 +133,7 @@ function CoreValue() {
     <section className="bg-background dark:bg-[hsl(224_50%_5%)]">
       <div className={`${shell} py-20 lg:py-28`}>
         <div className="text-center mb-14">
-          <p className="text-sm font-bold uppercase tracking-[0.2em] text-primary/80 dark:text-purple-400 mb-4">Neden Calon?</p>
+          <p className="text-sm font-bold uppercase tracking-[0.2em] text-primary/70 mb-4">Neden Calon?</p>
           <h2
             className="font-bold tracking-tight text-foreground"
             style={{ fontSize: 'clamp(1.75rem, 3vw + 0.5rem, 3rem)' }}
@@ -148,8 +148,8 @@ function CoreValue() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
           {values.map((v) => (
             <div key={v.title} className="rounded-2xl border border-border/50 bg-card dark:bg-[hsl(224_40%_9%)] dark:border-[hsl(224_30%_16%)] p-8 lg:p-9 space-y-4 transition-colors hover:border-amber-300/40 dark:hover:border-amber-600/30">
-              <div className="w-12 h-12 rounded-xl bg-primary/10 dark:bg-purple-900/40 flex items-center justify-center">
-                <v.icon className="h-6 w-6 text-primary dark:text-purple-400" />
+              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                <v.icon className="h-6 w-6 text-primary" />
               </div>
               <h3 className="text-xl font-semibold tracking-tight">{v.title}</h3>
               <p className="text-base text-muted-foreground leading-relaxed">{v.desc}</p>
@@ -207,7 +207,7 @@ function ProductProof() {
     <section id="urun" className="bg-muted/30 dark:bg-[hsl(224_45%_7%)] border-y border-border/30 dark:border-[hsl(224_30%_14%)]">
       <div className={`${shell} py-20 lg:py-28`}>
         <div className="text-center mb-14">
-          <p className="text-sm font-bold uppercase tracking-[0.2em] text-primary/80 dark:text-purple-400 mb-4">Ürün</p>
+          <p className="text-sm font-bold uppercase tracking-[0.2em] text-primary/70 mb-4">Ürün</p>
           <h2
             className="font-bold tracking-tight text-foreground"
             style={{ fontSize: 'clamp(1.75rem, 3vw + 0.5rem, 3rem)' }}
@@ -276,7 +276,7 @@ function WhoItsFor() {
     <section className="bg-background dark:bg-[hsl(224_50%_5%)]">
       <div className={`${shell} py-20 lg:py-28`}>
         <div className="text-center mb-14">
-          <p className="text-sm font-bold uppercase tracking-[0.2em] text-primary/80 dark:text-purple-400 mb-4">Kimin İçin?</p>
+          <p className="text-sm font-bold uppercase tracking-[0.2em] text-primary/70 mb-4">Kimin İçin?</p>
           <h2
             className="font-bold tracking-tight text-foreground"
             style={{ fontSize: 'clamp(1.75rem, 3vw + 0.5rem, 3rem)' }}
@@ -288,8 +288,8 @@ function WhoItsFor() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
           {segments.map((s) => (
             <div key={s.title} className="rounded-2xl border border-border/50 bg-card dark:bg-[hsl(224_40%_9%)] dark:border-[hsl(224_30%_16%)] p-8 lg:p-9 space-y-4 text-center transition-colors hover:border-amber-300/40 dark:hover:border-amber-600/30">
-              <div className="w-12 h-12 rounded-xl bg-primary/10 dark:bg-purple-900/40 flex items-center justify-center mx-auto">
-                <s.icon className="h-6 w-6 text-primary dark:text-purple-400" />
+              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto">
+                <s.icon className="h-6 w-6 text-primary" />
               </div>
               <h3 className="text-xl font-semibold tracking-tight">{s.title}</h3>
               <p className="text-base text-muted-foreground leading-relaxed">{s.desc}</p>
