@@ -57,7 +57,7 @@ function Hero() {
 
           {/* CTAs */}
           <div className="mt-9 flex flex-wrap items-center gap-4">
-            <Button asChild size="lg" className="h-14 px-9 text-lg font-semibold bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20 hover:shadow-amber-500/10">
+            <Button asChild size="lg" className="h-14 px-9 text-lg font-semibold bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20 hover:shadow-accent/10">
               <Link href="/register">
                 Demo Talep Et
                 <ArrowRight className="ml-2.5 h-5 w-5" />
@@ -147,7 +147,7 @@ function CoreValue() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
           {values.map((v) => (
-            <div key={v.title} className="rounded-2xl border border-border/50 bg-card dark:bg-[hsl(224_40%_9%)] dark:border-[hsl(224_30%_16%)] p-8 lg:p-9 space-y-4 transition-colors hover:border-amber-300/40 dark:hover:border-amber-600/30">
+            <div key={v.title} className="rounded-2xl border border-border/50 bg-card dark:bg-[hsl(224_40%_9%)] dark:border-[hsl(224_30%_16%)] p-8 lg:p-9 space-y-4 transition-colors hover:border-accent/30 dark:hover:border-accent/40">
               <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
                 <v.icon className="h-6 w-6 text-primary" />
               </div>
@@ -287,7 +287,7 @@ function WhoItsFor() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
           {segments.map((s) => (
-            <div key={s.title} className="rounded-2xl border border-border/50 bg-card dark:bg-[hsl(224_40%_9%)] dark:border-[hsl(224_30%_16%)] p-8 lg:p-9 space-y-4 text-center transition-colors hover:border-amber-300/40 dark:hover:border-amber-600/30">
+            <div key={s.title} className="rounded-2xl border border-border/50 bg-card dark:bg-[hsl(224_40%_9%)] dark:border-[hsl(224_30%_16%)] p-8 lg:p-9 space-y-4 text-center transition-colors hover:border-accent/30 dark:hover:border-accent/40">
               <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto">
                 <s.icon className="h-6 w-6 text-primary" />
               </div>
@@ -325,7 +325,7 @@ function FinalCTA() {
           Müşterileriniz hemen online randevu almaya başlasın.
         </p>
         <div className="mt-9 flex flex-wrap items-center justify-center gap-4">
-          <Button asChild size="lg" className="h-14 px-9 text-lg font-semibold bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20 hover:shadow-amber-500/10">
+          <Button asChild size="lg" className="h-14 px-9 text-lg font-semibold bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20 hover:shadow-accent/10">
             <Link href="/register">
               Demo Talep Et
               <ArrowRight className="ml-2.5 h-5 w-5" />
@@ -394,7 +394,7 @@ export default function LandingPage() {
             <Button asChild variant="ghost" className="text-[15px] text-muted-foreground hover:text-foreground">
               <Link href="/login">Giriş Yap</Link>
             </Button>
-            <Button asChild className="text-[15px] px-6 bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm hover:shadow-amber-500/10">
+            <Button asChild className="text-[15px] px-6 bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm hover:shadow-accent/10">
               <Link href="/register">Demo Talep Et</Link>
             </Button>
           </div>

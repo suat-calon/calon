@@ -1,7 +1,7 @@
 # CALON BRAND LOCK — Visual Identity Source of Truth
 
 **Status:** LOCKED (2026-04-06)
-**Sprint:** BRAND-SOURCE-OF-TRUTH-AUDIT-01
+**Sprint:** LANDING-BRAND-TOKEN-ALIGN-01 (supersedes BRAND-SOURCE-OF-TRUTH-AUDIT-01)
 **Class:** BRAND DECISION RECORD
 
 ---
@@ -37,22 +37,39 @@ This is locked as the brand primary across all surfaces.
 
 ## Accent Color
 
-**Amber / warm orange = hover micro-accent only.**
+**`--accent` CSS token = Calon warm accent. Pre-existing. Defined 2026-03-22 (commit 9dfccba).**
 
-Amber has no brand source. It was introduced as a subtle interaction hint and accepted
-for the following narrow use cases:
+```css
+/* Calon brand — Warm Coral accent */
+--accent: 12 76% 61%;   /* HSL 12 = coral / warm orange-red */
+--accent-foreground: 0 0% 100%;
+```
+
+Token resolves to a coral/warm orange-red hue (approx #E8633A range).
+This is the defined warm accent for interaction states and micro-emphasis.
+
+### Usage — token-based
 
 | Use case | Class |
 |----------|-------|
-| Card hover border | `hover:border-amber-300/40 dark:hover:border-amber-600/30` |
-| CTA hover shadow | `hover:shadow-amber-500/10` |
+| Card hover border (light) | `hover:border-accent/30` |
+| Card hover border (dark) | `dark:hover:border-accent/40` |
+| CTA hover shadow | `hover:shadow-accent/10` |
+
+### Amber (`amber-*` Tailwind classes) — FORBIDDEN as brand accent
+
+Amber is NOT the accent token. In the design token system:
+- `--warning: 38 92% 50%` = HSL 38 = amber = semantic **warning** color
+
+Amber Tailwind classes (`amber-50`, `amber-300`, `amber-500`, etc.) are
+**semantic warning indicators only** — pending states, overdue alerts, balance warnings.
 
 Amber is **forbidden** from:
+- Warm hover accent roles (use `accent` token instead)
 - Ambient glow / orb backgrounds
 - Primary accent roles (CTA bg, badge bg, icon fill)
 - Section backgrounds
 - Section label text
-- Any static (non-hover) visible element
 
 ---
 
