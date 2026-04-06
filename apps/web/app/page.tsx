@@ -26,14 +26,14 @@ function Hero() {
   return (
     <section className="relative overflow-hidden">
       {/* Ambient glow */}
-      <div className="absolute inset-0 bg-gradient-to-b from-purple-50/30 via-purple-50/10 to-transparent dark:from-purple-950/15 dark:via-purple-950/5 dark:to-transparent pointer-events-none" />
-      <div className="absolute top-20 -left-40 w-[600px] h-[600px] rounded-full bg-purple-200/20 dark:bg-purple-500/5 blur-3xl pointer-events-none" />
-      <div className="absolute top-40 right-0 w-[500px] h-[500px] rounded-full bg-purple-200/10 dark:bg-purple-500/5 blur-3xl pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-b from-brand-100/20 via-brand-50/10 to-transparent dark:from-brand-950/20 dark:via-brand-950/5 dark:to-transparent pointer-events-none" />
+      <div className="absolute top-20 -left-40 w-[600px] h-[600px] rounded-full bg-brand-200/20 dark:bg-brand-500/8 blur-3xl pointer-events-none" />
+      <div className="absolute top-40 right-0 w-[500px] h-[500px] rounded-full bg-brand-200/10 dark:bg-brand-400/5 blur-3xl pointer-events-none" />
 
       <div className={`${shell} relative pt-20 pb-16 lg:pt-28 lg:pb-24`}>
         <div className="max-w-[860px]">
           {/* Eyebrow */}
-          <div className="inline-flex items-center gap-2.5 rounded-full border border-purple-200/60 bg-purple-50/60 px-5 py-2 text-[16px] font-semibold text-purple-700 dark:border-purple-700/40 dark:bg-purple-950/40 dark:text-purple-300 mb-7 shadow-sm">
+          <div className="inline-flex items-center gap-2.5 rounded-full border border-brand-200/60 bg-brand-50/60 px-5 py-2 text-[16px] font-semibold text-brand-700 dark:border-brand-600/40 dark:bg-brand-950/40 dark:text-brand-300 mb-7 shadow-sm">
             <Sparkles className="h-4 w-4" />
             Beauty & Wellness Business OS
           </div>
@@ -91,7 +91,7 @@ function TrustBand() {
   ];
 
   return (
-    <section className="border-y border-border/40 bg-muted/30 dark:bg-[hsl(224_40%_8%)]">
+    <section className="border-y border-border/40 bg-muted/30 dark:bg-muted/20">
       <div className={`${shell} py-5`}>
         <div className="flex flex-wrap items-center justify-center gap-x-14 gap-y-3">
           {signals.map((s) => (
@@ -130,7 +130,7 @@ function CoreValue() {
   ];
 
   return (
-    <section className="bg-background dark:bg-[hsl(224_50%_5%)]">
+    <section className="bg-background">
       <div className={`${shell} py-20 lg:py-28`}>
         <div className="text-center mb-14">
           <p className="text-[15px] font-bold uppercase tracking-[0.2em] text-primary/70 mb-4">Neden Calon?</p>
@@ -147,7 +147,7 @@ function CoreValue() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
           {values.map((v) => (
-            <div key={v.title} className="rounded-2xl border border-border/50 bg-card dark:bg-[hsl(224_40%_9%)] dark:border-[hsl(224_30%_16%)] p-9 lg:p-10 space-y-4 transition-all duration-200 hover:border-accent/30 dark:hover:border-accent/40 motion-safe:hover:-translate-y-1 motion-safe:hover:shadow-lg">
+            <div key={v.title} className="rounded-2xl border border-border/50 bg-card dark:bg-card dark:border-border p-9 lg:p-10 space-y-4 transition-all duration-200 hover:border-primary/20 dark:hover:border-primary/30 motion-safe:hover:-translate-y-1 motion-safe:hover:shadow-lg dark:hover:shadow-primary/10">
               <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
                 <v.icon className="h-6 w-6 text-primary" />
               </div>
@@ -173,10 +173,10 @@ function ProductProof() {
       title: 'Müşterileriniz kendi randevusunu alsın',
       desc: 'Markalı rezervasyon sayfanız 7/24 açık. Hizmet seçimi, personel tercihi, uygun saat bulma — müşteri deneyimi sizin kontrolünüzde.',
       features: ['Hizmet ve personel seçimi', 'Otomatik uygunluk kontrolü', 'Mobil uyumlu rezervasyon', 'Salon vitrini ve tanıtım'],
-      bg: 'bg-blue-50/80 dark:bg-[hsl(220_50%_10%)]',
-      border: 'border-blue-200/60 dark:border-blue-700/40',
-      iconBg: 'bg-blue-100 dark:bg-blue-900/50',
-      iconColor: 'text-blue-600 dark:text-blue-400',
+      bg: 'bg-brand-50/60 dark:bg-brand-950/30',
+      border: 'border-brand-200/60 dark:border-brand-700/30',
+      iconBg: 'bg-brand-100 dark:bg-brand-900/50',
+      iconColor: 'text-brand-600 dark:text-brand-400',
     },
     {
       icon: Monitor,
@@ -184,10 +184,10 @@ function ProductProof() {
       title: 'Günlük operasyonu tek ekrandan yönetin',
       desc: 'Takvim görünümü, randevu detayları, müşteri notları, ödeme takibi — salon sahiplerinin günlük komuta merkezi.',
       features: ['Günlük/haftalık takvim', 'Personel bazlı görünüm', 'Müşteri geçmişi ve notlar', 'Ödeme ve kasa takibi'],
-      bg: 'bg-purple-50/80 dark:bg-[hsl(270_40%_10%)]',
-      border: 'border-purple-200/60 dark:border-purple-700/40',
-      iconBg: 'bg-purple-100 dark:bg-purple-900/50',
-      iconColor: 'text-purple-600 dark:text-purple-400',
+      bg: 'bg-brand-100/50 dark:bg-brand-900/20',
+      border: 'border-brand-300/60 dark:border-brand-600/40',
+      iconBg: 'bg-brand-200/60 dark:bg-brand-800/50',
+      iconColor: 'text-brand-700 dark:text-brand-300',
       featured: true,
     },
     {
@@ -196,15 +196,15 @@ function ProductProof() {
       title: 'Küçük başlayın, sınırsız büyüyün',
       desc: 'Tek şubeden çoklu lokasyona, birkaç hizmetten geniş kataloğa. Altyapı sizi yavaşlatmaz — büyümenizi destekler.',
       features: ['Çoklu şube desteği', 'Hizmet ve katalog düzeni', 'Ekip ölçeklendirme', 'Platform seviyesinde kontrol'],
-      bg: 'bg-emerald-50/80 dark:bg-[hsl(160_40%_8%)]',
-      border: 'border-emerald-200/60 dark:border-emerald-700/40',
+      bg: 'bg-emerald-50/80 dark:bg-emerald-950/20',
+      border: 'border-emerald-200/60 dark:border-emerald-700/30',
       iconBg: 'bg-emerald-100 dark:bg-emerald-900/50',
       iconColor: 'text-emerald-600 dark:text-emerald-400',
     },
   ];
 
   return (
-    <section id="urun" className="bg-muted/30 dark:bg-[hsl(224_45%_7%)] border-y border-border/30 dark:border-[hsl(224_30%_14%)]">
+    <section id="urun" className="bg-muted/30 dark:bg-muted/20 border-y border-border/30">
       <div className={`${shell} py-20 lg:py-28`}>
         <div className="text-center mb-14">
           <p className="text-[15px] font-bold uppercase tracking-[0.2em] text-primary/70 mb-4">Ürün</p>
@@ -223,7 +223,7 @@ function ProductProof() {
           {surfaces.map((s) => (
             <div
               key={s.label}
-              className={`rounded-2xl border p-9 lg:p-10 space-y-5 transition-all duration-200 motion-safe:hover:-translate-y-1 motion-safe:hover:shadow-xl ${s.bg} ${s.border} ${s.featured ? 'lg:scale-[1.02] lg:shadow-xl lg:shadow-purple-500/5 ring-1 ring-purple-300/20 dark:ring-purple-600/20' : ''}`}
+              className={`rounded-2xl border p-9 lg:p-10 space-y-5 transition-all duration-200 motion-safe:hover:-translate-y-1 motion-safe:hover:shadow-xl ${s.bg} ${s.border} ${s.featured ? 'lg:scale-[1.02] lg:shadow-xl lg:shadow-primary/8 ring-1 ring-brand-300/30 dark:ring-brand-500/20' : ''}`}
             >
               <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${s.iconBg}`}>
                 <s.icon className={`h-6 w-6 ${s.iconColor}`} />
@@ -273,7 +273,7 @@ function WhoItsFor() {
   ];
 
   return (
-    <section className="bg-background dark:bg-[hsl(224_50%_5%)]">
+    <section className="bg-background">
       <div className={`${shell} py-20 lg:py-28`}>
         <div className="text-center mb-14">
           <p className="text-[15px] font-bold uppercase tracking-[0.2em] text-primary/70 mb-4">Kimin İçin?</p>
@@ -287,7 +287,7 @@ function WhoItsFor() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
           {segments.map((s) => (
-            <div key={s.title} className="rounded-2xl border border-border/50 bg-card dark:bg-[hsl(224_40%_9%)] dark:border-[hsl(224_30%_16%)] p-9 lg:p-10 space-y-4 text-center transition-all duration-200 hover:border-accent/30 dark:hover:border-accent/40 motion-safe:hover:-translate-y-1 motion-safe:hover:shadow-lg">
+            <div key={s.title} className="rounded-2xl border border-border/50 bg-card dark:bg-card dark:border-border p-9 lg:p-10 space-y-4 text-center transition-all duration-200 hover:border-primary/20 dark:hover:border-primary/30 motion-safe:hover:-translate-y-1 motion-safe:hover:shadow-lg dark:hover:shadow-primary/10">
               <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto">
                 <s.icon className="h-6 w-6 text-primary" />
               </div>
@@ -307,10 +307,10 @@ function WhoItsFor() {
 
 function FinalCTA() {
   return (
-    <section className="relative overflow-hidden bg-purple-50/30 dark:bg-[hsl(224_45%_7%)] border-t border-border/30 dark:border-[hsl(224_30%_14%)]">
+    <section className="relative overflow-hidden bg-brand-50/30 dark:bg-brand-950/20 border-t border-border/30">
       {/* Glow */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <div className="w-[600px] h-[300px] rounded-full bg-purple-200/20 dark:bg-purple-500/5 blur-3xl" />
+        <div className="w-[600px] h-[300px] rounded-full bg-brand-200/20 dark:bg-brand-500/8 blur-3xl" />
       </div>
 
       <div className={`${narrow} relative px-6 py-20 lg:py-28 text-center`}>
@@ -349,7 +349,7 @@ function FinalCTA() {
 
 function Footer() {
   return (
-    <footer className="border-t border-border/30 dark:border-[hsl(224_30%_14%)] bg-background dark:bg-[hsl(224_50%_4%)]">
+    <footer className="border-t border-border/30 bg-background">
       <div className={`${shell} py-10`}>
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -364,7 +364,7 @@ function Footer() {
             <Link href="/register" className="hover:text-foreground transition-colors">Kayıt Ol</Link>
           </div>
         </div>
-        <div className="mt-6 pt-5 border-t border-border/20 dark:border-[hsl(224_30%_12%)] text-center">
+        <div className="mt-6 pt-5 border-t border-border/20 text-center">
           <p className="text-sm text-muted-foreground/40">
             © {new Date().getFullYear()} Calon. Tüm hakları saklıdır.
           </p>
@@ -380,9 +380,9 @@ function Footer() {
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-background dark:bg-[hsl(224_50%_4%)]">
+    <div className="min-h-screen bg-background">
       {/* Nav */}
-      <header className="sticky top-0 z-50 border-b border-border/30 dark:border-[hsl(224_30%_12%)] bg-background/80 dark:bg-[hsl(224_50%_4%/0.85)] backdrop-blur-xl">
+      <header className="sticky top-0 z-50 border-b border-border/30 bg-background/80 backdrop-blur-xl">
         <div className={`${shell} h-[72px] flex items-center justify-between`}>
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center shadow-sm">

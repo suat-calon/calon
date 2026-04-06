@@ -195,7 +195,7 @@ export function BookingWidget({ salon, services, staff, initialReferralCode }: B
   const currentIdx = STEP_ORDER.indexOf(step);
 
   return (
-    <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+    <div className="booking-glass rounded-3xl shadow-sm overflow-hidden">
 
       {/* ── Progress stepper — Untitled-inspired clean hierarchy ──────── */}
       {step !== 'confirm' && (
@@ -222,7 +222,7 @@ export function BookingWidget({ salon, services, staff, initialReferralCode }: B
                   </div>
                   <span className={cn(
                     'hidden sm:inline text-xs font-medium transition-colors',
-                    i <= currentIdx ? 'text-gray-900' : 'text-gray-400',
+                    i <= currentIdx ? 'text-foreground' : 'text-muted-foreground/50',
                   )}>
                     {s.label}
                   </span>
@@ -230,7 +230,7 @@ export function BookingWidget({ salon, services, staff, initialReferralCode }: B
                 {i < STEPS.filter((s) => s.id !== 'confirm').length - 1 && (
                   <div className={cn(
                     'flex-1 h-[2px] rounded-full mx-1 transition-colors',
-                    i < currentIdx ? 'bg-brand-500' : 'bg-gray-200',
+                    i < currentIdx ? 'bg-brand-500' : 'bg-brand-100/60',
                   )} />
                 )}
               </React.Fragment>
@@ -244,7 +244,7 @@ export function BookingWidget({ salon, services, staff, initialReferralCode }: B
         {/* ══ ADIM 1: HİZMET ══════════════════════════════════════════ */}
         {step === 'service' && (
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            <h3 className="text-lg font-semibold mb-4" style={{color:'#332B5B'}}>
               Hangi hizmeti almak istersiniz?
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -257,22 +257,22 @@ export function BookingWidget({ salon, services, staff, initialReferralCode }: B
                   }}
                   className={cn(
                     'text-left p-5 rounded-2xl border-2 transition-all duration-150 motion-safe:hover:scale-[1.01]',
-                    'hover:border-brand-400 hover:bg-brand-50',
+                    'hover:border-brand-400 hover:bg-brand-50/80',
                     state.service?.id === svc.id
-                      ? 'border-brand-500 bg-brand-50'
-                      : 'border-gray-100 bg-white',
+                      ? 'border-brand-500 bg-brand-50/80 slot-active-card'
+                      : 'border-brand-100/40 booking-glass',
                   )}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-2">
                       <Scissors className="w-4 h-4 text-brand-500 shrink-0 mt-0.5" />
-                      <span className="font-medium text-gray-900 text-base">{svc.name}</span>
+                      <span className="font-medium text-base" style={{color:'#332B5B'}}>{svc.name}</span>
                     </div>
                     <span className="text-brand-600 font-bold text-base shrink-0">
                       {formatPrice(svc.price, svc.currency)}
                     </span>
                   </div>
-                  <div className="flex items-center gap-1 mt-2 ml-6 text-gray-400 text-sm">
+                  <div className="flex items-center gap-1 mt-2 ml-6 text-sm" style={{color:'#9E97BE'}}>
                     <Clock className="w-3 h-3" />
                     <span>{formatDuration(svc.durationMin)}</span>
                   </div>
@@ -285,20 +285,20 @@ export function BookingWidget({ salon, services, staff, initialReferralCode }: B
         {/* ══ ADIM 2: PERSONEL ════════════════════════════════════════ */}
         {step === 'staff' && (
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-1">
+            <h3 className="text-lg font-semibold mb-1" style={{color:'#332B5B'}}>
               Personel seçin
             </h3>
-            <p className="text-gray-400 text-sm mb-4">
+            <p className="text-sm mb-4" style={{color:'#9E97BE'}}>
               {state.service?.name} hizmeti için müsait personeller gösterilmektedir.
             </p>
 
             {filteredStaff.length === 0 ? (
               <div className="text-center py-10">
-                <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
-                  <User className="w-5 h-5 text-gray-400" />
+                <div className="w-12 h-12 rounded-full bg-brand-50 flex items-center justify-center mx-auto mb-3">
+                  <User className="w-5 h-5 text-brand-400" />
                 </div>
-                <p className="text-gray-600 text-sm font-medium">Bu hizmet için müsait personel yok</p>
-                <p className="text-gray-400 text-xs mt-1">Farklı bir hizmet seçmeyi deneyin.</p>
+                <p className="text-sm font-medium" style={{color:'#5C5485'}}>Bu hizmet için müsait personel yok</p>
+                <p className="text-xs mt-1" style={{color:'#9E97BE'}}>Farklı bir hizmet seçmeyi deneyin.</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -311,10 +311,10 @@ export function BookingWidget({ salon, services, staff, initialReferralCode }: B
                     }}
                     className={cn(
                       'flex items-center gap-3 p-5 rounded-2xl border-2 transition-all text-left motion-safe:hover:scale-[1.01]',
-                      'hover:border-brand-400 hover:bg-brand-50',
+                      'hover:border-brand-400 hover:bg-brand-50/80',
                       state.staff?.id === member.id
-                        ? 'border-brand-500 bg-brand-50'
-                        : 'border-gray-100 bg-white',
+                        ? 'border-brand-500 bg-brand-50/80'
+                        : 'border-brand-100/40 booking-glass',
                     )}
                   >
                     <div
@@ -325,11 +325,11 @@ export function BookingWidget({ salon, services, staff, initialReferralCode }: B
                       {member.firstName[0]}{member.lastName[0]}
                     </div>
                     <div>
-                      <p className="font-medium text-gray-900 text-base">
+                      <p className="font-medium text-base" style={{color:'#332B5B'}}>
                         {member.firstName} {member.lastName}
                       </p>
                       {member.title && (
-                        <p className="text-gray-400 text-sm">{member.title}</p>
+                        <p className="text-sm" style={{color:'#9E97BE'}}>{member.title}</p>
                       )}
                     </div>
                   </button>
@@ -344,7 +344,7 @@ export function BookingWidget({ salon, services, staff, initialReferralCode }: B
         {/* ══ ADIM 3: TARİH ═══════════════════════════════════════════ */}
         {step === 'date' && (
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            <h3 className="text-lg font-semibold mb-4" style={{color:'#332B5B'}}>
               Tarih seçin
             </h3>
             <div className="max-w-xs">
@@ -356,9 +356,8 @@ export function BookingWidget({ salon, services, staff, initialReferralCode }: B
                 onChange={(e) =>
                   setState((s) => ({ ...s, date: e.target.value, slot: null }))
                 }
-                className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-base
-                           focus:outline-none focus:border-brand-500 transition-colors
-                           text-gray-900 bg-white"
+                className="w-full rounded-xl px-4 py-3 text-base booking-input"
+                style={{color:'#332B5B'}}
               />
             </div>
             <div className="flex gap-3 mt-6">
@@ -383,25 +382,25 @@ export function BookingWidget({ salon, services, staff, initialReferralCode }: B
         {/* ══ ADIM 4: SLOT ════════════════════════════════════════════ */}
         {step === 'slot' && (
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-1">
+            <h3 className="text-lg font-semibold mb-1" style={{color:'#332B5B'}}>
               Saat seçin
             </h3>
-            <p className="text-gray-400 text-sm mb-4">
+            <p className="text-sm mb-4" style={{color:'#9E97BE'}}>
               {formatDate(state.date + 'T00:00:00Z')} — {state.staff?.firstName} {state.staff?.lastName}
             </p>
 
             {loadingSlots ? (
               <div className="flex flex-col items-center justify-center py-14 gap-3">
-                <div className="w-8 h-8 rounded-full border-[3px] border-gray-200 border-t-brand-500 animate-spin" />
-                <p className="text-gray-400 text-xs">Müsait saatler yükleniyor...</p>
+                <div className="w-8 h-8 rounded-full border-[3px] border-brand-100 border-t-brand-500 animate-spin" />
+                <p className="text-xs" style={{color:'#9E97BE'}}>Müsait saatler yükleniyor...</p>
               </div>
             ) : slots.length === 0 ? (
               <div className="text-center py-10">
-                <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
-                  <Clock className="w-5 h-5 text-gray-400" />
+                <div className="w-12 h-12 rounded-full bg-brand-50 flex items-center justify-center mx-auto mb-3">
+                  <Clock className="w-5 h-5 text-brand-400" />
                 </div>
-                <p className="text-gray-600 text-sm font-medium">Bu tarihte müsait saat yok</p>
-                <p className="text-gray-400 text-xs mt-1">Farklı bir tarih veya personel seçmeyi deneyin.</p>
+                <p className="text-sm font-medium" style={{color:'#5C5485'}}>Bu tarihte müsait saat yok</p>
+                <p className="text-xs mt-1" style={{color:'#9E97BE'}}>Farklı bir tarih veya personel seçmeyi deneyin.</p>
               </div>
             ) : (
               <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
@@ -414,10 +413,10 @@ export function BookingWidget({ salon, services, staff, initialReferralCode }: B
                     }}
                     className={cn(
                       'py-3 px-3 rounded-xl border-2 text-[15px] font-medium transition-all motion-safe:hover:scale-[1.03]',
-                      'hover:border-brand-400 hover:bg-brand-50',
+                      'hover:border-brand-400 hover:bg-brand-50/80',
                       state.slot?.startTime === slot.startTime
-                        ? 'border-brand-500 bg-brand-50 text-brand-700'
-                        : 'border-gray-100 text-gray-700',
+                        ? 'slot-active'
+                        : 'booking-glass border-brand-100/40',
                     )}
                   >
                     {formatTime(slot.startTime)}
@@ -433,10 +432,10 @@ export function BookingWidget({ salon, services, staff, initialReferralCode }: B
         {/* ══ ADIM 5: MÜŞTERİ BİLGİLERİ ══════════════════════════════ */}
         {step === 'form' && (
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-1">
+            <h3 className="text-lg font-semibold mb-1" style={{color:'#332B5B'}}>
               Bilgileriniz
             </h3>
-            <p className="text-gray-400 text-sm mb-5">
+            <p className="text-sm mb-5" style={{color:'#9E97BE'}}>
               Randevu onayı için aşağıdaki alanları doldurun.
             </p>
 
@@ -464,7 +463,7 @@ export function BookingWidget({ salon, services, staff, initialReferralCode }: B
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium mb-1" style={{color:'#5C5485'}}>
                   Ad <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -472,12 +471,11 @@ export function BookingWidget({ salon, services, staff, initialReferralCode }: B
                   placeholder="Ayşe"
                   value={state.firstName}
                   onChange={(e) => setState((s) => ({ ...s, firstName: e.target.value }))}
-                  className="w-full border-2 border-gray-200 rounded-xl px-3 py-3 text-base
-                             focus:outline-none focus:border-brand-500 transition-colors"
+                  className="w-full rounded-xl px-3 py-3 text-base booking-input"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium mb-1" style={{color:'#5C5485'}}>
                   Soyad <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -485,12 +483,11 @@ export function BookingWidget({ salon, services, staff, initialReferralCode }: B
                   placeholder="Yılmaz"
                   value={state.lastName}
                   onChange={(e) => setState((s) => ({ ...s, lastName: e.target.value }))}
-                  className="w-full border-2 border-gray-200 rounded-xl px-3 py-3 text-base
-                             focus:outline-none focus:border-brand-500 transition-colors"
+                  className="w-full rounded-xl px-3 py-3 text-base booking-input"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium mb-1" style={{color:'#5C5485'}}>
                   Telefon <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -498,12 +495,11 @@ export function BookingWidget({ salon, services, staff, initialReferralCode }: B
                   placeholder="0532 000 00 00"
                   value={state.phone}
                   onChange={(e) => setState((s) => ({ ...s, phone: e.target.value }))}
-                  className="w-full border-2 border-gray-200 rounded-xl px-3 py-3 text-base
-                             focus:outline-none focus:border-brand-500 transition-colors"
+                  className="w-full rounded-xl px-3 py-3 text-base booking-input"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium mb-1" style={{color:'#5C5485'}}>
                   E-posta (opsiyonel)
                 </label>
                 <input
@@ -511,12 +507,11 @@ export function BookingWidget({ salon, services, staff, initialReferralCode }: B
                   placeholder="ayse@ornek.com"
                   value={state.email}
                   onChange={(e) => setState((s) => ({ ...s, email: e.target.value }))}
-                  className="w-full border-2 border-gray-200 rounded-xl px-3 py-3 text-base
-                             focus:outline-none focus:border-brand-500 transition-colors"
+                  className="w-full rounded-xl px-3 py-3 text-base booking-input"
                 />
               </div>
               <div className="sm:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium mb-1" style={{color:'#5C5485'}}>
                   Not (opsiyonel)
                 </label>
                 <textarea
@@ -524,8 +519,7 @@ export function BookingWidget({ salon, services, staff, initialReferralCode }: B
                   value={state.notes}
                   onChange={(e) => setState((s) => ({ ...s, notes: e.target.value }))}
                   rows={2}
-                  className="w-full border-2 border-gray-200 rounded-xl px-3 py-3 text-base
-                             focus:outline-none focus:border-brand-500 transition-colors resize-none"
+                  className="w-full rounded-xl px-3 py-3 text-base booking-input resize-none"
                 />
               </div>
             </div>
@@ -574,14 +568,14 @@ export function BookingWidget({ salon, services, staff, initialReferralCode }: B
             <div className="w-14 h-14 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-4 ring-4 ring-green-100">
               <CheckCircle className="w-7 h-7 text-green-600" />
             </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-1">
+            <h3 className="text-2xl font-bold mb-1" style={{color:'#332B5B'}}>
               Randevunuz Oluşturuldu!
             </h3>
-            <p className="text-gray-500 text-base mb-6">
+            <p className="text-base mb-6" style={{color:'#6E6791'}}>
               Aşağıdaki bilgilerle randevunuz kaydedildi.
             </p>
 
-            <div className="bg-gray-50 rounded-2xl p-5 text-left max-w-sm mx-auto space-y-3 border border-gray-100">
+            <div className="booking-glass rounded-2xl p-5 text-left max-w-sm mx-auto space-y-3">
               <Detail icon={<Scissors />} label="Hizmet"   value={result.service.name} />
               <Detail
                 icon={<User />}
@@ -596,8 +590,8 @@ export function BookingWidget({ salon, services, staff, initialReferralCode }: B
               <Detail icon={<MapPin />}  label="Konum"    value={result.location.name} />
             </div>
 
-            <p className="text-gray-400 text-xs mt-6">
-              Randevu referansı: <span className="font-mono text-gray-600">{result.appointmentId.slice(0, 8)}</span>
+            <p className="text-xs mt-6" style={{color:'#9E97BE'}}>
+              Randevu referansı: <span className="font-mono" style={{color:'#5C5485'}}>{result.appointmentId.slice(0, 8)}</span>
             </p>
 
             {/* ── Faz 18 + Faz 19: Referral Share Widget ────────────── */}
@@ -727,7 +721,7 @@ function BackButton({ onClick }: { onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className="mt-4 flex items-center gap-1 text-gray-400 text-sm hover:text-gray-600 transition-colors"
+      className="mt-4 flex items-center gap-1 text-sm transition-colors" style={{color:'#9E97BE'}}
     >
       <ChevronLeft className="w-4 h-4" />
       Geri
@@ -766,8 +760,8 @@ function Detail({
     <div className="flex items-start gap-2.5">
       <span className="text-brand-500 mt-0.5 shrink-0 w-4 h-4">{icon}</span>
       <div>
-        <p className="text-xs text-gray-400">{label}</p>
-        <p className="text-sm font-medium text-gray-900">{value}</p>
+        <p className="text-xs" style={{color:'#9E97BE'}}>{label}</p>
+        <p className="text-sm font-medium" style={{color:'#332B5B'}}>{value}</p>
       </div>
     </div>
   );

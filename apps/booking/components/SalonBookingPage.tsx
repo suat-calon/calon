@@ -30,14 +30,14 @@ export function SalonBookingPage({ salon, services, staff, canonicalUrl, initial
   const city = salon.location?.city ?? '';
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen">
 
       {/* ── 1. HERO ─────────────────────────────────────────────────────── */}
-      <section className="relative bg-gradient-to-br from-brand-900 via-brand-800 to-purple-900 text-white overflow-hidden">
+      <section className="relative bg-gradient-to-br from-brand-950 via-brand-900 to-brand-800 text-white overflow-hidden">
         {/* Arka plan dekorasyon */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-0 left-1/4 w-96 h-96 bg-white rounded-full blur-3xl" />
-          <div className="absolute bottom-0 right-1/4 w-64 h-64 bg-brand-300 rounded-full blur-2xl" />
+        <div className="absolute inset-0 opacity-15">
+          <div className="absolute top-0 left-1/4 w-96 h-96 bg-brand-300 rounded-full blur-3xl" />
+          <div className="absolute bottom-0 right-1/4 w-64 h-64 bg-brand-400 rounded-full blur-2xl" />
         </div>
 
         <div className="relative max-w-5xl mx-auto px-6 py-20 text-center">
@@ -57,7 +57,7 @@ export function SalonBookingPage({ salon, services, staff, canonicalUrl, initial
             {salon.name}
           </h1>
 
-          <div className="flex items-center justify-center gap-4 text-brand-200 text-sm mt-4 mb-8">
+          <div className="flex items-center justify-center gap-4 text-brand-100/80 text-sm mt-4 mb-8">
             {city && (
               <span className="flex items-center gap-1">
                 <MapPin className="w-4 h-4" />
@@ -81,9 +81,9 @@ export function SalonBookingPage({ salon, services, staff, canonicalUrl, initial
 
           <a
             href="#booking"
-            className="inline-flex items-center gap-2 bg-white text-brand-800 font-semibold
+            className="inline-flex items-center gap-2 bg-white/90 text-brand-800 font-semibold
                        px-8 py-4 rounded-2xl text-lg shadow-xl hover:shadow-2xl
-                       hover:bg-brand-50 transition-all duration-200"
+                       hover:bg-white transition-all duration-200 backdrop-blur-sm"
           >
             <CheckCircle className="w-5 h-5" />
             Randevu Al
@@ -96,7 +96,7 @@ export function SalonBookingPage({ salon, services, staff, canonicalUrl, initial
         {/* ── 1b. SALON BIO ─────────────────────────────────────────────── */}
         {salon.description && (
           <section className="py-10">
-            <p className="text-gray-600 text-lg leading-relaxed max-w-3xl">
+            <p className="text-lg leading-relaxed max-w-3xl" style={{color:'#5C5485'}}>
               {salon.description}
             </p>
           </section>
@@ -137,18 +137,18 @@ export function SalonBookingPage({ salon, services, staff, canonicalUrl, initial
         {/* ── 2. HİZMETLER ──────────────────────────────────────────────── */}
         {services.length > 0 && (
           <section className="py-16">
-            <h2 className="text-3xl font-bold text-gray-900 mb-8">
+            <h2 className="text-3xl font-bold mb-8" style={{color:'#332B5B'}}>
               Hizmetlerimiz
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
               {services.map((service) => (
                 <div
                   key={service.id}
-                  className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm
+                  className="booking-glass rounded-2xl p-6 shadow-sm
                              hover:shadow-lg transition-all duration-200 motion-safe:hover:-translate-y-1"
                 >
                   <div className="flex items-start justify-between mb-2">
-                    <h3 className="font-semibold text-gray-900 text-base leading-tight">
+                    <h3 className="font-semibold text-base leading-tight" style={{color:'#332B5B'}}>
                       {service.name}
                     </h3>
                     <span className="text-brand-600 font-bold text-base ml-2 shrink-0">
@@ -176,15 +176,15 @@ export function SalonBookingPage({ salon, services, staff, canonicalUrl, initial
 
         {/* ── 3. PERSONEL ───────────────────────────────────────────────── */}
         {staff.length > 0 && (
-          <section className="py-8 border-t border-gray-100">
-            <h2 className="text-3xl font-bold text-gray-900 mb-8">
+          <section className="py-8 border-t border-brand-100/30">
+            <h2 className="text-3xl font-bold mb-8" style={{color:'#332B5B'}}>
               Ekibimiz
             </h2>
             <div className="flex flex-wrap gap-4">
               {staff.map((member) => (
                 <div
                   key={member.id}
-                  className="flex items-center gap-3 bg-gray-50 rounded-2xl px-5 py-4 transition-all duration-150 motion-safe:hover:-translate-y-0.5 motion-safe:hover:shadow-sm"
+                  className="flex items-center gap-3 booking-glass rounded-2xl px-5 py-4 transition-all duration-150 motion-safe:hover:-translate-y-0.5 motion-safe:hover:shadow-sm"
                 >
                   <div
                     className="w-11 h-11 rounded-full flex items-center justify-center
@@ -194,11 +194,11 @@ export function SalonBookingPage({ salon, services, staff, canonicalUrl, initial
                     {member.firstName[0]}{member.lastName[0]}
                   </div>
                   <div>
-                    <p className="font-medium text-gray-900 text-base">
+                    <p className="font-medium text-base" style={{color:'#332B5B'}}>
                       {member.firstName} {member.lastName}
                     </p>
                     {member.title && (
-                      <p className="text-gray-500 text-sm">{member.title}</p>
+                      <p className="text-sm" style={{color:'#6E6791'}}>{member.title}</p>
                     )}
                   </div>
                 </div>
@@ -209,13 +209,13 @@ export function SalonBookingPage({ salon, services, staff, canonicalUrl, initial
 
         {/* ── 3b. GALERİ ──────────────────────────────────────────────── */}
         {salon.galleryImages && salon.galleryImages.length > 0 && (
-          <section className="py-8 border-t border-gray-100">
-            <h2 className="text-3xl font-bold text-gray-900 mb-6">Galeri</h2>
+          <section className="py-8 border-t border-brand-100/30">
+            <h2 className="text-3xl font-bold mb-6" style={{color:'#332B5B'}}>Galeri</h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {salon.galleryImages.slice(0, 6).map((url, i) => (
                 <div
                   key={i}
-                  className="aspect-[4/3] rounded-2xl overflow-hidden bg-gray-100 shadow-sm"
+                  className="aspect-[4/3] rounded-2xl overflow-hidden bg-brand-50 shadow-sm"
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
@@ -231,11 +231,11 @@ export function SalonBookingPage({ salon, services, staff, canonicalUrl, initial
         )}
 
         {/* ── 4. BOOKING WIDGET ─────────────────────────────────────────── */}
-        <section id="booking" className="py-16 border-t border-gray-100">
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">
+        <section id="booking" className="py-16 border-t border-brand-100/30">
+          <h2 className="text-3xl font-bold mb-2" style={{color:'#332B5B'}}>
             Online Randevu
           </h2>
-          <p className="text-gray-500 text-base mb-8">
+          <p className="text-base mb-8" style={{color:'#6E6791'}}>
             Hizmet ve personel seçerek uygun bir slot rezerve edin.
           </p>
           <BookingWidget
@@ -248,14 +248,14 @@ export function SalonBookingPage({ salon, services, staff, canonicalUrl, initial
 
         {/* ── 5. KONUM ──────────────────────────────────────────────────── */}
         {salon.location && (
-          <section className="py-8 border-t border-gray-100">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">Konum</h2>
-            <div className="flex items-start gap-3 mb-4 text-gray-700">
+          <section className="py-8 border-t border-brand-100/30">
+            <h2 className="text-3xl font-bold mb-4" style={{color:'#332B5B'}}>Konum</h2>
+            <div className="flex items-start gap-3 mb-4" style={{color:'#4A4270'}}>
               <MapPin className="w-5 h-5 text-brand-500 mt-0.5 shrink-0" />
               <div>
                 <p className="font-medium">{salon.location.name}</p>
                 {salon.location.address && (
-                  <p className="text-sm text-gray-500 mt-0.5">
+                  <p className="text-sm mt-0.5" style={{color:'#6E6791'}}>
                     {salon.location.address}
                     {salon.location.city && `, ${salon.location.city}`}
                   </p>
@@ -264,7 +264,7 @@ export function SalonBookingPage({ salon, services, staff, canonicalUrl, initial
             </div>
             {/* Google Maps embed — lat/lng varsa pin-point, yoksa adres-bazlı */}
             {(salon.location.latitude && salon.location.longitude) ? (
-              <div className="rounded-2xl overflow-hidden shadow-sm border border-gray-100 h-64">
+              <div className="rounded-2xl overflow-hidden shadow-sm border border-brand-100/30 h-64">
                 <iframe
                   className="w-full h-full"
                   loading="lazy"
@@ -274,7 +274,7 @@ export function SalonBookingPage({ salon, services, staff, canonicalUrl, initial
                 />
               </div>
             ) : salon.location.address ? (
-              <div className="rounded-2xl overflow-hidden shadow-sm border border-gray-100 h-64">
+              <div className="rounded-2xl overflow-hidden shadow-sm border border-brand-100/30 h-64">
                 <iframe
                   className="w-full h-full"
                   loading="lazy"
@@ -291,7 +291,7 @@ export function SalonBookingPage({ salon, services, staff, canonicalUrl, initial
       </div>
 
       {/* ── 6. FOOTER — Growth Element ────────────────────────────────────── */}
-      <footer className="border-t border-gray-100 mt-16 py-8 text-center text-gray-400 text-sm">
+      <footer className="border-t border-brand-100/30 mt-16 py-8 text-center text-sm" style={{color:'#9E97BE'}}>
         <p>
           Randevu sistemi{' '}
           <a

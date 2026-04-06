@@ -72,7 +72,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen flex bg-muted/40 dark:bg-background">
       {/* Sidebar — control cockpit style */}
-      <aside className="w-[220px] bg-card border-r border-border/60 flex flex-col shrink-0">
+      <aside className="w-[220px] bg-white/30 dark:bg-card/40 backdrop-blur-xl border-r border-border/40 flex flex-col shrink-0">
         <div className="h-14 flex items-center px-4 border-b border-border/60">
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded-md bg-primary/15 flex items-center justify-center">
@@ -92,13 +92,11 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
             return (
               <Link key={item.href} href={item.href}
                 className={cn(
-                  'group flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-all duration-150',
-                  active
-                    ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'text-foreground/60 hover:bg-muted hover:text-foreground',
+                  'group flex items-center gap-2.5 px-3 py-2 rounded-[10px] text-sm font-medium transition-all duration-200 aurora-sidebar-item',
+                  active && 'active',
                 )}
               >
-                <item.icon className={cn('h-[18px] w-[18px] shrink-0', active ? 'text-primary-foreground' : 'text-foreground/40 group-hover:text-foreground/60')} />
+                <item.icon className={cn('h-[18px] w-[18px] shrink-0', active ? 'text-primary' : 'text-muted-foreground/60 group-hover:text-foreground/70')} />
                 {item.label}
               </Link>
             );
@@ -110,7 +108,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
           <button
             type="button"
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            className="group flex items-center gap-2.5 w-full px-3 py-2 rounded-md text-sm font-medium text-foreground/60 hover:bg-muted hover:text-foreground transition-all"
+            className="group flex items-center gap-2.5 w-full px-3 py-2 rounded-[10px] text-sm font-medium aurora-sidebar-item"
           >
             {theme === 'dark' ? <Sun className="h-[18px] w-[18px] text-foreground/40" /> : <Moon className="h-[18px] w-[18px] text-foreground/40" />}
             {theme === 'dark' ? 'Açık Tema' : 'Koyu Tema'}

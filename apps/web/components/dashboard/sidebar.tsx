@@ -51,15 +51,13 @@ export function Sidebar() {
         key={href}
         href={href}
         className={cn(
-          'group flex items-center gap-3 px-3 py-[7px] rounded-md text-[13px] font-medium transition-all duration-150',
-          isActive
-            ? 'bg-primary text-primary-foreground shadow-sm'
-            : 'text-foreground/60 hover:bg-muted hover:text-foreground',
+          'group flex items-center gap-3 px-3 py-[7px] rounded-[10px] text-[13px] font-medium transition-all duration-200 aurora-sidebar-item',
+          isActive && 'active',
         )}
       >
         <Icon className={cn(
           'h-[18px] w-[18px] shrink-0 transition-colors',
-          isActive ? 'text-primary-foreground' : 'text-foreground/40 group-hover:text-foreground/60',
+          isActive ? 'text-primary' : 'text-muted-foreground/60 group-hover:text-foreground/70',
         )} />
         {label}
       </Link>
@@ -67,7 +65,7 @@ export function Sidebar() {
   };
 
   return (
-    <aside className="hidden lg:flex lg:flex-col lg:w-[232px] border-r border-border/60 bg-muted/30 dark:bg-card/50">
+    <aside className="hidden lg:flex lg:flex-col lg:w-[232px] border-r border-border/40 bg-white/30 dark:bg-card/40 backdrop-blur-xl">
       {/* Brand zone */}
       <div className="h-14 flex items-center px-4 border-b border-border/60">
         <Link href="/dashboard" className="flex items-center gap-2.5">
@@ -97,7 +95,7 @@ export function Sidebar() {
         <button
           type="button"
           onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-          className="group flex items-center gap-3 w-full px-3 py-[7px] rounded-md text-[13px] font-medium text-foreground/60 hover:bg-muted hover:text-foreground transition-all duration-150"
+          className="group flex items-center gap-3 w-full px-3 py-[7px] rounded-[10px] text-[13px] font-medium aurora-sidebar-item"
         >
           {theme === 'dark' ? (
             <Sun className="h-[18px] w-[18px] shrink-0 text-foreground/40 group-hover:text-foreground/60" />
