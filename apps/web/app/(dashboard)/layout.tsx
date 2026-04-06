@@ -50,7 +50,7 @@ export default function DashboardLayout({
       <div className="flex-1 flex flex-col min-w-0">
         <Topbar />
         <main className="flex-1 overflow-y-auto">
-          <div className="px-4 lg:px-6 py-4 lg:py-5">
+          <div className="px-6 lg:px-10 py-6 lg:py-8">
             {children}
           </div>
         </main>

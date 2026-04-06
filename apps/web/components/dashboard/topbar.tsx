@@ -46,7 +46,7 @@ export function Topbar() {
 
   return (
     <>
-      <header className="h-14 border-b border-border/60 bg-card/50 dark:bg-card/30 flex items-center justify-between px-4 lg:px-5 shrink-0 backdrop-blur-sm">
+      <header className="h-16 border-b border-border/60 bg-card/50 dark:bg-card/30 flex items-center justify-between px-5 lg:px-8 shrink-0 backdrop-blur-sm">
         {/* Mobile menu toggle */}
         <button
           className="lg:hidden p-2 -ml-2 rounded-md hover:bg-muted"
@@ -66,7 +66,7 @@ export function Topbar() {
         {/* Tenant info */}
         <div className="hidden lg:flex items-center gap-3">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold text-foreground">{tenant?.name ?? '...'}</span>
+            <span className="text-base font-semibold text-foreground">{tenant?.name ?? '...'}</span>
             {tenant?.plan && (
               <span className="inline-flex items-center rounded-full bg-primary/8 px-2 py-0.5 text-[10px] font-semibold text-primary ring-1 ring-inset ring-primary/15">
                 {tenant.plan}

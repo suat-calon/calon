@@ -58,11 +58,11 @@ export default function AdminBillingPage() {
   const selectedName = selected ? (tenantNameMap.get(selected.tenantId) ?? null) : null;
 
   return (
-    <div className="space-y-4 max-w-6xl">
+    <div className="space-y-6">
       {/* Page header */}
-      <div className="flex items-center justify-between pb-1 border-b border-border/40">
+      <div className="flex items-center justify-between pb-2 border-b border-border/40">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight">Faturalama</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Faturalama</h1>
           <p className="text-[11px] text-muted-foreground/70 mt-0.5">
             {statusCounts.total} abonelik · {statusCounts.active} aktif · {statusCounts.trial} deneme
             {statusCounts.pastDue > 0 && <span className="text-amber-600 dark:text-amber-400"> · {statusCounts.pastDue} gecikmiş</span>}

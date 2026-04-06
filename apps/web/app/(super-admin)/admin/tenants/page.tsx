@@ -27,12 +27,12 @@ export default function AdminTenantsPage() {
   };
 
   return (
-    <div className="space-y-4 max-w-6xl">
+    <div className="space-y-6">
       {/* Page header */}
-      <div className="flex items-center justify-between pb-1 border-b border-border/40">
+      <div className="flex items-center justify-between pb-2 border-b border-border/40">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight">Salonlar</h1>
-          <p className="text-[11px] text-muted-foreground/70 mt-0.5">{statusCounts.total} salon · {statusCounts.active} aktif · {statusCounts.trial} deneme</p>
+          <h1 className="text-2xl font-bold tracking-tight">Salonlar</h1>
+          <p className="text-sm text-muted-foreground/70 mt-1">{statusCounts.total} salon · {statusCounts.active} aktif · {statusCounts.trial} deneme</p>
         </div>
       </div>
 

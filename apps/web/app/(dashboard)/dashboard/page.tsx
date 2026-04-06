@@ -438,20 +438,20 @@ export default function DashboardPage() {
   }, [appointments, now]);
 
   return (
-    <div className="space-y-5 max-w-5xl">
+    <div className="space-y-7">
       {/* ── Page Header ──────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between pb-1 border-b border-border/40">
+      <div className="flex items-center justify-between pb-2 border-b border-border/40">
         <div>
-          <h1 className="text-lg font-semibold tracking-tight text-foreground">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">
             {tenant?.name ?? 'Özet'}
           </h1>
-          <p className="text-muted-foreground/70 text-[11px] mt-0.5">
+          <p className="text-muted-foreground/70 text-sm mt-1">
             {format(now, 'd MMMM yyyy, EEEE', { locale: tr })}
           </p>
         </div>
-        <Button asChild size="sm" variant="outline" className="text-xs h-8">
+        <Button asChild size="sm" variant="outline" className="text-sm h-9 px-4">
           <Link href="/calendar">
-            <CalendarDays className="mr-1.5 h-3.5 w-3.5" />
+            <CalendarDays className="mr-2 h-4 w-4" />
             Takvime Git
           </Link>
         </Button>
@@ -459,13 +459,13 @@ export default function DashboardPage() {
 
       {/* ── Activation Checklist / Ready Card ────────────────────────────── */}
       {!activation.allDone ? (
-        <div className="bg-gradient-to-br from-primary/5 via-primary/3 to-transparent border border-primary/10 rounded-xl p-4 shadow-sm">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-primary" />
-              <h2 className="text-sm font-semibold">Salonunuzu hazırlayın</h2>
+        <div className="bg-gradient-to-br from-primary/5 via-primary/3 to-transparent border border-primary/10 rounded-xl p-6 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2.5">
+              <Sparkles className="h-5 w-5 text-primary" />
+              <h2 className="text-base font-semibold">Salonunuzu hazırlayın</h2>
             </div>
-            <span className="text-xs text-muted-foreground">
+            <span className="text-sm text-muted-foreground">
               {activation.completedCount}/{activation.steps.length} tamamlandı
             </span>
           </div>
@@ -545,13 +545,13 @@ export default function DashboardPage() {
 
       {/* ── Priority Customers ──────────────────────────────────────────── */}
       {priorityCustomers.length > 0 && (
-        <div className="bg-card border border-primary/15 rounded-lg p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-[13px] font-semibold flex items-center gap-1.5">
-              <Users className="h-3.5 w-3.5 text-primary" />
+        <div className="bg-card border border-primary/15 rounded-xl p-5 lg:p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-base font-semibold flex items-center gap-2">
+              <Users className="h-4 w-4 text-primary" />
               Dikkat Gereken Müşteriler
             </h2>
-            <Link href="/customers" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+            <Link href="/customers" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
               Tümü →
             </Link>
           </div>
@@ -589,8 +589,8 @@ export default function DashboardPage() {
 
       {/* ── Stat Cards ────────────────────────────────────────────────────── */}
       <div>
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 mb-2.5">Bugünkü Durum</p>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
+        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/60 mb-3">Bugünkü Durum</p>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           icon={CalendarDays}
           label="Bugün Toplam"
@@ -631,22 +631,22 @@ export default function DashboardPage() {
 
       {/* ── Two-Column: Upcoming + Quick Actions ──────────────────────────── */}
       <div>
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 mb-2.5">Randevular</p>
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_260px] gap-4">
+        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/60 mb-3">Randevular</p>
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-5">
         {/* Upcoming */}
-        <div className="bg-card rounded-lg border">
-          <div className="flex items-center justify-between px-4 pt-4 pb-2.5">
+        <div className="bg-card rounded-xl border">
+          <div className="flex items-center justify-between px-5 pt-5 pb-3">
             <div>
-              <h2 className="text-[13px] font-semibold text-foreground">Yaklaşan Randevular</h2>
-              <p className="text-[11px] text-muted-foreground/70 mt-0.5">Sıradaki {upcoming.length} randevu</p>
+              <h2 className="text-base font-semibold text-foreground">Yaklaşan Randevular</h2>
+              <p className="text-sm text-muted-foreground/70 mt-0.5">Sıradaki {upcoming.length} randevu</p>
             </div>
-            <Button variant="ghost" size="sm" asChild className="text-xs text-muted-foreground hover:text-foreground">
+            <Button variant="ghost" size="sm" asChild className="text-sm text-muted-foreground hover:text-foreground">
               <Link href="/calendar">
-                Takvim <ArrowRight className="ml-1 h-3 w-3" />
+                Takvim <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
               </Link>
             </Button>
           </div>
-          <div className="px-4 pb-4">
+          <div className="px-5 pb-5">
             {error ? (
               <div className="flex items-center gap-2 text-destructive text-sm py-6">
                 <AlertCircle className="h-4 w-4" />
@@ -672,8 +672,8 @@ export default function DashboardPage() {
         </div>
 
         {/* Quick Actions */}
-        <div className="space-y-1.5">
-          <h2 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground px-1 pb-1">Hızlı İşlemler</h2>
+        <div className="space-y-2">
+          <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground px-1 pb-1">Hızlı İşlemler</h2>
           <QuickAction href="/calendar" icon={CalendarDays} label="Takvim" description="Haftalık takvim" primary />
           <QuickAction href="/customers" icon={Users} label="Müşteriler" description="Müşteri listesi" />
           <QuickAction href="/services" icon={Scissors} label="Hizmetler" description="Hizmet yönetimi" />
@@ -685,14 +685,14 @@ export default function DashboardPage() {
 
       {/* ── Today's Appointments ──────────────────────────────────────────── */}
       {todayAppts.length > 0 && (
-        <div className="bg-card rounded-lg border">
-          <div className="flex items-center justify-between px-4 pt-4 pb-2.5">
+        <div className="bg-card rounded-xl border">
+          <div className="flex items-center justify-between px-5 pt-5 pb-3">
             <div>
-              <h2 className="text-[13px] font-semibold text-foreground">Bugünkü Randevular</h2>
-              <p className="text-[11px] text-muted-foreground/70 mt-0.5">{todayAppts.length} randevu</p>
+              <h2 className="text-base font-semibold text-foreground">Bugünkü Randevular</h2>
+              <p className="text-sm text-muted-foreground/70 mt-0.5">{todayAppts.length} randevu</p>
             </div>
           </div>
-          <div className="px-4 pb-4 space-y-1.5">
+          <div className="px-5 pb-5 space-y-2">
             {todayAppts.slice(0, 6).map((apt) => (
               <AppointmentRow key={apt.id} appointment={apt} />
             ))}

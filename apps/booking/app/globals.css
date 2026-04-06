@@ -16,6 +16,10 @@ html {
    CALON Aurora — Booking app surface
    Palette: Lavender / Violet / Mist Blue
    ────────────────────────────────────────────── */
+html {
+  font-size: 17px;
+}
+
 body {
   font-family: 'Inter', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;

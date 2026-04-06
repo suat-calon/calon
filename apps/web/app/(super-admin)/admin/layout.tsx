@@ -72,8 +72,8 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen flex bg-muted/40 dark:bg-background">
       {/* Sidebar — control cockpit style */}
-      <aside className="w-[220px] bg-white/30 dark:bg-card/40 backdrop-blur-xl border-r border-border/40 flex flex-col shrink-0">
-        <div className="h-14 flex items-center px-4 border-b border-border/60">
+      <aside className="w-[256px] bg-white/30 dark:bg-card/40 backdrop-blur-xl border-r border-border/40 flex flex-col shrink-0">
+        <div className="h-16 flex items-center px-5 border-b border-border/60">
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded-md bg-primary/15 flex items-center justify-center">
               <Shield className="h-3.5 w-3.5 text-primary" />
@@ -92,11 +92,11 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
             return (
               <Link key={item.href} href={item.href}
                 className={cn(
-                  'group flex items-center gap-2.5 px-3 py-2 rounded-[10px] text-sm font-medium transition-all duration-200 aurora-sidebar-item',
+                  'group flex items-center gap-3 px-3.5 py-2 rounded-[10px] text-sm font-medium transition-all duration-200 aurora-sidebar-item',
                   active && 'active',
                 )}
               >
-                <item.icon className={cn('h-[18px] w-[18px] shrink-0', active ? 'text-primary' : 'text-muted-foreground/60 group-hover:text-foreground/70')} />
+                <item.icon className={cn('h-5 w-5 shrink-0', active ? 'text-primary' : 'text-muted-foreground/60 group-hover:text-foreground/70')} />
                 {item.label}
               </Link>
             );
@@ -129,7 +129,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
 
       {/* Main */}
       <main className="flex-1 overflow-auto">
-        <div className="px-6 py-6">
+        <div className="px-8 py-8">
           {children}
         </div>
       </main>

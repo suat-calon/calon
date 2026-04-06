@@ -26,14 +26,14 @@ export function StatCard({ icon, label, value, detail, trend, className, loading
   if (loading) {
     return (
       <Card className={cn('relative overflow-hidden', className)}>
-        <CardContent className="p-4">
+        <CardContent className="p-5 lg:p-6">
           <div className="flex items-start justify-between">
             <div className="space-y-2 flex-1">
-              <div className="h-3 w-16 rounded bg-muted shimmer" />
-              <div className="h-7 w-20 rounded bg-muted shimmer" />
-              <div className="h-3 w-24 rounded bg-muted shimmer" />
+              <div className="h-3.5 w-20 rounded bg-muted shimmer" />
+              <div className="h-9 w-24 rounded bg-muted shimmer" />
+              <div className="h-3.5 w-28 rounded bg-muted shimmer" />
             </div>
-            <div className="rounded-md bg-muted p-2 shimmer h-9 w-9" />
+            <div className="rounded-xl bg-muted p-3 shimmer h-12 w-12" />
           </div>
         </CardContent>
       </Card>
@@ -44,24 +44,24 @@ export function StatCard({ icon, label, value, detail, trend, className, loading
 
   return (
     <Card className={cn('relative overflow-hidden', className)}>
-      <CardContent className="p-4">
+      <CardContent className="p-5 lg:p-6">
         <div className="flex items-start justify-between">
-          <div className="space-y-1 min-w-0">
-            <p className="text-xs font-medium text-muted-foreground">{label}</p>
-            <p className="text-2xl font-bold tracking-tight truncate">{displayValue}</p>
+          <div className="space-y-1.5 min-w-0">
+            <p className="text-sm font-medium text-muted-foreground">{label}</p>
+            <p className="text-3xl font-bold tracking-tight truncate">{displayValue}</p>
             {detail && (
-              <p className="text-xs text-muted-foreground truncate">{detail}</p>
+              <p className="text-sm text-muted-foreground truncate">{detail}</p>
             )}
             {trend && (
               <p className={cn(
-                'text-xs font-medium',
+                'text-sm font-medium',
                 trend.positive ? 'text-green-600' : 'text-red-600',
               )}>
                 {trend.positive ? '↑' : '↓'} {trend.value}
               </p>
             )}
           </div>
-          <div className="rounded-md bg-primary/10 p-2 text-primary shrink-0">
+          <div className="rounded-xl bg-primary/10 p-3 text-primary shrink-0">
             {icon}
           </div>
         </div>

@@ -9,12 +9,12 @@ export default function AdminOpsPage() {
   const { data: version, isLoading: vLoading } = useVersionInfo();
 
   return (
-    <div className="space-y-5 max-w-6xl">
+    <div className="space-y-7">
       {/* Page header */}
-      <div className="flex items-center justify-between pb-1 border-b border-border/40">
+      <div className="flex items-center justify-between pb-2 border-b border-border/40">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight">Operasyon & Sağlık</h1>
-          <p className="text-[11px] text-muted-foreground/70 mt-0.5">Read-only cockpit</p>
+          <h1 className="text-2xl font-bold tracking-tight">Operasyon & Sağlık</h1>
+          <p className="text-sm text-muted-foreground/70 mt-1">Read-only cockpit</p>
         </div>
         {health && (
           <Badge variant={health.status === 'ready' ? 'success' : 'destructive'} className="text-[10px]">

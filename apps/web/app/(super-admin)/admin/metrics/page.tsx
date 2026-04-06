@@ -7,12 +7,12 @@ export default function AdminMetricsPage() {
   const { data: metrics, isLoading, error } = useGrowthMetrics();
 
   return (
-    <div className="space-y-5 max-w-6xl">
+    <div className="space-y-7">
       {/* Page header */}
-      <div className="flex items-center justify-between pb-1 border-b border-border/40">
+      <div className="flex items-center justify-between pb-2 border-b border-border/40">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight">Platform Metrikleri</h1>
-          <p className="text-[11px] text-muted-foreground/70 mt-0.5">Read-only metrik cockpit</p>
+          <h1 className="text-2xl font-bold tracking-tight">Platform Metrikleri</h1>
+          <p className="text-sm text-muted-foreground/70 mt-1">Read-only metrik cockpit</p>
         </div>
       </div>
 

@@ -13,10 +13,10 @@ export default function AdminOverviewPage() {
   const error = ovError || grError;
 
   return (
-    <div className="space-y-5 max-w-6xl">
+    <div className="space-y-7">
       {/* Header */}
-      <div className="flex items-center justify-between pb-1 border-b border-border/40">
-        <h1 className="text-xl font-semibold tracking-tight">Platform Genel Bakış</h1>
+      <div className="flex items-center justify-between pb-2 border-b border-border/40">
+        <h1 className="text-2xl font-bold tracking-tight">Platform Genel Bakış</h1>
         {health && (
           <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${health.checks?.database?.status === 'up' ? 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400' : 'bg-red-100 dark:bg-red-950/40 text-red-700 dark:text-red-400'}`}>
             {health.status === 'ready' ? '● Sağlıklı' : '○ Sorunlu'}
@@ -37,8 +37,8 @@ export default function AdminOverviewPage() {
         <>
           {/* Stat cards */}
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 mb-2.5">Platform Metrikleri</p>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/60 mb-3">Platform Metrikleri</p>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <StatCard icon={Building2} label="Toplam Salon" value={overview?.totalTenants ?? growth?.totalSalons ?? 0} />
               <StatCard icon={Users} label="Aktif Salon" value={overview?.activeTenants ?? growth?.activeSalons ?? 0} accent />
               <StatCard icon={Calendar} label="Bugünkü Randevu" value={growth?.bookingsToday ?? 0} />
@@ -48,10 +48,10 @@ export default function AdminOverviewPage() {
 
           {/* Health + Version */}
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 mb-2.5">Altyapı</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-              <div className="bg-card rounded-lg border p-4 space-y-2">
-                <h3 className="text-sm font-semibold">Platform Sağlığı</h3>
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/60 mb-3">Altyapı</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-card rounded-xl border p-5 lg:p-6 space-y-3">
+                <h3 className="text-base font-semibold">Platform Sağlığı</h3>
                 {health?.checks ? (
                   <div className="space-y-1.5 text-sm">
                     <div className="flex justify-between"><span className="text-muted-foreground">Database</span><span className={health.checks.database.status === 'up' ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}>{health.checks.database.status} ({health.checks.database.latencyMs}ms)</span></div>
@@ -59,8 +59,8 @@ export default function AdminOverviewPage() {
                   </div>
                 ) : <p className="text-[11px] text-muted-foreground/70">Veri yok</p>}
               </div>
-              <div className="bg-card rounded-lg border p-4 space-y-2">
-                <h3 className="text-sm font-semibold">Versiyon</h3>
+              <div className="bg-card rounded-xl border p-5 lg:p-6 space-y-3">
+                <h3 className="text-base font-semibold">Versiyon</h3>
                 {version ? (
                   <div className="space-y-1.5 text-sm">
                     <div className="flex justify-between"><span className="text-muted-foreground">Version</span><span className="font-mono text-[11px]">{version.version}</span></div>
@@ -75,8 +75,8 @@ export default function AdminOverviewPage() {
           {/* Plan distribution */}
           {growth?.planDistribution && Object.keys(growth.planDistribution).length > 0 && (
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 mb-2.5">Plan Dağılımı</p>
-              <div className="bg-card rounded-lg border p-4 space-y-2.5">
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/60 mb-3">Plan Dağılımı</p>
+              <div className="bg-card rounded-xl border p-5 lg:p-6 space-y-3.5">
                 {Object.entries(growth.planDistribution).map(([plan, count]) => {
                   const total = overview?.totalTenants ?? growth?.totalSalons ?? 1;
                   const pct = Math.min(100, ((count as number) / Math.max(total, 1)) * 100);
@@ -101,14 +101,14 @@ export default function AdminOverviewPage() {
 
 function StatCard({ icon: Icon, label, value, accent }: { icon: React.ComponentType<{ className?: string }>; label: string; value: number; accent?: boolean }) {
   return (
-    <div className="bg-card rounded-lg border p-4 transition-all duration-150 motion-safe:hover:shadow-md">
-      <div className="flex items-center gap-3">
-        <div className={`p-1.5 rounded-md ${accent ? 'bg-primary/10' : 'bg-muted'}`}>
-          <Icon className={`h-3.5 w-3.5 ${accent ? 'text-primary' : 'text-muted-foreground'}`} />
-        </div>
+    <div className="bg-card rounded-xl border p-5 lg:p-6 transition-all duration-150 motion-safe:hover:shadow-md">
+      <div className="flex items-start justify-between">
         <div>
-          <p className="text-xl font-semibold leading-none">{value}</p>
-          <p className="text-[11px] text-muted-foreground mt-0.5">{label}</p>
+          <p className="text-sm text-muted-foreground mb-1">{label}</p>
+          <p className="text-3xl font-bold leading-none">{value}</p>
+        </div>
+        <div className={`p-2.5 rounded-xl ${accent ? 'bg-primary/10' : 'bg-muted'}`}>
+          <Icon className={`h-5 w-5 ${accent ? 'text-primary' : 'text-muted-foreground'}`} />
         </div>
       </div>
     </div>

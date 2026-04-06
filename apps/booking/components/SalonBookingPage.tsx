@@ -40,7 +40,7 @@ export function SalonBookingPage({ salon, services, staff, canonicalUrl, initial
           <div className="absolute bottom-0 right-1/4 w-64 h-64 bg-brand-400 rounded-full blur-2xl" />
         </div>
 
-        <div className="relative max-w-5xl mx-auto px-6 py-20 text-center">
+        <div className="relative max-w-6xl mx-auto px-6 lg:px-10 py-24 text-center">
           {/* Logo */}
           {salon.logoUrl && (
             <div className="flex justify-center mb-6">
@@ -53,7 +53,7 @@ export function SalonBookingPage({ salon, services, staff, canonicalUrl, initial
             </div>
           )}
 
-          <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-3">
+          <h1 className="text-5xl md:text-7xl font-bold tracking-tight mb-3">
             {salon.name}
           </h1>
 
@@ -82,7 +82,7 @@ export function SalonBookingPage({ salon, services, staff, canonicalUrl, initial
           <a
             href="#booking"
             className="inline-flex items-center gap-2 bg-white/90 text-brand-800 font-semibold
-                       px-8 py-4 rounded-2xl text-lg shadow-xl hover:shadow-2xl
+                       px-10 py-5 rounded-2xl text-xl shadow-xl hover:shadow-2xl
                        hover:bg-white transition-all duration-200 backdrop-blur-sm"
           >
             <CheckCircle className="w-5 h-5" />
@@ -91,7 +91,7 @@ export function SalonBookingPage({ salon, services, staff, canonicalUrl, initial
         </div>
       </section>
 
-      <div className="max-w-5xl mx-auto px-6">
+      <div className="max-w-6xl mx-auto px-6 lg:px-10">
 
         {/* ── 1b. SALON BIO ─────────────────────────────────────────────── */}
         {salon.description && (
@@ -140,11 +140,11 @@ export function SalonBookingPage({ salon, services, staff, canonicalUrl, initial
             <h2 className="text-3xl font-bold mb-8" style={{color:'#332B5B'}}>
               Hizmetlerimiz
             </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {services.map((service) => (
                 <div
                   key={service.id}
-                  className="booking-glass rounded-2xl p-6 shadow-sm
+                  className="booking-glass rounded-2xl p-7 shadow-sm
                              hover:shadow-lg transition-all duration-200 motion-safe:hover:-translate-y-1"
                 >
                   <div className="flex items-start justify-between mb-2">
