@@ -12,12 +12,32 @@ html {
   scroll-behavior: smooth;
 }
 
+/* ──────────────────────────────────────────────
+   CALON Aurora — Booking app surface
+   Palette: Lavender / Violet / Mist Blue
+   ────────────────────────────────────────────── */
 body {
   font-family: 'Inter', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: #fafafa;
-  color: #111827;
+  background: linear-gradient(
+    135deg,
+    #F5F1FF 0%,
+    #ECE3FF 25%,
+    #E7F0FF 50%,
+    #F6E8FF 75%,
+    #F5F1FF 100%
+  );
+  background-attachment: fixed;
+  background-size: cover;
+  color: #332B5B;
+  min-height: 100vh;
+}
+
+@media (max-width: 768px) {
+  body {
+    background-attachment: scroll;
+  }
 }
 
 /* Booking widget step animation */
@@ -28,4 +48,40 @@ body {
 
 .step-enter {
   animation: fadeSlideIn 0.2s ease-out;
+}
+
+/* Aurora glass — booking widget kartlar */
+.booking-glass {
+  background: rgba(255, 255, 255, 0.50);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.booking-glass:hover {
+  background: rgba(255, 255, 255, 0.65);
+  border-color: rgba(109, 76, 255, 0.20);
+  box-shadow: 0 4px 20px rgba(109, 76, 255, 0.08);
+}
+
+/* Aurora input — booking */
+.booking-input {
+  background: rgba(255, 255, 255, 0.60);
+  border: 1px solid rgba(255, 255, 255, 0.60);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: #332B5B;
+}
+
+.booking-input:focus {
+  border-color: rgba(109, 76, 255, 0.40);
+  box-shadow: 0 0 0 3px rgba(109, 76, 255, 0.10);
+  outline: none;
+}
+
+/* Slot chip active */
+.slot-active {
+  background: linear-gradient(135deg, #6D4CFF 0%, #8A5CFF 100%);
+  color: #fff;
+  border-color: transparent;
 }

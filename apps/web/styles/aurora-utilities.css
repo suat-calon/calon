@@ -1,9 +1,9 @@
 /* ──────────────────────────────────────────────
-   CALON AURORA — Isolated utility layer
-   Bu dosya yalnızca /ui/aurora route'unda kullanılır.
-   Global sisteme müdahale etmez.
+   CALON Aurora — Global utility layer
+   Tüm yüzeylerde kullanılabilir.
    ────────────────────────────────────────────── */
 
+/* ── Arka plan ── */
 .aurora-bg {
   background: linear-gradient(
     135deg,
@@ -30,6 +30,26 @@
   z-index: 0;
 }
 
+/* Dark mode arka plan */
+.dark .aurora-bg {
+  background: linear-gradient(
+    135deg,
+    #0F0B1A 0%,
+    #151126 30%,
+    #1B1633 60%,
+    #171D33 80%,
+    #0F0B1A 100%
+  );
+}
+
+.dark .aurora-bg::before {
+  background:
+    radial-gradient(ellipse 80% 60% at 20% 30%, rgba(138, 92, 255, 0.10) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 80% at 80% 70%, rgba(200, 107, 255, 0.07) 0%, transparent 70%),
+    radial-gradient(ellipse 70% 50% at 50% 10%, rgba(126, 215, 255, 0.05) 0%, transparent 70%);
+}
+
+/* ── Glass yüzeyler ── */
 .aurora-glass {
   background: rgba(255, 255, 255, 0.42);
   border: 1px solid rgba(255, 255, 255, 0.50);
@@ -51,6 +71,29 @@
   -webkit-backdrop-filter: blur(32px);
 }
 
+/* Dark mode glass */
+.dark .aurora-glass {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+
+.dark .aurora-glass-subtle {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.dark .aurora-glass-strong {
+  background: rgba(255, 255, 255, 0.09);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(32px);
+  -webkit-backdrop-filter: blur(32px);
+}
+
+/* ── Input ── */
 .aurora-input {
   background: rgba(255, 255, 255, 0.50);
   border: 1px solid rgba(255, 255, 255, 0.55);
@@ -71,6 +114,24 @@
   outline: none;
 }
 
+.dark .aurora-input {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.dark .aurora-input:hover {
+  border-color: rgba(138, 92, 255, 0.30);
+  background: rgba(255, 255, 255, 0.09);
+}
+
+.dark .aurora-input:focus {
+  border-color: rgba(138, 92, 255, 0.50);
+  box-shadow: 0 0 0 3px rgba(138, 92, 255, 0.15);
+  background: rgba(255, 255, 255, 0.10);
+  outline: none;
+}
+
+/* ── Butonlar ── */
 .aurora-btn-primary {
   background: linear-gradient(135deg, #6D4CFF 0%, #8A5CFF 100%);
   color: #fff;
@@ -79,13 +140,13 @@
 }
 
 .aurora-btn-primary:hover {
-  box-shadow: 0 4px 20px rgba(109, 76, 255, 0.25);
+  box-shadow: 0 4px 20px rgba(109, 76, 255, 0.30);
   transform: translateY(-1px);
 }
 
 .aurora-btn-primary:active {
   transform: translateY(0);
-  box-shadow: 0 2px 10px rgba(109, 76, 255, 0.18);
+  box-shadow: 0 2px 10px rgba(109, 76, 255, 0.20);
 }
 
 .aurora-btn-social {
@@ -100,56 +161,135 @@
   background: rgba(255, 255, 255, 0.70);
   border-color: rgba(109, 76, 255, 0.18);
   transform: translateY(-1px);
-  box-shadow: 0 2px 12px rgba(109, 76, 255, 0.08);
+  box-shadow: 0 2px 12px rgba(109, 76, 255, 0.10);
 }
 
+.dark .aurora-btn-social {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.dark .aurora-btn-social:hover {
+  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(138, 92, 255, 0.30);
+  box-shadow: 0 2px 12px rgba(138, 92, 255, 0.15);
+}
+
+/* ── Kart ── */
 .aurora-card {
   background: rgba(255, 255, 255, 0.38);
   border: 1px solid rgba(255, 255, 255, 0.48);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border-radius: 16px;
+  border-radius: 20px;
   transition: all 0.25s ease;
 }
 
 .aurora-card:hover {
   background: rgba(255, 255, 255, 0.48);
-  box-shadow: 0 4px 24px rgba(109, 76, 255, 0.06);
-  transform: translateY(-1px);
+  box-shadow: 0 4px 24px rgba(109, 76, 255, 0.08);
+  transform: translateY(-2px);
 }
 
+.dark .aurora-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+}
+
+.dark .aurora-card:hover {
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 24px rgba(138, 92, 255, 0.18);
+  transform: translateY(-2px);
+}
+
+/* ── Ayırıcı ── */
 .aurora-divider {
   width: 1px;
   background: linear-gradient(
     180deg,
     transparent 0%,
     rgba(109, 76, 255, 0.10) 20%,
-    rgba(109, 76, 255, 0.12) 50%,
+    rgba(109, 76, 255, 0.14) 50%,
     rgba(109, 76, 255, 0.10) 80%,
     transparent 100%
   );
 }
 
+.dark .aurora-divider {
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(138, 92, 255, 0.20) 20%,
+    rgba(138, 92, 255, 0.25) 50%,
+    rgba(138, 92, 255, 0.20) 80%,
+    transparent 100%
+  );
+}
+
+/* ── Sidebar öğesi ── */
 .aurora-sidebar-item {
   transition: all 0.2s ease;
   border-radius: 10px;
   padding: 8px 12px;
+  color: #6E6791;
 }
 
 .aurora-sidebar-item:hover {
-  background: rgba(109, 76, 255, 0.06);
+  background: rgba(109, 76, 255, 0.07);
+  color: #332B5B;
 }
 
 .aurora-sidebar-item.active {
-  background: rgba(109, 76, 255, 0.10);
+  background: rgba(109, 76, 255, 0.12);
   color: #6D4CFF;
+  font-weight: 500;
 }
 
+.dark .aurora-sidebar-item {
+  color: #9E97BE;
+}
+
+.dark .aurora-sidebar-item:hover {
+  background: rgba(138, 92, 255, 0.10);
+  color: #C9C2EA;
+}
+
+.dark .aurora-sidebar-item.active {
+  background: rgba(138, 92, 255, 0.18);
+  color: #8A5CFF;
+}
+
+/* ── Animasyonlar ── */
 @keyframes aurora-pulse {
   0%, 100% { opacity: 0.4; }
   50% { opacity: 0.7; }
 }
 
+@keyframes aurora-float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-4px); }
+}
+
 .aurora-glow-dot {
   animation: aurora-pulse 3s ease-in-out infinite;
+}
+
+.aurora-float {
+  animation: aurora-float 6s ease-in-out infinite;
+}
+
+/* ── KPI kart hover shimmer ── */
+.aurora-kpi-card {
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.aurora-kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(109, 76, 255, 0.12);
+}
+
+.dark .aurora-kpi-card:hover {
+  box-shadow: 0 8px 32px rgba(138, 92, 255, 0.22);
 }

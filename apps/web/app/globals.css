@@ -4,79 +4,90 @@
 
 @layer base {
   :root {
-    --background:             0 0% 100%;
-    --foreground:             222.2 84% 4.9%;
+    /* ────────────────────────────────────────────
+       CALON Aurora — Light surface token sistemi
+       Palette: Lavender / Violet / Mist Blue
+       Primary text: #332B5B  Accent: #6D4CFF
+       ──────────────────────────────────────────── */
+
+    --background:             252 100% 97%;   /* #F5F1FF lavender white   */
+    --foreground:             251  36% 26%;   /* #332B5B deep violet text */
 
     --card:                   0 0% 100%;
-    --card-foreground:        222.2 84% 4.9%;
+    --card-foreground:        251  36% 26%;
 
     --popover:                0 0% 100%;
-    --popover-foreground:     222.2 84% 4.9%;
+    --popover-foreground:     251  36% 26%;
 
-    /* Calon brand — Primary Purple */
-    --primary:                271 76% 53%;
+    /* Aurora — Primary Violet */
+    --primary:                253 100% 65%;   /* #6D4CFF */
     --primary-foreground:     0 0% 100%;
 
-    --secondary:              210 40% 96.1%;
-    --secondary-foreground:   222.2 47.4% 11.2%;
+    --secondary:              258 100% 95%;   /* #ECE3FF soft lavender   */
+    --secondary-foreground:   251  36% 26%;
 
-    --muted:                  210 40% 96.1%;
-    --muted-foreground:       215.4 16.3% 46.9%;
+    --muted:                  258  50% 95%;
+    --muted-foreground:       251  16% 49%;   /* #6E6791 secondary text  */
 
-    /* Calon brand — Warm Coral accent */
-    --accent:                 12 76% 61%;
+    /* Aurora — Orchid accent */
+    --accent:                 284 100% 72%;   /* #C86BFF orchid          */
     --accent-foreground:      0 0% 100%;
 
     --destructive:            0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive-foreground: 0 0% 100%;
 
-    /* Calon — success / warning semantic */
     --success:                142 71% 45%;
     --success-foreground:     0 0% 100%;
     --warning:                38 92% 50%;
     --warning-foreground:     0 0% 100%;
 
-    --border:                 214.3 31.8% 91.4%;
-    --input:                  214.3 31.8% 91.4%;
-    --ring:                   271 76% 53%;
+    --border:                 258  50% 88%;   /* soft lavender border    */
+    --input:                  258  50% 88%;
+    --ring:                   253 100% 65%;
 
-    --radius:                 0.5rem;
+    --radius:                 0.75rem;
   }
 
   .dark {
-    /* Surface stack: deep navy, NOT pure black */
-    --background:             224 71% 4%;
-    --foreground:             210 40% 98%;
+    /* ────────────────────────────────────────────
+       CALON Aurora — Dark surface: derin violet gece
+       Background: #0F0B1A  Card: #151126
+       Text: #F4F1FF  Border: rgba kontrollü
+       ──────────────────────────────────────────── */
 
-    --card:                   223 47% 10%;
-    --card-foreground:        210 40% 98%;
+    --background:             256  44%  7%;   /* #0F0B1A deep violet     */
+    --foreground:             252  80% 95%;   /* #F4F1FF lavender white  */
 
-    --popover:                223 47% 12%;
-    --popover-foreground:     210 40% 98%;
+    --card:                   251  42% 11%;   /* #151126 elevated dark   */
+    --card-foreground:        252  80% 95%;
 
-    --primary:                271 76% 53%;
+    --popover:                251  38% 14%;
+    --popover-foreground:     252  80% 95%;
+
+    /* Aurora dark — primary biraz parlak */
+    --primary:                257 100% 68%;   /* #8A5CFF electric purple */
     --primary-foreground:     0 0% 100%;
 
-    --secondary:              223 47% 15%;
-    --secondary-foreground:   210 40% 98%;
+    --secondary:              251  38% 18%;
+    --secondary-foreground:   252  80% 95%;
 
-    --muted:                  223 47% 15%;
-    --muted-foreground:       215 20.2% 65.1%;
+    --muted:                  251  38% 18%;
+    --muted-foreground:       251  15% 62%;   /* #938DB2 muted text      */
 
-    --accent:                 12 76% 61%;
+    --accent:                 284 100% 72%;
     --accent-foreground:      0 0% 100%;
 
     --destructive:            0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive-foreground: 0 0% 100%;
 
     --success:                142 71% 45%;
     --success-foreground:     0 0% 100%;
     --warning:                38 92% 50%;
     --warning-foreground:     0 0% 100%;
 
-    --border:                 223 30% 20%;
-    --input:                  223 30% 20%;
-    --ring:                   271 76% 53%;
+    --border:                 251  30% 22%;
+    --input:                  251  30% 22%;
+    --ring:                   257 100% 68%;
   }
 }
 
@@ -87,7 +98,81 @@
   body {
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
+}
+
+/* ──────────────────────────────────────────────
+   Aurora gradient arka plan — sadece light mode
+   ────────────────────────────────────────────── */
+html:not(.dark) body {
+  background-image: linear-gradient(
+    135deg,
+    #F5F1FF 0%,
+    #ECE3FF 25%,
+    #E7F0FF 50%,
+    #F6E8FF 75%,
+    #F5F1FF 100%
+  );
+  background-attachment: fixed;
+  background-size: cover;
+}
+
+@media (max-width: 768px) {
+  html:not(.dark) body {
+    background-attachment: scroll;
+  }
+}
+
+/* ──────────────────────────────────────────────
+   Glass card — light mode
+   ────────────────────────────────────────────── */
+html:not(.dark) .bg-card {
+  background: rgba(255, 255, 255, 0.42);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+
+/* ──────────────────────────────────────────────
+   Glass card — dark mode (kontrollü, çamur değil)
+   ────────────────────────────────────────────── */
+.dark .bg-card {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-color: rgba(255, 255, 255, 0.10);
+}
+
+/* ──────────────────────────────────────────────
+   Glass popover
+   ────────────────────────────────────────────── */
+html:not(.dark) .bg-popover {
+  background: rgba(255, 255, 255, 0.80);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+
+.dark .bg-popover {
+  background: rgba(21, 17, 38, 0.90);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+
+/* ──────────────────────────────────────────────
+   Aurora input focus glow
+   ────────────────────────────────────────────── */
+html:not(.dark) input:focus,
+html:not(.dark) textarea:focus,
+html:not(.dark) select:focus {
+  box-shadow: 0 0 0 3px rgba(109, 76, 255, 0.12);
+}
+
+.dark input:focus,
+.dark textarea:focus,
+.dark select:focus {
+  box-shadow: 0 0 0 3px rgba(138, 92, 255, 0.20);
 }
 
 @import "../styles/aurora-utilities.css";
