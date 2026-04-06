@@ -26,14 +26,14 @@ function Hero() {
   return (
     <section className="relative overflow-hidden">
       {/* Ambient glow */}
-      <div className="absolute inset-0 bg-gradient-to-b from-amber-50/40 via-purple-50/20 to-transparent dark:from-amber-950/15 dark:via-purple-950/10 dark:to-transparent pointer-events-none" />
-      <div className="absolute top-20 -left-40 w-[600px] h-[600px] rounded-full bg-amber-200/20 dark:bg-amber-500/5 blur-3xl pointer-events-none" />
-      <div className="absolute top-40 right-0 w-[500px] h-[500px] rounded-full bg-purple-200/15 dark:bg-purple-500/5 blur-3xl pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-b from-purple-50/30 via-amber-50/10 to-transparent dark:from-purple-950/15 dark:via-amber-950/5 dark:to-transparent pointer-events-none" />
+      <div className="absolute top-20 -left-40 w-[600px] h-[600px] rounded-full bg-purple-200/20 dark:bg-purple-500/5 blur-3xl pointer-events-none" />
+      <div className="absolute top-40 right-0 w-[500px] h-[500px] rounded-full bg-amber-200/10 dark:bg-amber-500/3 blur-3xl pointer-events-none" />
 
       <div className={`${shell} relative pt-20 pb-16 lg:pt-28 lg:pb-24`}>
         <div className="max-w-[860px]">
           {/* Eyebrow */}
-          <div className="inline-flex items-center gap-2.5 rounded-full border border-amber-300/50 bg-amber-50/70 px-5 py-2 text-[15px] font-semibold text-amber-800 dark:border-amber-600/30 dark:bg-amber-950/40 dark:text-amber-300 mb-7 shadow-sm">
+          <div className="inline-flex items-center gap-2.5 rounded-full border border-purple-200/60 bg-purple-50/60 px-5 py-2 text-[15px] font-semibold text-purple-700 dark:border-purple-700/40 dark:bg-purple-950/40 dark:text-purple-300 mb-7 shadow-sm">
             <Sparkles className="h-4 w-4" />
             Beauty & Wellness Business OS
           </div>
@@ -57,7 +57,7 @@ function Hero() {
 
           {/* CTAs */}
           <div className="mt-9 flex flex-wrap items-center gap-4">
-            <Button asChild size="lg" className="h-14 px-9 text-lg font-semibold bg-amber-500 hover:bg-amber-600 text-white dark:bg-amber-500 dark:hover:bg-amber-400 dark:text-black shadow-lg shadow-amber-500/20">
+            <Button asChild size="lg" className="h-14 px-9 text-lg font-semibold bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20 hover:shadow-amber-500/10">
               <Link href="/register">
                 Demo Talep Et
                 <ArrowRight className="ml-2.5 h-5 w-5" />
@@ -91,12 +91,12 @@ function TrustBand() {
   ];
 
   return (
-    <section className="border-y border-border/40 bg-[hsl(40_30%_97%)] dark:bg-[hsl(224_40%_8%)]">
+    <section className="border-y border-border/40 bg-muted/30 dark:bg-[hsl(224_40%_8%)]">
       <div className={`${shell} py-5`}>
         <div className="flex flex-wrap items-center justify-center gap-x-14 gap-y-3">
           {signals.map((s) => (
             <div key={s.text} className="flex items-center gap-2.5 text-[15px] font-medium text-muted-foreground">
-              <s.icon className="h-5 w-5 text-amber-500/70 dark:text-amber-400/60" />
+              <s.icon className="h-5 w-5 text-primary/60 dark:text-purple-400/60" />
               {s.text}
             </div>
           ))}
@@ -133,7 +133,7 @@ function CoreValue() {
     <section className="bg-background dark:bg-[hsl(224_50%_5%)]">
       <div className={`${shell} py-20 lg:py-28`}>
         <div className="text-center mb-14">
-          <p className="text-sm font-bold uppercase tracking-[0.2em] text-amber-600 dark:text-amber-400 mb-4">Neden Calon?</p>
+          <p className="text-sm font-bold uppercase tracking-[0.2em] text-primary/80 dark:text-purple-400 mb-4">Neden Calon?</p>
           <h2
             className="font-bold tracking-tight text-foreground"
             style={{ fontSize: 'clamp(1.75rem, 3vw + 0.5rem, 3rem)' }}
@@ -148,8 +148,8 @@ function CoreValue() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
           {values.map((v) => (
             <div key={v.title} className="rounded-2xl border border-border/50 bg-card dark:bg-[hsl(224_40%_9%)] dark:border-[hsl(224_30%_16%)] p-8 lg:p-9 space-y-4 transition-colors hover:border-amber-300/40 dark:hover:border-amber-600/30">
-              <div className="w-12 h-12 rounded-xl bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center">
-                <v.icon className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+              <div className="w-12 h-12 rounded-xl bg-primary/10 dark:bg-purple-900/40 flex items-center justify-center">
+                <v.icon className="h-6 w-6 text-primary dark:text-purple-400" />
               </div>
               <h3 className="text-xl font-semibold tracking-tight">{v.title}</h3>
               <p className="text-base text-muted-foreground leading-relaxed">{v.desc}</p>
@@ -204,10 +204,10 @@ function ProductProof() {
   ];
 
   return (
-    <section id="urun" className="bg-[hsl(40_20%_97%)] dark:bg-[hsl(224_45%_7%)] border-y border-border/30 dark:border-[hsl(224_30%_14%)]">
+    <section id="urun" className="bg-muted/30 dark:bg-[hsl(224_45%_7%)] border-y border-border/30 dark:border-[hsl(224_30%_14%)]">
       <div className={`${shell} py-20 lg:py-28`}>
         <div className="text-center mb-14">
-          <p className="text-sm font-bold uppercase tracking-[0.2em] text-amber-600 dark:text-amber-400 mb-4">Ürün</p>
+          <p className="text-sm font-bold uppercase tracking-[0.2em] text-primary/80 dark:text-purple-400 mb-4">Ürün</p>
           <h2
             className="font-bold tracking-tight text-foreground"
             style={{ fontSize: 'clamp(1.75rem, 3vw + 0.5rem, 3rem)' }}
@@ -276,7 +276,7 @@ function WhoItsFor() {
     <section className="bg-background dark:bg-[hsl(224_50%_5%)]">
       <div className={`${shell} py-20 lg:py-28`}>
         <div className="text-center mb-14">
-          <p className="text-sm font-bold uppercase tracking-[0.2em] text-amber-600 dark:text-amber-400 mb-4">Kimin İçin?</p>
+          <p className="text-sm font-bold uppercase tracking-[0.2em] text-primary/80 dark:text-purple-400 mb-4">Kimin İçin?</p>
           <h2
             className="font-bold tracking-tight text-foreground"
             style={{ fontSize: 'clamp(1.75rem, 3vw + 0.5rem, 3rem)' }}
@@ -288,8 +288,8 @@ function WhoItsFor() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
           {segments.map((s) => (
             <div key={s.title} className="rounded-2xl border border-border/50 bg-card dark:bg-[hsl(224_40%_9%)] dark:border-[hsl(224_30%_16%)] p-8 lg:p-9 space-y-4 text-center transition-colors hover:border-amber-300/40 dark:hover:border-amber-600/30">
-              <div className="w-12 h-12 rounded-xl bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center mx-auto">
-                <s.icon className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+              <div className="w-12 h-12 rounded-xl bg-primary/10 dark:bg-purple-900/40 flex items-center justify-center mx-auto">
+                <s.icon className="h-6 w-6 text-primary dark:text-purple-400" />
               </div>
               <h3 className="text-xl font-semibold tracking-tight">{s.title}</h3>
               <p className="text-base text-muted-foreground leading-relaxed">{s.desc}</p>
@@ -307,10 +307,10 @@ function WhoItsFor() {
 
 function FinalCTA() {
   return (
-    <section className="relative overflow-hidden bg-[hsl(35_40%_96%)] dark:bg-[hsl(224_45%_7%)] border-t border-border/30 dark:border-[hsl(224_30%_14%)]">
+    <section className="relative overflow-hidden bg-purple-50/30 dark:bg-[hsl(224_45%_7%)] border-t border-border/30 dark:border-[hsl(224_30%_14%)]">
       {/* Glow */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <div className="w-[600px] h-[300px] rounded-full bg-amber-200/20 dark:bg-amber-500/5 blur-3xl" />
+        <div className="w-[600px] h-[300px] rounded-full bg-purple-200/20 dark:bg-purple-500/5 blur-3xl" />
       </div>
 
       <div className={`${narrow} relative px-6 py-20 lg:py-28 text-center`}>
@@ -325,7 +325,7 @@ function FinalCTA() {
           Müşterileriniz hemen online randevu almaya başlasın.
         </p>
         <div className="mt-9 flex flex-wrap items-center justify-center gap-4">
-          <Button asChild size="lg" className="h-14 px-9 text-lg font-semibold bg-amber-500 hover:bg-amber-600 text-white dark:bg-amber-500 dark:hover:bg-amber-400 dark:text-black shadow-lg shadow-amber-500/20">
+          <Button asChild size="lg" className="h-14 px-9 text-lg font-semibold bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20 hover:shadow-amber-500/10">
             <Link href="/register">
               Demo Talep Et
               <ArrowRight className="ml-2.5 h-5 w-5" />
@@ -353,8 +353,8 @@ function Footer() {
       <div className={`${shell} py-10`}>
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-amber-500 flex items-center justify-center shadow-sm">
-              <span className="text-white text-base font-bold">C</span>
+            <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center shadow-sm">
+              <span className="text-primary-foreground text-base font-bold">C</span>
             </div>
             <span className="text-lg font-semibold tracking-tight">Calon</span>
             <span className="text-sm text-muted-foreground/50">Salon Operating System</span>
@@ -385,8 +385,8 @@ export default function LandingPage() {
       <header className="sticky top-0 z-50 border-b border-border/30 dark:border-[hsl(224_30%_12%)] bg-background/80 dark:bg-[hsl(224_50%_4%/0.85)] backdrop-blur-xl">
         <div className={`${shell} h-[72px] flex items-center justify-between`}>
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-amber-500 flex items-center justify-center shadow-sm">
-              <span className="text-white text-base font-bold">C</span>
+            <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center shadow-sm">
+              <span className="text-primary-foreground text-base font-bold">C</span>
             </div>
             <span className="text-lg font-semibold tracking-tight">Calon</span>
           </div>
@@ -394,7 +394,7 @@ export default function LandingPage() {
             <Button asChild variant="ghost" className="text-[15px] text-muted-foreground hover:text-foreground">
               <Link href="/login">Giriş Yap</Link>
             </Button>
-            <Button asChild className="text-[15px] px-6 bg-amber-500 hover:bg-amber-600 text-white dark:bg-amber-500 dark:hover:bg-amber-400 dark:text-black shadow-sm">
+            <Button asChild className="text-[15px] px-6 bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm hover:shadow-amber-500/10">
               <Link href="/register">Demo Talep Et</Link>
             </Button>
           </div>
