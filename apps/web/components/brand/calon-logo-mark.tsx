@@ -45,11 +45,11 @@ export function CalonLogoMark({ size = 36, wordmark = false, className = '' }: P
           x2="228" y2="36"
           gradientUnits="userSpaceOnUse"
         >
-          <stop offset="0%"   stopColor="#064E3B" />
-          <stop offset="22%"  stopColor="#065F46" />
-          <stop offset="52%"  stopColor="#059669" />
-          <stop offset="78%"  stopColor="#10B981" />
-          <stop offset="100%" stopColor="#34D399" />
+          <stop offset="0%"   stopColor="#1E1B6B" />
+          <stop offset="22%"  stopColor="#4C1D95" />
+          <stop offset="52%"  stopColor="#7C3AED" />
+          <stop offset="78%"  stopColor="#C026D3" />
+          <stop offset="100%" stopColor="#EC4899" />
         </linearGradient>
       </defs>
 
@@ -61,7 +61,7 @@ export function CalonLogoMark({ size = 36, wordmark = false, className = '' }: P
           The right-side opening is excluded by the path geometry.
       ─────────────────────────────────────────────────────────────────── */}
       <path
-        className="fill-[#052E16] dark:fill-[#DCFCE7]"
+        className="fill-[#0D0A3B] dark:fill-[#EDE8FF]"
         d="
           M  44  8
           L 162  8
@@ -116,25 +116,25 @@ export function CalonLogoMark({ size = 36, wordmark = false, className = '' }: P
       {/* Bottom-left */}
       <circle
         cx="28" cy="169" r="8.5"
-        className="fill-[#052E16] dark:fill-[#0D2618]"
+        className="fill-[#0D0A3B] dark:fill-[#1E1B4B]"
         stroke="url(#cln-g)" strokeWidth="5"
       />
       {/* Upper-right — outermost arc end */}
       <circle
         cx="222" cy="40" r="11"
-        className="fill-[#052E16] dark:fill-[#0D2618]"
+        className="fill-[#0D0A3B] dark:fill-[#1E1B4B]"
         stroke="url(#cln-g)" strokeWidth="5"
       />
       {/* Upper-right — middle arc end */}
       <circle
         cx="224" cy="53" r="11"
-        className="fill-[#052E16] dark:fill-[#0D2618]"
+        className="fill-[#0D0A3B] dark:fill-[#1E1B4B]"
         stroke="url(#cln-g)" strokeWidth="5"
       />
       {/* Upper-right — inner arc end */}
       <circle
         cx="200" cy="57" r="9"
-        className="fill-[#052E16] dark:fill-[#0D2618]"
+        className="fill-[#0D0A3B] dark:fill-[#1E1B4B]"
         stroke="url(#cln-g)" strokeWidth="4.5"
       />
 
@@ -146,7 +146,7 @@ export function CalonLogoMark({ size = 36, wordmark = false, className = '' }: P
           fontFamily="'Arial Black', 'Helvetica Neue', Arial, sans-serif"
           fontSize="52"
           fontWeight="900"
-          className="fill-[#052E16] dark:fill-[#DCFCE7]"
+          className="fill-[#0D0A3B] dark:fill-[#EDE8FF]"
           textAnchor="middle"
           letterSpacing="6"
         >

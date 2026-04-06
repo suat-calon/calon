@@ -9,19 +9,19 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        /* Verde green brand scale — Calon booking */
+        /* Aurora violet brand scale — Calon booking */
         brand: {
-          50:  '#F0FDF4',
-          100: '#DCFCE7',
-          200: '#BBF7D0',
-          300: '#86EFAC',
-          400: '#4ADE80',  /* bright green      */
-          500: '#22C55E',  /* primary green      */
-          600: '#16A34A',  /* primary dark green */
-          700: '#15803D',
-          800: '#166534',
-          900: '#14532D',
-          950: '#052E16',
+          50:  '#F5F1FF',
+          100: '#ECE3FF',
+          200: '#D4C5FF',
+          300: '#B8A0FF',
+          400: '#8A5CFF',  /* electric purple */
+          500: '#6D4CFF',  /* primary violet  */
+          600: '#5B3EDB',
+          700: '#4830B5',
+          800: '#38248F',
+          900: '#281B6B',
+          950: '#1A1245',
         },
       },
       fontFamily: {

@@ -1,0 +1,155 @@
+/* ──────────────────────────────────────────────
+   CALON AURORA — Isolated utility layer
+   Bu dosya yalnızca /ui/aurora route'unda kullanılır.
+   Global sisteme müdahale etmez.
+   ────────────────────────────────────────────── */
+
+.aurora-bg {
+  background: linear-gradient(
+    135deg,
+    #F5F1FF 0%,
+    #ECE3FF 25%,
+    #E7F0FF 50%,
+    #F6E8FF 75%,
+    #F5F1FF 100%
+  );
+  min-height: 100vh;
+  position: relative;
+  overflow: hidden;
+}
+
+.aurora-bg::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 80% 60% at 20% 30%, rgba(109, 76, 255, 0.06) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 80% at 80% 70%, rgba(200, 107, 255, 0.05) 0%, transparent 70%),
+    radial-gradient(ellipse 70% 50% at 50% 10%, rgba(126, 215, 255, 0.04) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.aurora-glass {
+  background: rgba(255, 255, 255, 0.42);
+  border: 1px solid rgba(255, 255, 255, 0.50);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+
+.aurora-glass-subtle {
+  background: rgba(255, 255, 255, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.38);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.aurora-glass-strong {
+  background: rgba(255, 255, 255, 0.56);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(32px);
+  -webkit-backdrop-filter: blur(32px);
+}
+
+.aurora-input {
+  background: rgba(255, 255, 255, 0.50);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: all 0.2s ease;
+}
+
+.aurora-input:hover {
+  border-color: rgba(109, 76, 255, 0.20);
+  background: rgba(255, 255, 255, 0.60);
+}
+
+.aurora-input:focus {
+  border-color: rgba(109, 76, 255, 0.40);
+  box-shadow: 0 0 0 3px rgba(109, 76, 255, 0.08);
+  background: rgba(255, 255, 255, 0.70);
+  outline: none;
+}
+
+.aurora-btn-primary {
+  background: linear-gradient(135deg, #6D4CFF 0%, #8A5CFF 100%);
+  color: #fff;
+  border: none;
+  transition: all 0.2s ease;
+}
+
+.aurora-btn-primary:hover {
+  box-shadow: 0 4px 20px rgba(109, 76, 255, 0.25);
+  transform: translateY(-1px);
+}
+
+.aurora-btn-primary:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 10px rgba(109, 76, 255, 0.18);
+}
+
+.aurora-btn-social {
+  background: rgba(255, 255, 255, 0.50);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: all 0.2s ease;
+}
+
+.aurora-btn-social:hover {
+  background: rgba(255, 255, 255, 0.70);
+  border-color: rgba(109, 76, 255, 0.18);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 12px rgba(109, 76, 255, 0.08);
+}
+
+.aurora-card {
+  background: rgba(255, 255, 255, 0.38);
+  border: 1px solid rgba(255, 255, 255, 0.48);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 16px;
+  transition: all 0.25s ease;
+}
+
+.aurora-card:hover {
+  background: rgba(255, 255, 255, 0.48);
+  box-shadow: 0 4px 24px rgba(109, 76, 255, 0.06);
+  transform: translateY(-1px);
+}
+
+.aurora-divider {
+  width: 1px;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(109, 76, 255, 0.10) 20%,
+    rgba(109, 76, 255, 0.12) 50%,
+    rgba(109, 76, 255, 0.10) 80%,
+    transparent 100%
+  );
+}
+
+.aurora-sidebar-item {
+  transition: all 0.2s ease;
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+
+.aurora-sidebar-item:hover {
+  background: rgba(109, 76, 255, 0.06);
+}
+
+.aurora-sidebar-item.active {
+  background: rgba(109, 76, 255, 0.10);
+  color: #6D4CFF;
+}
+
+@keyframes aurora-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.7; }
+}
+
+.aurora-glow-dot {
+  animation: aurora-pulse 3s ease-in-out infinite;
+}
