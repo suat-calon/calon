@@ -5,6 +5,7 @@ import {
   Layers, Monitor, Smartphone,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { LandingThemeToggle } from '@/components/landing/theme-toggle';
 
 export const metadata = {
   title: 'Calon — Salon Operating System',
@@ -390,7 +391,8 @@ export default function LandingPage() {
             </div>
             <span className="text-lg font-semibold tracking-tight">Calon</span>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <LandingThemeToggle />
             <Button asChild variant="ghost" className="text-[15px] text-muted-foreground hover:text-foreground">
               <Link href="/login">Giriş Yap</Link>
             </Button>
