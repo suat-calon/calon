@@ -96,7 +96,7 @@ export function SalonBookingPage({ salon, services, staff, canonicalUrl, initial
         {/* ── 1b. SALON BIO ─────────────────────────────────────────────── */}
         {salon.description && (
           <section className="py-10">
-            <p className="text-gray-600 text-base leading-relaxed max-w-3xl">
+            <p className="text-gray-600 text-lg leading-relaxed max-w-3xl">
               {salon.description}
             </p>
           </section>
@@ -109,11 +109,11 @@ export function SalonBookingPage({ salon, services, staff, canonicalUrl, initial
               <div className="flex items-start gap-3">
                 <Megaphone className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-gray-900 text-sm">
+                  <h3 className="font-semibold text-gray-900 text-base">
                     {salon.announcementTitle}
                   </h3>
                   {salon.announcementText && (
-                    <p className="text-gray-600 text-sm mt-1">
+                    <p className="text-gray-600 text-base mt-1">
                       {salon.announcementText}
                     </p>
                   )}
@@ -137,34 +137,34 @@ export function SalonBookingPage({ salon, services, staff, canonicalUrl, initial
         {/* ── 2. HİZMETLER ──────────────────────────────────────────────── */}
         {services.length > 0 && (
           <section className="py-16">
-            <h2 className="text-2xl font-bold text-gray-900 mb-8">
+            <h2 className="text-3xl font-bold text-gray-900 mb-8">
               Hizmetlerimiz
             </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
               {services.map((service) => (
                 <div
                   key={service.id}
-                  className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm
-                             hover:shadow-md transition-shadow duration-200"
+                  className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm
+                             hover:shadow-lg transition-all duration-200 motion-safe:hover:-translate-y-1"
                 >
                   <div className="flex items-start justify-between mb-2">
-                    <h3 className="font-semibold text-gray-900 text-sm leading-tight">
+                    <h3 className="font-semibold text-gray-900 text-base leading-tight">
                       {service.name}
                     </h3>
-                    <span className="text-brand-600 font-bold text-sm ml-2 shrink-0">
+                    <span className="text-brand-600 font-bold text-base ml-2 shrink-0">
                       {formatPrice(service.price, service.currency)}
                     </span>
                   </div>
                   {service.description && (
-                    <p className="text-gray-500 text-xs mb-3 line-clamp-2">
+                    <p className="text-gray-500 text-sm mb-3 line-clamp-2">
                       {service.description}
                     </p>
                   )}
-                  <div className="flex items-center gap-1 text-gray-400 text-xs">
+                  <div className="flex items-center gap-1 text-gray-400 text-sm">
                     <Clock className="w-3.5 h-3.5" />
                     <span>{formatDuration(service.durationMin)}</span>
                     <span className="mx-1">•</span>
-                    <span className="text-brand-500 font-medium text-xs">
+                    <span className="text-brand-500 font-medium text-sm">
                       {service.categoryName}
                     </span>
                   </div>
@@ -177,28 +177,28 @@ export function SalonBookingPage({ salon, services, staff, canonicalUrl, initial
         {/* ── 3. PERSONEL ───────────────────────────────────────────────── */}
         {staff.length > 0 && (
           <section className="py-8 border-t border-gray-100">
-            <h2 className="text-2xl font-bold text-gray-900 mb-8">
+            <h2 className="text-3xl font-bold text-gray-900 mb-8">
               Ekibimiz
             </h2>
             <div className="flex flex-wrap gap-4">
               {staff.map((member) => (
                 <div
                   key={member.id}
-                  className="flex items-center gap-3 bg-gray-50 rounded-2xl px-4 py-3"
+                  className="flex items-center gap-3 bg-gray-50 rounded-2xl px-5 py-4 transition-all duration-150 motion-safe:hover:-translate-y-0.5 motion-safe:hover:shadow-sm"
                 >
                   <div
-                    className="w-10 h-10 rounded-full flex items-center justify-center
-                                text-white font-semibold text-sm shrink-0"
+                    className="w-11 h-11 rounded-full flex items-center justify-center
+                                text-white font-semibold text-base shrink-0"
                     style={{ backgroundColor: member.colorHex }}
                   >
                     {member.firstName[0]}{member.lastName[0]}
                   </div>
                   <div>
-                    <p className="font-medium text-gray-900 text-sm">
+                    <p className="font-medium text-gray-900 text-base">
                       {member.firstName} {member.lastName}
                     </p>
                     {member.title && (
-                      <p className="text-gray-500 text-xs">{member.title}</p>
+                      <p className="text-gray-500 text-sm">{member.title}</p>
                     )}
                   </div>
                 </div>
@@ -210,7 +210,7 @@ export function SalonBookingPage({ salon, services, staff, canonicalUrl, initial
         {/* ── 3b. GALERİ ──────────────────────────────────────────────── */}
         {salon.galleryImages && salon.galleryImages.length > 0 && (
           <section className="py-8 border-t border-gray-100">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Galeri</h2>
+            <h2 className="text-3xl font-bold text-gray-900 mb-6">Galeri</h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {salon.galleryImages.slice(0, 6).map((url, i) => (
                 <div
@@ -232,10 +232,10 @@ export function SalonBookingPage({ salon, services, staff, canonicalUrl, initial
 
         {/* ── 4. BOOKING WIDGET ─────────────────────────────────────────── */}
         <section id="booking" className="py-16 border-t border-gray-100">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+          <h2 className="text-3xl font-bold text-gray-900 mb-2">
             Online Randevu
           </h2>
-          <p className="text-gray-500 text-sm mb-8">
+          <p className="text-gray-500 text-base mb-8">
             Hizmet ve personel seçerek uygun bir slot rezerve edin.
           </p>
           <BookingWidget
@@ -249,7 +249,7 @@ export function SalonBookingPage({ salon, services, staff, canonicalUrl, initial
         {/* ── 5. KONUM ──────────────────────────────────────────────────── */}
         {salon.location && (
           <section className="py-8 border-t border-gray-100">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Konum</h2>
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">Konum</h2>
             <div className="flex items-start gap-3 mb-4 text-gray-700">
               <MapPin className="w-5 h-5 text-brand-500 mt-0.5 shrink-0" />
               <div>

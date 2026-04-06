@@ -125,19 +125,19 @@ export default function CustomerPortalPage() {
           <div className="w-14 h-14 mx-auto bg-brand-100 rounded-2xl flex items-center justify-center mb-4">
             <Phone className="w-7 h-7 text-brand-600" />
           </div>
-          <h2 className="text-xl font-bold text-gray-900">Müşteri Portalı</h2>
-          <p className="text-sm text-gray-500 mt-1">Randevularınızı görüntüleyin ve yönetin</p>
+          <h2 className="text-2xl font-bold text-gray-900">Müşteri Portalı</h2>
+          <p className="text-base text-gray-500 mt-1">Randevularınızı görüntüleyin ve yönetin</p>
         </div>
 
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Telefon Numarası</label>
+            <label className="block text-base font-medium text-gray-700 mb-1">Telefon Numarası</label>
             <input
               type="tel"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder="+90 5XX XXX XX XX"
-              className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 focus:border-transparent outline-none"
+              className="w-full px-4 py-3 border border-gray-200 rounded-xl text-base focus:ring-2 focus:ring-brand-500 focus:border-transparent outline-none"
             />
           </div>
 
@@ -168,8 +168,8 @@ export default function CustomerPortalPage() {
           <div className="w-14 h-14 mx-auto bg-green-100 rounded-2xl flex items-center justify-center mb-4">
             <Shield className="w-7 h-7 text-green-600" />
           </div>
-          <h2 className="text-xl font-bold text-gray-900">Doğrulama Kodu</h2>
-          <p className="text-sm text-gray-500 mt-1">{phone} numarasına gönderildi</p>
+          <h2 className="text-2xl font-bold text-gray-900">Doğrulama Kodu</h2>
+          <p className="text-base text-gray-500 mt-1">{phone} numarasına gönderildi</p>
         </div>
 
         {devOtp && (
@@ -227,10 +227,10 @@ export default function CustomerPortalPage() {
       <div className="bg-white rounded-2xl border border-gray-100 p-6">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-lg font-bold text-gray-900">
+            <h2 className="text-xl font-bold text-gray-900">
               Hoş geldiniz, {profile?.firstName}!
             </h2>
-            <p className="text-sm text-gray-500">{profile?.phone ?? profile?.email}</p>
+            <p className="text-base text-gray-500">{profile?.phone ?? profile?.email}</p>
           </div>
           <button
             onClick={handleLogout}
@@ -259,7 +259,7 @@ export default function CustomerPortalPage() {
 
       {/* Upcoming Appointments */}
       <div className="bg-white rounded-2xl border border-gray-100 p-6">
-        <h3 className="text-base font-semibold text-gray-900 mb-4 flex items-center gap-2">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
           <Calendar className="w-5 h-5 text-brand-500" />
           Yaklaşan Randevular
         </h3>
@@ -280,7 +280,7 @@ export default function CustomerPortalPage() {
               <a
                 key={apt.id}
                 href={`/${slug}/account/appointments/${apt.id}`}
-                className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
+                className="flex items-center justify-between p-5 bg-gray-50 rounded-xl hover:bg-gray-100 transition-all duration-150 motion-safe:hover:-translate-y-0.5 motion-safe:hover:shadow-sm"
               >
                 <div className="flex items-center gap-3">
                   <div
@@ -290,8 +290,8 @@ export default function CustomerPortalPage() {
                     {apt.staff.firstName[0]}{apt.staff.lastName[0]}
                   </div>
                   <div>
-                    <p className="font-medium text-gray-900 text-sm">{apt.service.name}</p>
-                    <p className="text-xs text-gray-500">
+                    <p className="font-medium text-gray-900 text-base">{apt.service.name}</p>
+                    <p className="text-sm text-gray-500">
                       {new Date(apt.startTime).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', weekday: 'short' })}
                       {' · '}
                       {new Date(apt.startTime).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
@@ -307,7 +307,7 @@ export default function CustomerPortalPage() {
 
       {/* Past Appointments */}
       <div className="bg-white rounded-2xl border border-gray-100 p-6">
-        <h3 className="text-base font-semibold text-gray-900 mb-4 flex items-center gap-2">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
           <Clock className="w-5 h-5 text-gray-400" />
           Geçmiş Randevular
         </h3>
@@ -320,11 +320,11 @@ export default function CustomerPortalPage() {
               <a
                 key={apt.id}
                 href={`/${slug}/account/appointments/${apt.id}`}
-                className="flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 transition-colors"
+                className="flex items-center justify-between p-4 rounded-xl hover:bg-gray-50 transition-all duration-150"
               >
                 <div>
-                  <p className="font-medium text-gray-700 text-sm">{apt.service.name}</p>
-                  <p className="text-xs text-gray-400">
+                  <p className="font-medium text-gray-700 text-base">{apt.service.name}</p>
+                  <p className="text-sm text-gray-400">
                     {new Date(apt.startTime).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}
                     {' · '}
                     <span className={apt.status === 'COMPLETED' ? 'text-green-500' : apt.status === 'CANCELLED' ? 'text-red-400' : 'text-gray-400'}>

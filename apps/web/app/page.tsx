@@ -33,7 +33,7 @@ function Hero() {
       <div className={`${shell} relative pt-20 pb-16 lg:pt-28 lg:pb-24`}>
         <div className="max-w-[860px]">
           {/* Eyebrow */}
-          <div className="inline-flex items-center gap-2.5 rounded-full border border-purple-200/60 bg-purple-50/60 px-5 py-2 text-[15px] font-semibold text-purple-700 dark:border-purple-700/40 dark:bg-purple-950/40 dark:text-purple-300 mb-7 shadow-sm">
+          <div className="inline-flex items-center gap-2.5 rounded-full border border-purple-200/60 bg-purple-50/60 px-5 py-2 text-[16px] font-semibold text-purple-700 dark:border-purple-700/40 dark:bg-purple-950/40 dark:text-purple-300 mb-7 shadow-sm">
             <Sparkles className="h-4 w-4" />
             Beauty & Wellness Business OS
           </div>
@@ -49,7 +49,7 @@ function Hero() {
           {/* Lead */}
           <p
             className="mt-6 text-muted-foreground leading-relaxed max-w-[660px]"
-            style={{ fontSize: 'clamp(1.125rem, 1.5vw + 0.5rem, 1.5rem)' }}
+            style={{ fontSize: 'clamp(1.2rem, 1.5vw + 0.5rem, 1.6rem)' }}
           >
             Randevu, ekip, müşteri, ödeme — hepsi tek yerden.
             Calon, güzellik ve wellness işletmeleri için tasarlanmış işletme yönetim sistemidir.
@@ -57,7 +57,7 @@ function Hero() {
 
           {/* CTAs */}
           <div className="mt-9 flex flex-wrap items-center gap-4">
-            <Button asChild size="lg" className="h-14 px-9 text-lg font-semibold bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20 hover:shadow-accent/10">
+            <Button asChild size="lg" className="h-14 px-9 text-lg font-semibold bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20 hover:shadow-accent/10 motion-safe:active:scale-[0.97] transition-all duration-150">
               <Link href="/register">
                 Demo Talep Et
                 <ArrowRight className="ml-2.5 h-5 w-5" />
@@ -133,7 +133,7 @@ function CoreValue() {
     <section className="bg-background dark:bg-[hsl(224_50%_5%)]">
       <div className={`${shell} py-20 lg:py-28`}>
         <div className="text-center mb-14">
-          <p className="text-sm font-bold uppercase tracking-[0.2em] text-primary/70 mb-4">Neden Calon?</p>
+          <p className="text-[15px] font-bold uppercase tracking-[0.2em] text-primary/70 mb-4">Neden Calon?</p>
           <h2
             className="font-bold tracking-tight text-foreground"
             style={{ fontSize: 'clamp(1.75rem, 3vw + 0.5rem, 3rem)' }}
@@ -147,12 +147,12 @@ function CoreValue() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
           {values.map((v) => (
-            <div key={v.title} className="rounded-2xl border border-border/50 bg-card dark:bg-[hsl(224_40%_9%)] dark:border-[hsl(224_30%_16%)] p-8 lg:p-9 space-y-4 transition-colors hover:border-accent/30 dark:hover:border-accent/40">
+            <div key={v.title} className="rounded-2xl border border-border/50 bg-card dark:bg-[hsl(224_40%_9%)] dark:border-[hsl(224_30%_16%)] p-9 lg:p-10 space-y-4 transition-all duration-200 hover:border-accent/30 dark:hover:border-accent/40 motion-safe:hover:-translate-y-1 motion-safe:hover:shadow-lg">
               <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
                 <v.icon className="h-6 w-6 text-primary" />
               </div>
-              <h3 className="text-xl font-semibold tracking-tight">{v.title}</h3>
-              <p className="text-base text-muted-foreground leading-relaxed">{v.desc}</p>
+              <h3 className="text-[22px] font-semibold tracking-tight">{v.title}</h3>
+              <p className="text-[17px] text-muted-foreground leading-relaxed">{v.desc}</p>
             </div>
           ))}
         </div>
@@ -207,7 +207,7 @@ function ProductProof() {
     <section id="urun" className="bg-muted/30 dark:bg-[hsl(224_45%_7%)] border-y border-border/30 dark:border-[hsl(224_30%_14%)]">
       <div className={`${shell} py-20 lg:py-28`}>
         <div className="text-center mb-14">
-          <p className="text-sm font-bold uppercase tracking-[0.2em] text-primary/70 mb-4">Ürün</p>
+          <p className="text-[15px] font-bold uppercase tracking-[0.2em] text-primary/70 mb-4">Ürün</p>
           <h2
             className="font-bold tracking-tight text-foreground"
             style={{ fontSize: 'clamp(1.75rem, 3vw + 0.5rem, 3rem)' }}
@@ -223,7 +223,7 @@ function ProductProof() {
           {surfaces.map((s) => (
             <div
               key={s.label}
-              className={`rounded-2xl border p-8 lg:p-9 space-y-5 transition-all ${s.bg} ${s.border} ${s.featured ? 'lg:scale-[1.02] lg:shadow-xl lg:shadow-purple-500/5 ring-1 ring-purple-300/20 dark:ring-purple-600/20' : ''}`}
+              className={`rounded-2xl border p-9 lg:p-10 space-y-5 transition-all duration-200 motion-safe:hover:-translate-y-1 motion-safe:hover:shadow-xl ${s.bg} ${s.border} ${s.featured ? 'lg:scale-[1.02] lg:shadow-xl lg:shadow-purple-500/5 ring-1 ring-purple-300/20 dark:ring-purple-600/20' : ''}`}
             >
               <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${s.iconBg}`}>
                 <s.icon className={`h-6 w-6 ${s.iconColor}`} />
@@ -232,10 +232,10 @@ function ProductProof() {
                 <p className="text-xs font-bold uppercase tracking-[0.15em] text-muted-foreground/60 mb-2">{s.label}</p>
                 <h3 className="text-xl font-bold tracking-tight">{s.title}</h3>
               </div>
-              <p className="text-base text-muted-foreground leading-relaxed">{s.desc}</p>
+              <p className="text-[17px] text-muted-foreground leading-relaxed">{s.desc}</p>
               <ul className="space-y-2.5 pt-1">
                 {s.features.map((f) => (
-                  <li key={f} className="flex items-center gap-3 text-[15px] text-foreground/80">
+                  <li key={f} className="flex items-center gap-3 text-[16px] text-foreground/80">
                     <CheckCircle2 className="h-4.5 w-4.5 text-emerald-500 shrink-0" />
                     {f}
                   </li>
@@ -276,7 +276,7 @@ function WhoItsFor() {
     <section className="bg-background dark:bg-[hsl(224_50%_5%)]">
       <div className={`${shell} py-20 lg:py-28`}>
         <div className="text-center mb-14">
-          <p className="text-sm font-bold uppercase tracking-[0.2em] text-primary/70 mb-4">Kimin İçin?</p>
+          <p className="text-[15px] font-bold uppercase tracking-[0.2em] text-primary/70 mb-4">Kimin İçin?</p>
           <h2
             className="font-bold tracking-tight text-foreground"
             style={{ fontSize: 'clamp(1.75rem, 3vw + 0.5rem, 3rem)' }}
@@ -287,12 +287,12 @@ function WhoItsFor() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
           {segments.map((s) => (
-            <div key={s.title} className="rounded-2xl border border-border/50 bg-card dark:bg-[hsl(224_40%_9%)] dark:border-[hsl(224_30%_16%)] p-8 lg:p-9 space-y-4 text-center transition-colors hover:border-accent/30 dark:hover:border-accent/40">
+            <div key={s.title} className="rounded-2xl border border-border/50 bg-card dark:bg-[hsl(224_40%_9%)] dark:border-[hsl(224_30%_16%)] p-9 lg:p-10 space-y-4 text-center transition-all duration-200 hover:border-accent/30 dark:hover:border-accent/40 motion-safe:hover:-translate-y-1 motion-safe:hover:shadow-lg">
               <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto">
                 <s.icon className="h-6 w-6 text-primary" />
               </div>
-              <h3 className="text-xl font-semibold tracking-tight">{s.title}</h3>
-              <p className="text-base text-muted-foreground leading-relaxed">{s.desc}</p>
+              <h3 className="text-[22px] font-semibold tracking-tight">{s.title}</h3>
+              <p className="text-[17px] text-muted-foreground leading-relaxed">{s.desc}</p>
             </div>
           ))}
         </div>
@@ -325,7 +325,7 @@ function FinalCTA() {
           Müşterileriniz hemen online randevu almaya başlasın.
         </p>
         <div className="mt-9 flex flex-wrap items-center justify-center gap-4">
-          <Button asChild size="lg" className="h-14 px-9 text-lg font-semibold bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20 hover:shadow-accent/10">
+          <Button asChild size="lg" className="h-14 px-9 text-lg font-semibold bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20 hover:shadow-accent/10 motion-safe:active:scale-[0.97] transition-all duration-150">
             <Link href="/register">
               Demo Talep Et
               <ArrowRight className="ml-2.5 h-5 w-5" />

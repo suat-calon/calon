@@ -239,12 +239,12 @@ export function BookingWidget({ salon, services, staff, initialReferralCode }: B
         </div>
       )}
 
-      <div className="px-6 pb-6 step-enter">
+      <div className="px-6 pb-7 step-enter">
 
         {/* ══ ADIM 1: HİZMET ══════════════════════════════════════════ */}
         {step === 'service' && (
           <div>
-            <h3 className="text-base font-semibold text-gray-900 mb-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
               Hangi hizmeti almak istersiniz?
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -256,7 +256,7 @@ export function BookingWidget({ salon, services, staff, initialReferralCode }: B
                     next();
                   }}
                   className={cn(
-                    'text-left p-4 rounded-2xl border-2 transition-all duration-150',
+                    'text-left p-5 rounded-2xl border-2 transition-all duration-150 motion-safe:hover:scale-[1.01]',
                     'hover:border-brand-400 hover:bg-brand-50',
                     state.service?.id === svc.id
                       ? 'border-brand-500 bg-brand-50'
@@ -266,13 +266,13 @@ export function BookingWidget({ salon, services, staff, initialReferralCode }: B
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-2">
                       <Scissors className="w-4 h-4 text-brand-500 shrink-0 mt-0.5" />
-                      <span className="font-medium text-gray-900 text-sm">{svc.name}</span>
+                      <span className="font-medium text-gray-900 text-base">{svc.name}</span>
                     </div>
-                    <span className="text-brand-600 font-bold text-sm shrink-0">
+                    <span className="text-brand-600 font-bold text-base shrink-0">
                       {formatPrice(svc.price, svc.currency)}
                     </span>
                   </div>
-                  <div className="flex items-center gap-1 mt-2 ml-6 text-gray-400 text-xs">
+                  <div className="flex items-center gap-1 mt-2 ml-6 text-gray-400 text-sm">
                     <Clock className="w-3 h-3" />
                     <span>{formatDuration(svc.durationMin)}</span>
                   </div>
@@ -285,10 +285,10 @@ export function BookingWidget({ salon, services, staff, initialReferralCode }: B
         {/* ══ ADIM 2: PERSONEL ════════════════════════════════════════ */}
         {step === 'staff' && (
           <div>
-            <h3 className="text-base font-semibold text-gray-900 mb-1">
+            <h3 className="text-lg font-semibold text-gray-900 mb-1">
               Personel seçin
             </h3>
-            <p className="text-gray-400 text-xs mb-4">
+            <p className="text-gray-400 text-sm mb-4">
               {state.service?.name} hizmeti için müsait personeller gösterilmektedir.
             </p>
 
@@ -310,7 +310,7 @@ export function BookingWidget({ salon, services, staff, initialReferralCode }: B
                       next();
                     }}
                     className={cn(
-                      'flex items-center gap-3 p-4 rounded-2xl border-2 transition-all text-left',
+                      'flex items-center gap-3 p-5 rounded-2xl border-2 transition-all text-left motion-safe:hover:scale-[1.01]',
                       'hover:border-brand-400 hover:bg-brand-50',
                       state.staff?.id === member.id
                         ? 'border-brand-500 bg-brand-50'
@@ -318,18 +318,18 @@ export function BookingWidget({ salon, services, staff, initialReferralCode }: B
                     )}
                   >
                     <div
-                      className="w-10 h-10 rounded-full flex items-center justify-center text-white
-                                 font-semibold text-sm shrink-0"
+                      className="w-11 h-11 rounded-full flex items-center justify-center text-white
+                                 font-semibold text-base shrink-0"
                       style={{ backgroundColor: member.colorHex }}
                     >
                       {member.firstName[0]}{member.lastName[0]}
                     </div>
                     <div>
-                      <p className="font-medium text-gray-900 text-sm">
+                      <p className="font-medium text-gray-900 text-base">
                         {member.firstName} {member.lastName}
                       </p>
                       {member.title && (
-                        <p className="text-gray-400 text-xs">{member.title}</p>
+                        <p className="text-gray-400 text-sm">{member.title}</p>
                       )}
                     </div>
                   </button>
@@ -344,7 +344,7 @@ export function BookingWidget({ salon, services, staff, initialReferralCode }: B
         {/* ══ ADIM 3: TARİH ═══════════════════════════════════════════ */}
         {step === 'date' && (
           <div>
-            <h3 className="text-base font-semibold text-gray-900 mb-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
               Tarih seçin
             </h3>
             <div className="max-w-xs">
@@ -356,7 +356,7 @@ export function BookingWidget({ salon, services, staff, initialReferralCode }: B
                 onChange={(e) =>
                   setState((s) => ({ ...s, date: e.target.value, slot: null }))
                 }
-                className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-sm
+                className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-base
                            focus:outline-none focus:border-brand-500 transition-colors
                            text-gray-900 bg-white"
               />
@@ -367,7 +367,7 @@ export function BookingWidget({ salon, services, staff, initialReferralCode }: B
                 onClick={next}
                 disabled={!state.date}
                 className={cn(
-                  'flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all',
+                  'flex items-center gap-2 px-5 py-3 rounded-xl text-[15px] font-semibold transition-all',
                   state.date
                     ? 'bg-brand-600 text-white hover:bg-brand-700'
                     : 'bg-gray-100 text-gray-400 cursor-not-allowed',
@@ -383,10 +383,10 @@ export function BookingWidget({ salon, services, staff, initialReferralCode }: B
         {/* ══ ADIM 4: SLOT ════════════════════════════════════════════ */}
         {step === 'slot' && (
           <div>
-            <h3 className="text-base font-semibold text-gray-900 mb-1">
+            <h3 className="text-lg font-semibold text-gray-900 mb-1">
               Saat seçin
             </h3>
-            <p className="text-gray-400 text-xs mb-4">
+            <p className="text-gray-400 text-sm mb-4">
               {formatDate(state.date + 'T00:00:00Z')} — {state.staff?.firstName} {state.staff?.lastName}
             </p>
 
@@ -413,7 +413,7 @@ export function BookingWidget({ salon, services, staff, initialReferralCode }: B
                       next();
                     }}
                     className={cn(
-                      'py-2.5 px-2 rounded-xl border-2 text-sm font-medium transition-all',
+                      'py-3 px-3 rounded-xl border-2 text-[15px] font-medium transition-all motion-safe:hover:scale-[1.03]',
                       'hover:border-brand-400 hover:bg-brand-50',
                       state.slot?.startTime === slot.startTime
                         ? 'border-brand-500 bg-brand-50 text-brand-700'
@@ -433,10 +433,10 @@ export function BookingWidget({ salon, services, staff, initialReferralCode }: B
         {/* ══ ADIM 5: MÜŞTERİ BİLGİLERİ ══════════════════════════════ */}
         {step === 'form' && (
           <div>
-            <h3 className="text-base font-semibold text-gray-900 mb-1">
+            <h3 className="text-lg font-semibold text-gray-900 mb-1">
               Bilgileriniz
             </h3>
-            <p className="text-gray-400 text-xs mb-5">
+            <p className="text-gray-400 text-sm mb-5">
               Randevu onayı için aşağıdaki alanları doldurun.
             </p>
 
@@ -464,7 +464,7 @@ export function BookingWidget({ salon, services, staff, initialReferralCode }: B
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
                   Ad <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -472,12 +472,12 @@ export function BookingWidget({ salon, services, staff, initialReferralCode }: B
                   placeholder="Ayşe"
                   value={state.firstName}
                   onChange={(e) => setState((s) => ({ ...s, firstName: e.target.value }))}
-                  className="w-full border-2 border-gray-200 rounded-xl px-3 py-2.5 text-sm
+                  className="w-full border-2 border-gray-200 rounded-xl px-3 py-3 text-base
                              focus:outline-none focus:border-brand-500 transition-colors"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
                   Soyad <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -485,12 +485,12 @@ export function BookingWidget({ salon, services, staff, initialReferralCode }: B
                   placeholder="Yılmaz"
                   value={state.lastName}
                   onChange={(e) => setState((s) => ({ ...s, lastName: e.target.value }))}
-                  className="w-full border-2 border-gray-200 rounded-xl px-3 py-2.5 text-sm
+                  className="w-full border-2 border-gray-200 rounded-xl px-3 py-3 text-base
                              focus:outline-none focus:border-brand-500 transition-colors"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
                   Telefon <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -498,12 +498,12 @@ export function BookingWidget({ salon, services, staff, initialReferralCode }: B
                   placeholder="0532 000 00 00"
                   value={state.phone}
                   onChange={(e) => setState((s) => ({ ...s, phone: e.target.value }))}
-                  className="w-full border-2 border-gray-200 rounded-xl px-3 py-2.5 text-sm
+                  className="w-full border-2 border-gray-200 rounded-xl px-3 py-3 text-base
                              focus:outline-none focus:border-brand-500 transition-colors"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
                   E-posta (opsiyonel)
                 </label>
                 <input
@@ -511,12 +511,12 @@ export function BookingWidget({ salon, services, staff, initialReferralCode }: B
                   placeholder="ayse@ornek.com"
                   value={state.email}
                   onChange={(e) => setState((s) => ({ ...s, email: e.target.value }))}
-                  className="w-full border-2 border-gray-200 rounded-xl px-3 py-2.5 text-sm
+                  className="w-full border-2 border-gray-200 rounded-xl px-3 py-3 text-base
                              focus:outline-none focus:border-brand-500 transition-colors"
                 />
               </div>
               <div className="sm:col-span-2">
-                <label className="block text-xs font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
                   Not (opsiyonel)
                 </label>
                 <textarea
@@ -524,7 +524,7 @@ export function BookingWidget({ salon, services, staff, initialReferralCode }: B
                   value={state.notes}
                   onChange={(e) => setState((s) => ({ ...s, notes: e.target.value }))}
                   rows={2}
-                  className="w-full border-2 border-gray-200 rounded-xl px-3 py-2.5 text-sm
+                  className="w-full border-2 border-gray-200 rounded-xl px-3 py-3 text-base
                              focus:outline-none focus:border-brand-500 transition-colors resize-none"
                 />
               </div>
@@ -551,7 +551,7 @@ export function BookingWidget({ salon, services, staff, initialReferralCode }: B
                   !state.phone.trim()
                 }
                 className={cn(
-                  'flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold transition-all',
+                  'flex items-center gap-2 px-6 py-3 rounded-xl text-[15px] font-semibold transition-all',
                   submitting || !state.firstName || !state.lastName || !state.phone
                     ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                     : 'bg-brand-600 text-white hover:bg-brand-700',
@@ -574,10 +574,10 @@ export function BookingWidget({ salon, services, staff, initialReferralCode }: B
             <div className="w-14 h-14 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-4 ring-4 ring-green-100">
               <CheckCircle className="w-7 h-7 text-green-600" />
             </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-1">
+            <h3 className="text-2xl font-bold text-gray-900 mb-1">
               Randevunuz Oluşturuldu!
             </h3>
-            <p className="text-gray-500 text-sm mb-6">
+            <p className="text-gray-500 text-base mb-6">
               Aşağıdaki bilgilerle randevunuz kaydedildi.
             </p>
 

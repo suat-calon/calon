@@ -16,7 +16,7 @@ export default function AdminOverviewPage() {
     <div className="space-y-5 max-w-6xl">
       {/* Header */}
       <div className="flex items-center justify-between pb-1 border-b border-border/40">
-        <h1 className="text-lg font-semibold tracking-tight">Platform Genel Bakış</h1>
+        <h1 className="text-xl font-semibold tracking-tight">Platform Genel Bakış</h1>
         {health && (
           <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${health.checks?.database?.status === 'up' ? 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400' : 'bg-red-100 dark:bg-red-950/40 text-red-700 dark:text-red-400'}`}>
             {health.status === 'ready' ? '● Sağlıklı' : '○ Sorunlu'}
@@ -51,18 +51,18 @@ export default function AdminOverviewPage() {
             <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 mb-2.5">Altyapı</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
               <div className="bg-card rounded-lg border p-4 space-y-2">
-                <h3 className="text-[13px] font-semibold">Platform Sağlığı</h3>
+                <h3 className="text-sm font-semibold">Platform Sağlığı</h3>
                 {health?.checks ? (
-                  <div className="space-y-1.5 text-[13px]">
+                  <div className="space-y-1.5 text-sm">
                     <div className="flex justify-between"><span className="text-muted-foreground">Database</span><span className={health.checks.database.status === 'up' ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}>{health.checks.database.status} ({health.checks.database.latencyMs}ms)</span></div>
                     <div className="flex justify-between"><span className="text-muted-foreground">Redis</span><span className={health.checks.redis.status === 'up' ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}>{health.checks.redis.status} ({health.checks.redis.latencyMs}ms)</span></div>
                   </div>
                 ) : <p className="text-[11px] text-muted-foreground/70">Veri yok</p>}
               </div>
               <div className="bg-card rounded-lg border p-4 space-y-2">
-                <h3 className="text-[13px] font-semibold">Versiyon</h3>
+                <h3 className="text-sm font-semibold">Versiyon</h3>
                 {version ? (
-                  <div className="space-y-1.5 text-[13px]">
+                  <div className="space-y-1.5 text-sm">
                     <div className="flex justify-between"><span className="text-muted-foreground">Version</span><span className="font-mono text-[11px]">{version.version}</span></div>
                     <div className="flex justify-between"><span className="text-muted-foreground">Node</span><span className="font-mono text-[11px]">{version.nodeVersion}</span></div>
                     <div className="flex justify-between"><span className="text-muted-foreground">Ortam</span><span className="font-mono text-[11px]">{version.environment}</span></div>
@@ -101,13 +101,13 @@ export default function AdminOverviewPage() {
 
 function StatCard({ icon: Icon, label, value, accent }: { icon: React.ComponentType<{ className?: string }>; label: string; value: number; accent?: boolean }) {
   return (
-    <div className="bg-card rounded-lg border p-3.5">
+    <div className="bg-card rounded-lg border p-4 transition-all duration-150 motion-safe:hover:shadow-md">
       <div className="flex items-center gap-3">
         <div className={`p-1.5 rounded-md ${accent ? 'bg-primary/10' : 'bg-muted'}`}>
           <Icon className={`h-3.5 w-3.5 ${accent ? 'text-primary' : 'text-muted-foreground'}`} />
         </div>
         <div>
-          <p className="text-lg font-semibold leading-none">{value}</p>
+          <p className="text-xl font-semibold leading-none">{value}</p>
           <p className="text-[11px] text-muted-foreground mt-0.5">{label}</p>
         </div>
       </div>

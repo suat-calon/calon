@@ -79,7 +79,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
               <Shield className="h-3.5 w-3.5 text-primary" />
             </div>
             <div>
-              <span className="text-[13px] font-semibold text-foreground">Calon Admin</span>
+              <span className="text-sm font-semibold text-foreground">Calon Admin</span>
               <p className="text-[9px] text-muted-foreground/60 leading-none">SUPER_ADMIN</p>
             </div>
           </div>
@@ -92,7 +92,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
             return (
               <Link key={item.href} href={item.href}
                 className={cn(
-                  'group flex items-center gap-2.5 px-3 py-[7px] rounded-md text-[13px] font-medium transition-all duration-150',
+                  'group flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-all duration-150',
                   active
                     ? 'bg-primary text-primary-foreground shadow-sm'
                     : 'text-foreground/60 hover:bg-muted hover:text-foreground',
@@ -110,7 +110,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
           <button
             type="button"
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            className="group flex items-center gap-2.5 w-full px-3 py-[7px] rounded-md text-[13px] font-medium text-foreground/60 hover:bg-muted hover:text-foreground transition-all"
+            className="group flex items-center gap-2.5 w-full px-3 py-2 rounded-md text-sm font-medium text-foreground/60 hover:bg-muted hover:text-foreground transition-all"
           >
             {theme === 'dark' ? <Sun className="h-[18px] w-[18px] text-foreground/40" /> : <Moon className="h-[18px] w-[18px] text-foreground/40" />}
             {theme === 'dark' ? 'Açık Tema' : 'Koyu Tema'}
@@ -118,7 +118,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
           <Button
             variant="ghost"
             size="sm"
-            className="w-full justify-start text-foreground/60 hover:text-foreground text-[13px] h-auto py-[7px] px-3 font-medium"
+            className="w-full justify-start text-foreground/60 hover:text-foreground text-sm h-auto py-2 px-3 font-medium"
             onClick={async () => {
               try { await fetch('/api/v1/auth/logout', { method: 'POST', credentials: 'include' }); } catch {}
               router.push('/login');
@@ -131,7 +131,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
 
       {/* Main */}
       <main className="flex-1 overflow-auto">
-        <div className="px-5 py-5">
+        <div className="px-6 py-6">
           {children}
         </div>
       </main>

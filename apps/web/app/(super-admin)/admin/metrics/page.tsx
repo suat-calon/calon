@@ -11,7 +11,7 @@ export default function AdminMetricsPage() {
       {/* Page header */}
       <div className="flex items-center justify-between pb-1 border-b border-border/40">
         <div>
-          <h1 className="text-lg font-semibold tracking-tight">Platform Metrikleri</h1>
+          <h1 className="text-xl font-semibold tracking-tight">Platform Metrikleri</h1>
           <p className="text-[11px] text-muted-foreground/70 mt-0.5">Read-only metrik cockpit</p>
         </div>
       </div>
@@ -93,13 +93,13 @@ export default function AdminMetricsPage() {
 
 function StatCard({ icon: Icon, label, value, accent }: { icon: React.ComponentType<{ className?: string }>; label: string; value: number; accent?: boolean }) {
   return (
-    <div className="bg-card rounded-lg border p-3.5">
+    <div className="bg-card rounded-lg border p-4 transition-all duration-150 motion-safe:hover:shadow-md">
       <div className="flex items-center gap-3">
         <div className={`p-1.5 rounded-md ${accent ? 'bg-primary/10' : 'bg-muted'}`}>
           <Icon className={`h-3.5 w-3.5 ${accent ? 'text-primary' : 'text-muted-foreground'}`} />
         </div>
         <div>
-          <p className="text-lg font-semibold leading-none">{value}</p>
+          <p className="text-xl font-semibold leading-none">{value}</p>
           <p className="text-[11px] text-muted-foreground mt-0.5">{label}</p>
         </div>
       </div>

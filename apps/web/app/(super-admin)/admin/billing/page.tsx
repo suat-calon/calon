@@ -62,7 +62,7 @@ export default function AdminBillingPage() {
       {/* Page header */}
       <div className="flex items-center justify-between pb-1 border-b border-border/40">
         <div>
-          <h1 className="text-lg font-semibold tracking-tight">Faturalama</h1>
+          <h1 className="text-xl font-semibold tracking-tight">Faturalama</h1>
           <p className="text-[11px] text-muted-foreground/70 mt-0.5">
             {statusCounts.total} abonelik · {statusCounts.active} aktif · {statusCounts.trial} deneme
             {statusCounts.pastDue > 0 && <span className="text-amber-600 dark:text-amber-400"> · {statusCounts.pastDue} gecikmiş</span>}
@@ -130,7 +130,7 @@ export default function AdminBillingPage() {
                       key={t.id}
                       type="button"
                       className={cn(
-                        'w-full px-4 py-2.5 flex items-center gap-3 text-left transition-colors hover:bg-muted/50',
+                        'w-full px-4 py-3 flex items-center gap-3 text-left transition-colors hover:bg-muted/50',
                         selected?.id === t.id && 'bg-primary/5',
                       )}
                       onClick={() => setSelected(t)}
@@ -138,7 +138,7 @@ export default function AdminBillingPage() {
                       <CreditCard className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <span className="text-[13px] font-medium truncate">{name ?? t.tenantId.slice(0, 12) + '...'}</span>
+                          <span className="text-sm font-medium truncate">{name ?? t.tenantId.slice(0, 12) + '...'}</span>
                           <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4">{t.plan}</Badge>
                           <Badge
                             variant={t.status === 'ACTIVE' ? 'success' : t.status === 'TRIAL' ? 'info' : t.status === 'PAST_DUE' ? 'warning' : 'destructive'}
@@ -222,13 +222,13 @@ function BillingStatCard({ icon: Icon, label, value, accentClass, iconClass }: {
   iconClass: string;
 }) {
   return (
-    <div className="bg-card rounded-lg border p-3.5">
+    <div className="bg-card rounded-lg border p-4 transition-all duration-150 motion-safe:hover:shadow-md">
       <div className="flex items-center gap-3">
         <div className={`p-1.5 rounded-md ${accentClass}`}>
           <Icon className={`h-3.5 w-3.5 ${iconClass}`} />
         </div>
         <div>
-          <p className="text-lg font-semibold leading-none">{value}</p>
+          <p className="text-xl font-semibold leading-none">{value}</p>
           <p className="text-[11px] text-muted-foreground mt-0.5">{label}</p>
         </div>
       </div>

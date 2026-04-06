@@ -31,7 +31,7 @@ export default function AdminTenantsPage() {
       {/* Page header */}
       <div className="flex items-center justify-between pb-1 border-b border-border/40">
         <div>
-          <h1 className="text-lg font-semibold tracking-tight">Salonlar</h1>
+          <h1 className="text-xl font-semibold tracking-tight">Salonlar</h1>
           <p className="text-[11px] text-muted-foreground/70 mt-0.5">{statusCounts.total} salon · {statusCounts.active} aktif · {statusCounts.trial} deneme</p>
         </div>
       </div>
@@ -67,14 +67,14 @@ export default function AdminTenantsPage() {
           {filtered.map(t => (
             <button key={t.id} type="button"
               className={cn(
-                'w-full px-4 py-2.5 flex items-center gap-3 text-left transition-colors hover:bg-muted/50',
+                'w-full px-4 py-3 flex items-center gap-3 text-left transition-colors hover:bg-muted/50',
                 selected?.id === t.id && 'bg-primary/5',
               )}
               onClick={() => setSelected(t)}
             >
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="text-[13px] font-medium truncate">{t.name}</span>
+                  <span className="text-sm font-medium truncate">{t.name}</span>
                   <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4">{t.plan}</Badge>
                   {t.status && (
                     <Badge
