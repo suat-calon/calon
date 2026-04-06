@@ -5,32 +5,32 @@
 @layer base {
   :root {
     /* ────────────────────────────────────────────
-       CALON Aurora — Light surface token sistemi
-       Palette: Lavender / Violet / Mist Blue
-       Primary text: #332B5B  Accent: #6D4CFF
+       CALON Verde — Light surface token sistemi
+       Palette: Forest Green / Emerald / Mint
+       Primary text: #052E16  Accent: #16A34A
        ──────────────────────────────────────────── */
 
-    --background:             252 100% 97%;   /* #F5F1FF lavender white   */
-    --foreground:             251  36% 26%;   /* #332B5B deep violet text */
+    --background:             138  76% 97%;   /* #F0FDF9 mint white       */
+    --foreground:             142  89% 10%;   /* #052E16 deep forest text */
 
     --card:                   0 0% 100%;
-    --card-foreground:        251  36% 26%;
+    --card-foreground:        142  89% 10%;
 
     --popover:                0 0% 100%;
-    --popover-foreground:     251  36% 26%;
+    --popover-foreground:     142  89% 10%;
 
-    /* Aurora — Primary Violet */
-    --primary:                253 100% 65%;   /* #6D4CFF */
+    /* Verde — Primary Green */
+    --primary:                142  76% 36%;   /* #16A34A green-600        */
     --primary-foreground:     0 0% 100%;
 
-    --secondary:              258 100% 95%;   /* #ECE3FF soft lavender   */
-    --secondary-foreground:   251  36% 26%;
+    --secondary:              138  76% 93%;   /* #D1FAE5 soft mint        */
+    --secondary-foreground:   142  89% 10%;
 
-    --muted:                  258  50% 95%;
-    --muted-foreground:       251  16% 49%;   /* #6E6791 secondary text  */
+    --muted:                  138  50% 94%;
+    --muted-foreground:       142  25% 45%;   /* #4B7A5F secondary text   */
 
-    /* Aurora — Orchid accent */
-    --accent:                 284 100% 72%;   /* #C86BFF orchid          */
+    /* Verde — Emerald accent */
+    --accent:                 160  84% 39%;   /* #10B981 emerald          */
     --accent-foreground:      0 0% 100%;
 
     --destructive:            0 84.2% 60.2%;
@@ -41,41 +41,41 @@
     --warning:                38 92% 50%;
     --warning-foreground:     0 0% 100%;
 
-    --border:                 258  50% 88%;   /* soft lavender border    */
-    --input:                  258  50% 88%;
-    --ring:                   253 100% 65%;
+    --border:                 142  50% 85%;   /* soft green border        */
+    --input:                  142  50% 85%;
+    --ring:                   142  76% 36%;
 
     --radius:                 0.75rem;
   }
 
   .dark {
     /* ────────────────────────────────────────────
-       CALON Aurora — Dark surface: derin violet gece
-       Background: #0F0B1A  Card: #151126
-       Text: #F4F1FF  Border: rgba kontrollü
+       CALON Verde — Dark surface: derin orman gecesi
+       Background: #071A0F  Card: #0D2618
+       Text: #FFFFFF  Border: rgba kontrollü
        ──────────────────────────────────────────── */
 
-    --background:             256  44%  7%;   /* #0F0B1A deep violet     */
-    --foreground:             252  80% 95%;   /* #F4F1FF lavender white  */
+    --background:             142  40%  6%;   /* #071A0F deep forest     */
+    --foreground:             0    0% 100%;   /* #FFFFFF pure white      */
 
-    --card:                   251  42% 11%;   /* #151126 elevated dark   */
-    --card-foreground:        252  80% 95%;
+    --card:                   142  35% 10%;   /* #0D2618 elevated dark   */
+    --card-foreground:        0    0% 100%;
 
-    --popover:                251  38% 14%;
-    --popover-foreground:     252  80% 95%;
+    --popover:                142  35% 13%;
+    --popover-foreground:     0    0% 100%;
 
-    /* Aurora dark — primary biraz parlak */
-    --primary:                257 100% 68%;   /* #8A5CFF electric purple */
-    --primary-foreground:     0 0% 100%;
+    /* Verde dark — primary parlak yeşil */
+    --primary:                142  71% 50%;   /* #22C55E electric green  */
+    --primary-foreground:     142  89%  5%;
 
-    --secondary:              251  38% 18%;
-    --secondary-foreground:   252  80% 95%;
+    --secondary:              142  35% 16%;
+    --secondary-foreground:   0    0% 100%;
 
-    --muted:                  251  38% 18%;
-    --muted-foreground:       251  15% 62%;   /* #938DB2 muted text      */
+    --muted:                  142  35% 16%;
+    --muted-foreground:       142  20% 65%;   /* #86B09A muted text      */
 
-    --accent:                 284 100% 72%;
-    --accent-foreground:      0 0% 100%;
+    --accent:                 160  70% 55%;
+    --accent-foreground:      0    0% 100%;
 
     --destructive:            0 62.8% 30.6%;
     --destructive-foreground: 0 0% 100%;
@@ -85,15 +85,15 @@
     --warning:                38 92% 50%;
     --warning-foreground:     0 0% 100%;
 
-    --border:                 251  30% 22%;
-    --input:                  251  30% 22%;
-    --ring:                   257 100% 68%;
+    --border:                 142  30% 22%;
+    --input:                  142  30% 22%;
+    --ring:                   142  71% 50%;
   }
 }
 
 @layer base {
   html {
-    font-size: 17px;
+    font-size: 18px;
   }
   * {
     border-color: hsl(var(--border));
@@ -108,23 +108,40 @@
 }
 
 /* ──────────────────────────────────────────────
-   Aurora gradient arka plan — sadece light mode
+   Verde gradient arka plan — sadece light mode
    ────────────────────────────────────────────── */
 html:not(.dark) body {
   background-image: linear-gradient(
     135deg,
-    #F5F1FF 0%,
-    #ECE3FF 25%,
-    #E7F0FF 50%,
-    #F6E8FF 75%,
-    #F5F1FF 100%
+    #F0FDF4 0%,
+    #DCFCE7 25%,
+    #D1FAE5 50%,
+    #ECFDF5 75%,
+    #F0FDF4 100%
+  );
+  background-attachment: fixed;
+  background-size: cover;
+}
+
+/* ──────────────────────────────────────────────
+   Verde gradient arka plan — dark mode
+   ────────────────────────────────────────────── */
+.dark body {
+  background-image: linear-gradient(
+    135deg,
+    #071A0F 0%,
+    #0D2618 30%,
+    #0A3320 60%,
+    #0D2618 80%,
+    #071A0F 100%
   );
   background-attachment: fixed;
   background-size: cover;
 }
 
 @media (max-width: 768px) {
-  html:not(.dark) body {
+  html:not(.dark) body,
+  .dark body {
     background-attachment: scroll;
   }
 }
@@ -139,7 +156,7 @@ html:not(.dark) .bg-card {
 }
 
 /* ──────────────────────────────────────────────
-   Glass card — dark mode (kontrollü, çamur değil)
+   Glass card — dark mode
    ────────────────────────────────────────────── */
 .dark .bg-card {
   background: rgba(255, 255, 255, 0.05);
@@ -158,24 +175,24 @@ html:not(.dark) .bg-popover {
 }
 
 .dark .bg-popover {
-  background: rgba(21, 17, 38, 0.90);
+  background: rgba(7, 26, 15, 0.92);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
 }
 
 /* ──────────────────────────────────────────────
-   Aurora input focus glow
+   Verde input focus glow
    ────────────────────────────────────────────── */
 html:not(.dark) input:focus,
 html:not(.dark) textarea:focus,
 html:not(.dark) select:focus {
-  box-shadow: 0 0 0 3px rgba(109, 76, 255, 0.12);
+  box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.15);
 }
 
 .dark input:focus,
 .dark textarea:focus,
 .dark select:focus {
-  box-shadow: 0 0 0 3px rgba(138, 92, 255, 0.20);
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.22);
 }
 
 @import "../styles/aurora-utilities.css";

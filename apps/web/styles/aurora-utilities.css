@@ -1,5 +1,5 @@
 /* ──────────────────────────────────────────────
-   CALON Aurora — Global utility layer
+   CALON Verde — Global utility layer
    Tüm yüzeylerde kullanılabilir.
    ────────────────────────────────────────────── */
 
@@ -7,11 +7,11 @@
 .aurora-bg {
   background: linear-gradient(
     135deg,
-    #F5F1FF 0%,
-    #ECE3FF 25%,
-    #E7F0FF 50%,
-    #F6E8FF 75%,
-    #F5F1FF 100%
+    #F0FDF4 0%,
+    #DCFCE7 25%,
+    #D1FAE5 50%,
+    #ECFDF5 75%,
+    #F0FDF4 100%
   );
   min-height: 100vh;
   position: relative;
@@ -23,9 +23,9 @@
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(ellipse 80% 60% at 20% 30%, rgba(109, 76, 255, 0.06) 0%, transparent 70%),
-    radial-gradient(ellipse 60% 80% at 80% 70%, rgba(200, 107, 255, 0.05) 0%, transparent 70%),
-    radial-gradient(ellipse 70% 50% at 50% 10%, rgba(126, 215, 255, 0.04) 0%, transparent 70%);
+    radial-gradient(ellipse 80% 60% at 20% 30%, rgba(22, 163, 74, 0.07) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 80% at 80% 70%, rgba(16, 185, 129, 0.05) 0%, transparent 70%),
+    radial-gradient(ellipse 70% 50% at 50% 10%, rgba(52, 211, 153, 0.04) 0%, transparent 70%);
   pointer-events: none;
   z-index: 0;
 }
@@ -34,19 +34,19 @@
 .dark .aurora-bg {
   background: linear-gradient(
     135deg,
-    #0F0B1A 0%,
-    #151126 30%,
-    #1B1633 60%,
-    #171D33 80%,
-    #0F0B1A 100%
+    #071A0F 0%,
+    #0D2618 30%,
+    #0A3320 60%,
+    #0D2618 80%,
+    #071A0F 100%
   );
 }
 
 .dark .aurora-bg::before {
   background:
-    radial-gradient(ellipse 80% 60% at 20% 30%, rgba(138, 92, 255, 0.10) 0%, transparent 70%),
-    radial-gradient(ellipse 60% 80% at 80% 70%, rgba(200, 107, 255, 0.07) 0%, transparent 70%),
-    radial-gradient(ellipse 70% 50% at 50% 10%, rgba(126, 215, 255, 0.05) 0%, transparent 70%);
+    radial-gradient(ellipse 80% 60% at 20% 30%, rgba(34, 197, 94, 0.10) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 80% at 80% 70%, rgba(16, 185, 129, 0.07) 0%, transparent 70%),
+    radial-gradient(ellipse 70% 50% at 50% 10%, rgba(52, 211, 153, 0.05) 0%, transparent 70%);
 }
 
 /* ── Glass yüzeyler ── */
@@ -103,13 +103,13 @@
 }
 
 .aurora-input:hover {
-  border-color: rgba(109, 76, 255, 0.20);
+  border-color: rgba(22, 163, 74, 0.22);
   background: rgba(255, 255, 255, 0.60);
 }
 
 .aurora-input:focus {
-  border-color: rgba(109, 76, 255, 0.40);
-  box-shadow: 0 0 0 3px rgba(109, 76, 255, 0.08);
+  border-color: rgba(22, 163, 74, 0.45);
+  box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.10);
   background: rgba(255, 255, 255, 0.70);
   outline: none;
 }
@@ -120,33 +120,33 @@
 }
 
 .dark .aurora-input:hover {
-  border-color: rgba(138, 92, 255, 0.30);
+  border-color: rgba(34, 197, 94, 0.30);
   background: rgba(255, 255, 255, 0.09);
 }
 
 .dark .aurora-input:focus {
-  border-color: rgba(138, 92, 255, 0.50);
-  box-shadow: 0 0 0 3px rgba(138, 92, 255, 0.15);
+  border-color: rgba(34, 197, 94, 0.55);
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.18);
   background: rgba(255, 255, 255, 0.10);
   outline: none;
 }
 
 /* ── Butonlar ── */
 .aurora-btn-primary {
-  background: linear-gradient(135deg, #6D4CFF 0%, #8A5CFF 100%);
+  background: linear-gradient(135deg, #16A34A 0%, #22C55E 100%);
   color: #fff;
   border: none;
   transition: all 0.2s ease;
 }
 
 .aurora-btn-primary:hover {
-  box-shadow: 0 4px 20px rgba(109, 76, 255, 0.30);
+  box-shadow: 0 4px 20px rgba(22, 163, 74, 0.32);
   transform: translateY(-1px);
 }
 
 .aurora-btn-primary:active {
   transform: translateY(0);
-  box-shadow: 0 2px 10px rgba(109, 76, 255, 0.20);
+  box-shadow: 0 2px 10px rgba(22, 163, 74, 0.22);
 }
 
 .aurora-btn-social {
@@ -159,9 +159,9 @@
 
 .aurora-btn-social:hover {
   background: rgba(255, 255, 255, 0.70);
-  border-color: rgba(109, 76, 255, 0.18);
+  border-color: rgba(22, 163, 74, 0.20);
   transform: translateY(-1px);
-  box-shadow: 0 2px 12px rgba(109, 76, 255, 0.10);
+  box-shadow: 0 2px 12px rgba(22, 163, 74, 0.12);
 }
 
 .dark .aurora-btn-social {
@@ -171,8 +171,8 @@
 
 .dark .aurora-btn-social:hover {
   background: rgba(255, 255, 255, 0.09);
-  border-color: rgba(138, 92, 255, 0.30);
-  box-shadow: 0 2px 12px rgba(138, 92, 255, 0.15);
+  border-color: rgba(34, 197, 94, 0.32);
+  box-shadow: 0 2px 12px rgba(34, 197, 94, 0.18);
 }
 
 /* ── Kart ── */
@@ -187,7 +187,7 @@
 
 .aurora-card:hover {
   background: rgba(255, 255, 255, 0.48);
-  box-shadow: 0 4px 24px rgba(109, 76, 255, 0.08);
+  box-shadow: 0 4px 24px rgba(22, 163, 74, 0.10);
   transform: translateY(-2px);
 }
 
@@ -198,7 +198,7 @@
 
 .dark .aurora-card:hover {
   background: rgba(255, 255, 255, 0.08);
-  box-shadow: 0 4px 24px rgba(138, 92, 255, 0.18);
+  box-shadow: 0 4px 24px rgba(34, 197, 94, 0.20);
   transform: translateY(-2px);
 }
 
@@ -208,9 +208,9 @@
   background: linear-gradient(
     180deg,
     transparent 0%,
-    rgba(109, 76, 255, 0.10) 20%,
-    rgba(109, 76, 255, 0.14) 50%,
-    rgba(109, 76, 255, 0.10) 80%,
+    rgba(22, 163, 74, 0.12) 20%,
+    rgba(22, 163, 74, 0.18) 50%,
+    rgba(22, 163, 74, 0.12) 80%,
     transparent 100%
   );
 }
@@ -219,9 +219,9 @@
   background: linear-gradient(
     180deg,
     transparent 0%,
-    rgba(138, 92, 255, 0.20) 20%,
-    rgba(138, 92, 255, 0.25) 50%,
-    rgba(138, 92, 255, 0.20) 80%,
+    rgba(34, 197, 94, 0.22) 20%,
+    rgba(34, 197, 94, 0.28) 50%,
+    rgba(34, 197, 94, 0.22) 80%,
     transparent 100%
   );
 }
@@ -231,32 +231,32 @@
   transition: all 0.2s ease;
   border-radius: 10px;
   padding: 8px 12px;
-  color: #6E6791;
+  color: #4B7A5F;
 }
 
 .aurora-sidebar-item:hover {
-  background: rgba(109, 76, 255, 0.07);
-  color: #332B5B;
+  background: rgba(22, 163, 74, 0.08);
+  color: #052E16;
 }
 
 .aurora-sidebar-item.active {
-  background: rgba(109, 76, 255, 0.12);
-  color: #6D4CFF;
+  background: rgba(22, 163, 74, 0.13);
+  color: #16A34A;
   font-weight: 500;
 }
 
 .dark .aurora-sidebar-item {
-  color: #9E97BE;
+  color: #86EFAC;
 }
 
 .dark .aurora-sidebar-item:hover {
-  background: rgba(138, 92, 255, 0.10);
-  color: #C9C2EA;
+  background: rgba(74, 222, 128, 0.10);
+  color: #DCFCE7;
 }
 
 .dark .aurora-sidebar-item.active {
-  background: rgba(138, 92, 255, 0.18);
-  color: #8A5CFF;
+  background: rgba(74, 222, 128, 0.18);
+  color: #4ADE80;
 }
 
 /* ── Animasyonlar ── */
@@ -287,9 +287,9 @@
 
 .aurora-kpi-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 32px rgba(109, 76, 255, 0.12);
+  box-shadow: 0 8px 32px rgba(22, 163, 74, 0.14);
 }
 
 .dark .aurora-kpi-card:hover {
-  box-shadow: 0 8px 32px rgba(138, 92, 255, 0.22);
+  box-shadow: 0 8px 32px rgba(34, 197, 94, 0.24);
 }
