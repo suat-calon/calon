@@ -11,40 +11,65 @@ export const metadata = {
   description: 'Güzellik ve wellness işletmeleri için randevu, ekip, müşteri ve operasyon yönetim sistemi.',
 };
 
-// ── HERO ────────────────────────────────────────────────────────────────────
+/* ═══════════════════════════════════════════════════════════════════════════
+   SHELL — viewport-aware containers
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+const shell   = 'mx-auto w-full max-w-[1440px] 2xl:max-w-[1600px] px-6 sm:px-8 lg:px-12';
+const narrow  = 'mx-auto max-w-3xl lg:max-w-4xl';
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   HERO
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 function Hero() {
   return (
-    <section className="relative overflow-hidden bg-gradient-to-b from-white via-purple-50/30 to-white dark:from-background dark:via-purple-950/20 dark:to-background">
-      <div className="mx-auto max-w-[1440px] 2xl:max-w-[1520px] px-8 pt-20 pb-16 lg:pt-28 lg:pb-24">
-        <div className="max-w-[820px]">
-          <div className="inline-flex items-center gap-2.5 rounded-full border border-purple-200/60 bg-purple-50/60 px-5 py-2 text-base font-medium text-purple-700 dark:border-purple-700/50 dark:bg-purple-950/40 dark:text-purple-300 mb-7">
-            <Sparkles className="h-4.5 w-4.5" />
+    <section className="relative overflow-hidden">
+      {/* Ambient glow */}
+      <div className="absolute inset-0 bg-gradient-to-b from-amber-50/40 via-purple-50/20 to-transparent dark:from-amber-950/15 dark:via-purple-950/10 dark:to-transparent pointer-events-none" />
+      <div className="absolute top-20 -left-40 w-[600px] h-[600px] rounded-full bg-amber-200/20 dark:bg-amber-500/5 blur-3xl pointer-events-none" />
+      <div className="absolute top-40 right-0 w-[500px] h-[500px] rounded-full bg-purple-200/15 dark:bg-purple-500/5 blur-3xl pointer-events-none" />
+
+      <div className={`${shell} relative pt-20 pb-16 lg:pt-28 lg:pb-24`}>
+        <div className="max-w-[860px]">
+          {/* Eyebrow */}
+          <div className="inline-flex items-center gap-2.5 rounded-full border border-amber-300/50 bg-amber-50/70 px-5 py-2 text-[15px] font-semibold text-amber-800 dark:border-amber-600/30 dark:bg-amber-950/40 dark:text-amber-300 mb-7 shadow-sm">
+            <Sparkles className="h-4 w-4" />
             Beauty & Wellness Business OS
           </div>
 
-          <h1 className="text-6xl font-bold tracking-tight text-foreground xl:text-7xl xl:leading-[1.08]">
+          {/* Heading — fluid type */}
+          <h1
+            className="font-bold tracking-tight text-foreground"
+            style={{ fontSize: 'clamp(2.5rem, 5vw + 1rem, 4.5rem)', lineHeight: 1.08 }}
+          >
             Salonunuzu tek sistemden yönetin
           </h1>
 
-          <p className="mt-6 text-xl text-muted-foreground leading-relaxed max-w-[640px] xl:text-2xl xl:leading-relaxed">
+          {/* Lead */}
+          <p
+            className="mt-6 text-muted-foreground leading-relaxed max-w-[660px]"
+            style={{ fontSize: 'clamp(1.125rem, 1.5vw + 0.5rem, 1.5rem)' }}
+          >
             Randevu, ekip, müşteri, ödeme — hepsi tek yerden.
             Calon, güzellik ve wellness işletmeleri için tasarlanmış işletme yönetim sistemidir.
           </p>
 
+          {/* CTAs */}
           <div className="mt-9 flex flex-wrap items-center gap-4">
-            <Button asChild size="lg" className="h-14 px-9 text-lg font-semibold">
+            <Button asChild size="lg" className="h-14 px-9 text-lg font-semibold bg-amber-500 hover:bg-amber-600 text-white dark:bg-amber-500 dark:hover:bg-amber-400 dark:text-black shadow-lg shadow-amber-500/20">
               <Link href="/register">
                 Demo Talep Et
                 <ArrowRight className="ml-2.5 h-5 w-5" />
               </Link>
             </Button>
-            <Button asChild variant="outline" size="lg" className="h-14 px-9 text-lg font-medium">
+            <Button asChild variant="outline" size="lg" className="h-14 px-9 text-lg font-medium border-foreground/20 hover:bg-foreground/5">
               <a href="#urun">Ürünü İncele</a>
             </Button>
           </div>
 
-          <p className="mt-5 text-base text-muted-foreground/70">
+          {/* Micro trust */}
+          <p className="mt-5 text-[15px] text-muted-foreground/60">
             Kredi kartı gerekmez · 5 dakikada kurulum · Ücretsiz deneme
           </p>
         </div>
@@ -53,7 +78,9 @@ function Hero() {
   );
 }
 
-// ── TRUST BAND ──────────────────────────────────────────────────────────────
+/* ═══════════════════════════════════════════════════════════════════════════
+   TRUST BAND
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 function TrustBand() {
   const signals = [
@@ -64,12 +91,12 @@ function TrustBand() {
   ];
 
   return (
-    <section className="border-y border-border/50 bg-muted/30 dark:bg-card/40">
-      <div className="mx-auto max-w-[1440px] 2xl:max-w-[1520px] px-8 py-5">
+    <section className="border-y border-border/40 bg-[hsl(40_30%_97%)] dark:bg-[hsl(224_40%_8%)]">
+      <div className={`${shell} py-5`}>
         <div className="flex flex-wrap items-center justify-center gap-x-14 gap-y-3">
           {signals.map((s) => (
-            <div key={s.text} className="flex items-center gap-2.5 text-base font-medium text-muted-foreground">
-              <s.icon className="h-5 w-5 text-primary/70" />
+            <div key={s.text} className="flex items-center gap-2.5 text-[15px] font-medium text-muted-foreground">
+              <s.icon className="h-5 w-5 text-amber-500/70 dark:text-amber-400/60" />
               {s.text}
             </div>
           ))}
@@ -79,7 +106,9 @@ function TrustBand() {
   );
 }
 
-// ── CORE VALUE ──────────────────────────────────────────────────────────────
+/* ═══════════════════════════════════════════════════════════════════════════
+   CORE VALUE — "Neden Calon?"
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 function CoreValue() {
   const values = [
@@ -101,11 +130,14 @@ function CoreValue() {
   ];
 
   return (
-    <section className="bg-background">
-      <div className="mx-auto max-w-[1440px] 2xl:max-w-[1520px] px-8 py-20 lg:py-24">
+    <section className="bg-background dark:bg-[hsl(224_50%_5%)]">
+      <div className={`${shell} py-20 lg:py-28`}>
         <div className="text-center mb-14">
-          <p className="text-sm font-semibold uppercase tracking-widest text-primary/70 mb-3">Neden Calon?</p>
-          <h2 className="text-4xl font-bold tracking-tight xl:text-5xl">
+          <p className="text-sm font-bold uppercase tracking-[0.2em] text-amber-600 dark:text-amber-400 mb-4">Neden Calon?</p>
+          <h2
+            className="font-bold tracking-tight text-foreground"
+            style={{ fontSize: 'clamp(1.75rem, 3vw + 0.5rem, 3rem)' }}
+          >
             Salonunuzun ihtiyacı olan her şey, tek yerde
           </h2>
           <p className="mt-4 text-muted-foreground max-w-2xl mx-auto text-lg">
@@ -113,13 +145,13 @@ function CoreValue() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-7">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
           {values.map((v) => (
-            <div key={v.title} className="rounded-2xl border border-border/70 dark:border-border/50 bg-card p-8 space-y-4">
-              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                <v.icon className="h-6 w-6 text-primary" />
+            <div key={v.title} className="rounded-2xl border border-border/50 bg-card dark:bg-[hsl(224_40%_9%)] dark:border-[hsl(224_30%_16%)] p-8 lg:p-9 space-y-4 transition-colors hover:border-amber-300/40 dark:hover:border-amber-600/30">
+              <div className="w-12 h-12 rounded-xl bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center">
+                <v.icon className="h-6 w-6 text-amber-600 dark:text-amber-400" />
               </div>
-              <h3 className="text-xl font-semibold">{v.title}</h3>
+              <h3 className="text-xl font-semibold tracking-tight">{v.title}</h3>
               <p className="text-base text-muted-foreground leading-relaxed">{v.desc}</p>
             </div>
           ))}
@@ -129,45 +161,57 @@ function CoreValue() {
   );
 }
 
-// ── PRODUCT PROOF ───────────────────────────────────────────────────────────
+/* ═══════════════════════════════════════════════════════════════════════════
+   PRODUCT PROOF — "Gerçek ürün, gerçek yüzeyler"
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 function ProductProof() {
   const surfaces = [
     {
       icon: Globe,
-      label: 'Online Rezervasyon ve Salon Vitrini',
+      label: 'Online Rezervasyon',
       title: 'Müşterileriniz kendi randevusunu alsın',
       desc: 'Markalı rezervasyon sayfanız 7/24 açık. Hizmet seçimi, personel tercihi, uygun saat bulma — müşteri deneyimi sizin kontrolünüzde.',
       features: ['Hizmet ve personel seçimi', 'Otomatik uygunluk kontrolü', 'Mobil uyumlu rezervasyon', 'Salon vitrini ve tanıtım'],
-      accent: 'bg-blue-50 dark:bg-blue-950/50 border-blue-200/70 dark:border-blue-700/50',
-      iconAccent: 'bg-blue-100 dark:bg-blue-900/60 text-blue-600 dark:text-blue-400',
+      bg: 'bg-blue-50/80 dark:bg-[hsl(220_50%_10%)]',
+      border: 'border-blue-200/60 dark:border-blue-700/40',
+      iconBg: 'bg-blue-100 dark:bg-blue-900/50',
+      iconColor: 'text-blue-600 dark:text-blue-400',
     },
     {
       icon: Monitor,
-      label: 'Salon Operasyon Paneli',
+      label: 'Salon Paneli',
       title: 'Günlük operasyonu tek ekrandan yönetin',
       desc: 'Takvim görünümü, randevu detayları, müşteri notları, ödeme takibi — salon sahiplerinin günlük komuta merkezi.',
       features: ['Günlük/haftalık takvim', 'Personel bazlı görünüm', 'Müşteri geçmişi ve notlar', 'Ödeme ve kasa takibi'],
-      accent: 'bg-purple-50 dark:bg-purple-950/50 border-purple-200/70 dark:border-purple-700/50',
-      iconAccent: 'bg-purple-100 dark:bg-purple-900/60 text-purple-600 dark:text-purple-400',
+      bg: 'bg-purple-50/80 dark:bg-[hsl(270_40%_10%)]',
+      border: 'border-purple-200/60 dark:border-purple-700/40',
+      iconBg: 'bg-purple-100 dark:bg-purple-900/50',
+      iconColor: 'text-purple-600 dark:text-purple-400',
+      featured: true,
     },
     {
       icon: Layers,
-      label: 'Büyümeye Uygun İşletme Altyapısı',
+      label: 'İşletme Altyapısı',
       title: 'Küçük başlayın, sınırsız büyüyün',
       desc: 'Tek şubeden çoklu lokasyona, birkaç hizmetten geniş kataloğa. Altyapı sizi yavaşlatmaz — büyümenizi destekler.',
       features: ['Çoklu şube desteği', 'Hizmet ve katalog düzeni', 'Ekip ölçeklendirme', 'Platform seviyesinde kontrol'],
-      accent: 'bg-emerald-50 dark:bg-emerald-950/50 border-emerald-200/70 dark:border-emerald-700/50',
-      iconAccent: 'bg-emerald-100 dark:bg-emerald-900/60 text-emerald-600 dark:text-emerald-400',
+      bg: 'bg-emerald-50/80 dark:bg-[hsl(160_40%_8%)]',
+      border: 'border-emerald-200/60 dark:border-emerald-700/40',
+      iconBg: 'bg-emerald-100 dark:bg-emerald-900/50',
+      iconColor: 'text-emerald-600 dark:text-emerald-400',
     },
   ];
 
   return (
-    <section id="urun" className="bg-muted/20 dark:bg-card/30 border-y border-border/40 dark:border-border/30">
-      <div className="mx-auto max-w-[1440px] 2xl:max-w-[1520px] px-8 py-20 lg:py-24">
+    <section id="urun" className="bg-[hsl(40_20%_97%)] dark:bg-[hsl(224_45%_7%)] border-y border-border/30 dark:border-[hsl(224_30%_14%)]">
+      <div className={`${shell} py-20 lg:py-28`}>
         <div className="text-center mb-14">
-          <p className="text-sm font-semibold uppercase tracking-widest text-primary/70 mb-3">Ürün</p>
-          <h2 className="text-4xl font-bold tracking-tight xl:text-5xl">
+          <p className="text-sm font-bold uppercase tracking-[0.2em] text-amber-600 dark:text-amber-400 mb-4">Ürün</p>
+          <h2
+            className="font-bold tracking-tight text-foreground"
+            style={{ fontSize: 'clamp(1.75rem, 3vw + 0.5rem, 3rem)' }}
+          >
             Gerçek ürün, gerçek yüzeyler
           </h2>
           <p className="mt-4 text-muted-foreground max-w-2xl mx-auto text-lg">
@@ -175,20 +219,23 @@ function ProductProof() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-7">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
           {surfaces.map((s) => (
-            <div key={s.label} className={`rounded-2xl border p-8 space-y-5 ${s.accent}`}>
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${s.iconAccent}`}>
-                <s.icon className="h-6 w-6" />
+            <div
+              key={s.label}
+              className={`rounded-2xl border p-8 lg:p-9 space-y-5 transition-all ${s.bg} ${s.border} ${s.featured ? 'lg:scale-[1.02] lg:shadow-xl lg:shadow-purple-500/5 ring-1 ring-purple-300/20 dark:ring-purple-600/20' : ''}`}
+            >
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${s.iconBg}`}>
+                <s.icon className={`h-6 w-6 ${s.iconColor}`} />
               </div>
               <div>
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70 mb-2">{s.label}</p>
+                <p className="text-xs font-bold uppercase tracking-[0.15em] text-muted-foreground/60 mb-2">{s.label}</p>
                 <h3 className="text-xl font-bold tracking-tight">{s.title}</h3>
               </div>
               <p className="text-base text-muted-foreground leading-relaxed">{s.desc}</p>
               <ul className="space-y-2.5 pt-1">
                 {s.features.map((f) => (
-                  <li key={f} className="flex items-center gap-2.5 text-base text-foreground/80">
+                  <li key={f} className="flex items-center gap-3 text-[15px] text-foreground/80">
                     <CheckCircle2 className="h-4.5 w-4.5 text-emerald-500 shrink-0" />
                     {f}
                   </li>
@@ -202,7 +249,9 @@ function ProductProof() {
   );
 }
 
-// ── WHO IT'S FOR ────────────────────────────────────────────────────────────
+/* ═══════════════════════════════════════════════════════════════════════════
+   WHO IT'S FOR
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 function WhoItsFor() {
   const segments = [
@@ -224,22 +273,25 @@ function WhoItsFor() {
   ];
 
   return (
-    <section className="bg-background">
-      <div className="mx-auto max-w-[1440px] 2xl:max-w-[1520px] px-8 py-20 lg:py-24">
+    <section className="bg-background dark:bg-[hsl(224_50%_5%)]">
+      <div className={`${shell} py-20 lg:py-28`}>
         <div className="text-center mb-14">
-          <p className="text-sm font-semibold uppercase tracking-widest text-primary/70 mb-3">Kimin İçin?</p>
-          <h2 className="text-4xl font-bold tracking-tight xl:text-5xl">
+          <p className="text-sm font-bold uppercase tracking-[0.2em] text-amber-600 dark:text-amber-400 mb-4">Kimin İçin?</p>
+          <h2
+            className="font-bold tracking-tight text-foreground"
+            style={{ fontSize: 'clamp(1.75rem, 3vw + 0.5rem, 3rem)' }}
+          >
             Her ölçekte salon için
           </h2>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-7">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
           {segments.map((s) => (
-            <div key={s.title} className="rounded-2xl border border-border/70 dark:border-border/50 bg-card p-8 space-y-4 text-center">
-              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto">
-                <s.icon className="h-6 w-6 text-primary" />
+            <div key={s.title} className="rounded-2xl border border-border/50 bg-card dark:bg-[hsl(224_40%_9%)] dark:border-[hsl(224_30%_16%)] p-8 lg:p-9 space-y-4 text-center transition-colors hover:border-amber-300/40 dark:hover:border-amber-600/30">
+              <div className="w-12 h-12 rounded-xl bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center mx-auto">
+                <s.icon className="h-6 w-6 text-amber-600 dark:text-amber-400" />
               </div>
-              <h3 className="text-xl font-semibold">{s.title}</h3>
+              <h3 className="text-xl font-semibold tracking-tight">{s.title}</h3>
               <p className="text-base text-muted-foreground leading-relaxed">{s.desc}</p>
             </div>
           ))}
@@ -249,31 +301,41 @@ function WhoItsFor() {
   );
 }
 
-// ── FINAL CTA ───────────────────────────────────────────────────────────────
+/* ═══════════════════════════════════════════════════════════════════════════
+   FINAL CTA
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 function FinalCTA() {
   return (
-    <section className="bg-primary/5 dark:bg-primary/15 border-t border-border/40">
-      <div className="mx-auto max-w-[900px] px-8 py-20 lg:py-24 text-center">
-        <h2 className="text-4xl font-bold tracking-tight xl:text-5xl">
+    <section className="relative overflow-hidden bg-[hsl(35_40%_96%)] dark:bg-[hsl(224_45%_7%)] border-t border-border/30 dark:border-[hsl(224_30%_14%)]">
+      {/* Glow */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+        <div className="w-[600px] h-[300px] rounded-full bg-amber-200/20 dark:bg-amber-500/5 blur-3xl" />
+      </div>
+
+      <div className={`${narrow} relative px-6 py-20 lg:py-28 text-center`}>
+        <h2
+          className="font-bold tracking-tight text-foreground"
+          style={{ fontSize: 'clamp(1.75rem, 3vw + 0.5rem, 3rem)' }}
+        >
           Salonunuzu Calon'a taşıyın
         </h2>
-        <p className="mt-5 text-muted-foreground max-w-xl mx-auto text-lg">
+        <p className="mt-5 text-muted-foreground max-w-xl mx-auto text-lg leading-relaxed">
           5 dakikada kurun. Hizmetlerinizi, ekibinizi ve takviminizi ekleyin.
           Müşterileriniz hemen online randevu almaya başlasın.
         </p>
         <div className="mt-9 flex flex-wrap items-center justify-center gap-4">
-          <Button asChild size="lg" className="h-14 px-9 text-lg font-semibold">
+          <Button asChild size="lg" className="h-14 px-9 text-lg font-semibold bg-amber-500 hover:bg-amber-600 text-white dark:bg-amber-500 dark:hover:bg-amber-400 dark:text-black shadow-lg shadow-amber-500/20">
             <Link href="/register">
               Demo Talep Et
               <ArrowRight className="ml-2.5 h-5 w-5" />
             </Link>
           </Button>
-          <Button asChild variant="outline" size="lg" className="h-14 px-9 text-lg font-medium">
+          <Button asChild variant="outline" size="lg" className="h-14 px-9 text-lg font-medium border-foreground/20 hover:bg-foreground/5">
             <a href="#urun">Ürünü İncele</a>
           </Button>
         </div>
-        <p className="mt-5 text-base text-muted-foreground/60">
+        <p className="mt-5 text-[15px] text-muted-foreground/60">
           Kredi kartı gerekmez · Ücretsiz deneme
         </p>
       </div>
@@ -281,27 +343,29 @@ function FinalCTA() {
   );
 }
 
-// ── FOOTER ───────────────────────────────────────────────────────────────────
+/* ═══════════════════════════════════════════════════════════════════════════
+   FOOTER
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 function Footer() {
   return (
-    <footer className="border-t border-border/40 bg-background">
-      <div className="mx-auto max-w-[1440px] 2xl:max-w-[1520px] px-8 py-10">
+    <footer className="border-t border-border/30 dark:border-[hsl(224_30%_14%)] bg-background dark:bg-[hsl(224_50%_4%)]">
+      <div className={`${shell} py-10`}>
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center">
-              <span className="text-primary-foreground text-base font-bold">C</span>
+            <div className="w-9 h-9 rounded-lg bg-amber-500 flex items-center justify-center shadow-sm">
+              <span className="text-white text-base font-bold">C</span>
             </div>
             <span className="text-lg font-semibold tracking-tight">Calon</span>
-            <span className="text-sm text-muted-foreground/60">Salon Operating System</span>
+            <span className="text-sm text-muted-foreground/50">Salon Operating System</span>
           </div>
           <div className="flex items-center gap-8 text-base text-muted-foreground">
             <Link href="/login" className="hover:text-foreground transition-colors">Giriş Yap</Link>
             <Link href="/register" className="hover:text-foreground transition-colors">Kayıt Ol</Link>
           </div>
         </div>
-        <div className="mt-6 pt-5 border-t border-border/30 text-center">
-          <p className="text-sm text-muted-foreground/50">
+        <div className="mt-6 pt-5 border-t border-border/20 dark:border-[hsl(224_30%_12%)] text-center">
+          <p className="text-sm text-muted-foreground/40">
             © {new Date().getFullYear()} Calon. Tüm hakları saklıdır.
           </p>
         </div>
@@ -310,24 +374,27 @@ function Footer() {
   );
 }
 
-// ── PAGE ─────────────────────────────────────────────────────────────────────
+/* ═══════════════════════════════════════════════════════════════════════════
+   PAGE
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-sm">
-        <div className="mx-auto max-w-[1440px] 2xl:max-w-[1520px] px-8 h-[72px] flex items-center justify-between">
+    <div className="min-h-screen bg-background dark:bg-[hsl(224_50%_4%)]">
+      {/* Nav */}
+      <header className="sticky top-0 z-50 border-b border-border/30 dark:border-[hsl(224_30%_12%)] bg-background/80 dark:bg-[hsl(224_50%_4%/0.85)] backdrop-blur-xl">
+        <div className={`${shell} h-[72px] flex items-center justify-between`}>
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center">
-              <span className="text-primary-foreground text-base font-bold">C</span>
+            <div className="w-9 h-9 rounded-lg bg-amber-500 flex items-center justify-center shadow-sm">
+              <span className="text-white text-base font-bold">C</span>
             </div>
             <span className="text-lg font-semibold tracking-tight">Calon</span>
           </div>
           <div className="flex items-center gap-4">
-            <Button asChild variant="ghost" className="text-base">
+            <Button asChild variant="ghost" className="text-[15px] text-muted-foreground hover:text-foreground">
               <Link href="/login">Giriş Yap</Link>
             </Button>
-            <Button asChild className="text-base px-6">
+            <Button asChild className="text-[15px] px-6 bg-amber-500 hover:bg-amber-600 text-white dark:bg-amber-500 dark:hover:bg-amber-400 dark:text-black shadow-sm">
               <Link href="/register">Demo Talep Et</Link>
             </Button>
           </div>
