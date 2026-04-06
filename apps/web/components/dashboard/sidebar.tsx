@@ -3,6 +3,7 @@
 import Link            from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTheme }    from 'next-themes';
+import { CalonLogoMark } from '@/components/brand/calon-logo-mark';
 import {
   LayoutDashboard,
   CalendarDays,
@@ -69,9 +70,7 @@ export function Sidebar() {
       {/* Brand zone */}
       <div className="h-16 flex items-center px-5 border-b border-border/60">
         <Link href="/dashboard" className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shadow-sm">
-            <span className="text-xs font-bold text-primary-foreground">C</span>
-          </div>
+          <CalonLogoMark size={34} />
           <span className="text-base font-semibold text-foreground tracking-tight">Calon</span>
         </Link>
       </div>

@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { LandingThemeToggle } from '@/components/landing/theme-toggle';
+import { CalonLogoMark }      from '@/components/brand/calon-logo-mark';
 
 export const metadata = {
   title: 'Calon — Salon Operating System',
@@ -354,9 +355,7 @@ function Footer() {
       <div className={`${shell} py-10`}>
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center shadow-sm">
-              <span className="text-primary-foreground text-base font-bold">C</span>
-            </div>
+            <CalonLogoMark size={34} />
             <span className="text-lg font-semibold tracking-tight">Calon</span>
             <span className="text-sm text-muted-foreground/50">Salon Operating System</span>
           </div>
@@ -386,9 +385,7 @@ export default function LandingPage() {
       <header className="sticky top-0 z-50 border-b border-border/30 bg-background/80 backdrop-blur-xl">
         <div className={`${shell} h-[72px] flex items-center justify-between`}>
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center shadow-sm">
-              <span className="text-primary-foreground text-base font-bold">C</span>
-            </div>
+            <CalonLogoMark size={38} />
             <span className="text-lg font-semibold tracking-tight">Calon</span>
           </div>
           <div className="flex items-center gap-2">
